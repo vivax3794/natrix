@@ -47,16 +47,7 @@ impl<C: ComponentData, E: SealedElement<C>> ReactiveNode<C, E> {
         };
         element.render(ctx, &mut state)
     }
-}
 
-impl<C: ComponentData, E: SealedElement<C>> ReactiveHook<C> for ReactiveNode<C, E> {
-    fn update(&mut self, ctx: &mut State<C>, you: RcDepWeak<C>) {
-        self.render_inplace(ctx, you);
-    }
-}
-
-impl<C: ComponentData, E: SealedElement<C>> ReactiveNode<C, E> {
-    // This is the best I could figure out
     pub(crate) fn create_inital(
         callback: Box<dyn Fn(&State<C>) -> E>,
         ctx: &mut State<C>,
