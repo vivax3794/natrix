@@ -1,0 +1,8 @@
+[workspace]
+resolver = "2"
+members = ["natrix", "natrix_macros"]
+
+[profile.release]
+opt-level = "z"
+codegen-units = 1
+lto = "fat"
