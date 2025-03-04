@@ -219,8 +219,7 @@ impl<C: ComponentData> Element<C> for HtmlElement<C> {
         let style = styles
             .into_iter()
             .map(|(key, value)| key.to_owned() + ":" + &value + ";")
-            .collect::<Vec<_>>()
-            .join("");
+            .collect::<String>();
         element
             .set_attribute(intern("style"), &style)
             .expect("Failed to set style");

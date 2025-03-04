@@ -23,7 +23,6 @@ pub trait ComponentBase: Sized {
     /// Convert this struct into its reactive variant.
     fn into_data(self) -> Self::Data;
 
-    #[inline(always)]
     /// Convert this to its reactive variant and wrap it in the component state struct.
     fn into_state(self) -> Rc<RefCell<State<Self::Data>>> {
         State::new(self.into_data())
@@ -76,6 +75,9 @@ pub trait Component: ComponentBase {
 /// This should be the entry point to your application
 ///
 /// **WARNING:** This method implicitly leaks the memory of the root component
+///
+/// # Panics
+/// If target mount point is not found.
 #[inline]
 pub fn mount_component<C: Component>(component: C, target_id: &'static str) {
     let data = component.into_state();

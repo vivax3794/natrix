@@ -1,6 +1,6 @@
 #![doc = include_str!("../../README.md")]
 #![deny(unsafe_code, clippy::todo)]
-#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+#![warn(missing_docs, clippy::missing_docs_in_private_items, clippy::pedantic)]
 #![allow(private_interfaces, private_bounds, clippy::type_complexity)]
 
 use std::cell::OnceCell;
@@ -48,7 +48,6 @@ pub mod prelude {
         web_sys::console::log_1(&msg);
     }
 
-    #[inline(always)]
     #[allow(unused_variables)]
     /// Log the given string to browser console.
     /// *Has no effect in release mode*

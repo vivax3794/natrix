@@ -44,7 +44,6 @@ pub trait Element<C>: 'static {
     ) -> web_sys::Node;
 
     /// A utility wrapper around `render_box` for when you have a concrete type.
-    #[inline(always)]
     #[doc(hidden)]
     fn render(self, ctx: &mut State<C>, render_state: &mut RenderingState) -> web_sys::Node
     where
@@ -55,7 +54,6 @@ pub trait Element<C>: 'static {
 }
 
 impl<C> Element<C> for web_sys::Node {
-    #[inline(always)]
     fn render_box(
         self: Box<Self>,
         _ctx: &mut State<C>,
@@ -69,7 +67,6 @@ impl<C> Element<C> for web_sys::Node {
 pub struct Comment;
 
 impl<C> Element<C> for Comment {
-    #[inline(always)]
     fn render_box(
         self: Box<Self>,
         _ctx: &mut State<C>,
@@ -83,7 +80,6 @@ impl<C> Element<C> for Comment {
 
 #[cfg(feature = "element_unit")]
 impl<C: ComponentData> Element<C> for () {
-    #[inline]
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,

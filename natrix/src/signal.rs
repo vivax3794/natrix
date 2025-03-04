@@ -4,7 +4,7 @@ use std::cell::{Cell, RefCell};
 use std::ops::{Deref, DerefMut};
 
 use crate::state::{ComponentData, KeepAlive, State};
-use crate::utils::{HashSet, RcCmpPtr, WeakCmpPtr};
+use crate::utils::{RcCmpPtr, WeakCmpPtr};
 
 /// A `Rc` for a reactive hook
 pub type RcDep<C> = RcCmpPtr<RefCell<Box<dyn ReactiveHook<C>>>>;
@@ -32,7 +32,7 @@ pub struct Signal<T, C> {
     /// Actually calling said depdencies is the responsibility of the `State` struct.
     /// Depdencies are also lazily removed by the `State` struct, and hence might contain stale
     /// pointers.
-    deps: HashSet<RcDepWeak<C>>,
+    deps: Vec<RcDepWeak<C>>,
 }
 
 impl<T, C> Signal<T, C> {
@@ -42,7 +42,7 @@ impl<T, C> Signal<T, C> {
             data,
             written: false,
             read: Cell::new(false),
-            deps: HashSet::default(),
+            deps: Vec::new(),
         }
     }
 }
@@ -65,32 +65,28 @@ pub trait SignalMethods<C> {
     ///
     /// We are doing the cleaning in the `State` struct because it lets us deduplicate the changed
     /// hooks in `.update` without looping over the hashset twice.
-    fn deps(&mut self) -> &mut HashSet<RcDepWeak<C>>;
+    fn deps(&mut self) -> &mut Vec<RcDepWeak<C>>;
     /// Return the value of the `written` field
     fn changed(&self) -> bool;
 }
 
 impl<T, C> SignalMethods<C> for Signal<T, C> {
-    #[inline(always)]
     fn clear(&mut self) {
         self.written = false;
         self.read.set(false);
     }
 
-    #[inline(always)]
     fn register_dep(&mut self, dep: RcDepWeak<C>) {
         if self.read.get() {
-            self.deps.insert(dep);
+            self.deps.push(dep);
         }
     }
 
-    #[inline(always)]
     fn changed(&self) -> bool {
         self.written
     }
 
-    #[inline(always)]
-    fn deps(&mut self) -> &mut HashSet<RcDepWeak<C>> {
+    fn deps(&mut self) -> &mut Vec<RcDepWeak<C>> {
         &mut self.deps
     }
 }
@@ -98,14 +94,12 @@ impl<T, C> SignalMethods<C> for Signal<T, C> {
 impl<T, C> Deref for Signal<T, C> {
     type Target = T;
 
-    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         self.read.set(true);
         &self.data
     }
 }
 impl<T, C> DerefMut for Signal<T, C> {
-    #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.written = true;
         &mut self.data
@@ -118,5 +112,5 @@ pub(crate) trait ReactiveHook<C: ComponentData> {
     ///
     /// Hooks should recall `ctx.reg_dep` with the you paramater to re-register any potential
     /// depdencies.
-    fn update(&mut self, ctx: &mut State<C>, you: RcDepWeak<C>);
+    fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>);
 }

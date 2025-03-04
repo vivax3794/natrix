@@ -16,7 +16,7 @@ use crate::utils::{RcCmpPtr, WeakCmpPtr};
 /// a real hook can be swapped in once initalized
 struct DummyHook;
 impl<C: ComponentData> ReactiveHook<C> for DummyHook {
-    fn update(&mut self, _ctx: &mut State<C>, _you: RcDepWeak<C>) {}
+    fn update(&mut self, _ctx: &mut State<C>, _you: &RcDepWeak<C>) {}
 }
 
 /// Reactive hook for swapping out a entire dom node.
@@ -31,7 +31,7 @@ pub(crate) struct ReactiveNode<C, E> {
 
 impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
     /// Render this hook and replace the target.
-    fn render_inplace(&mut self, ctx: &mut State<C>, you: RcDepWeak<C>) {
+    fn render_inplace(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
         let new_node = self.render(ctx, you);
 
         let parent = self.target_node.parent_node().expect("No parent found");
@@ -45,11 +45,7 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
     ///
     /// IMPORTANT: This function works with the assumption what it returns will be put in its
     /// `target_node` field. This function is split out to facilitate `Self::create_inital`
-    fn render(
-        &mut self,
-        ctx: &mut State<C>,
-        you: crate::utils::WeakCmpPtr<RefCell<Box<dyn ReactiveHook<C>>>>,
-    ) -> web_sys::Node {
+    fn render(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) -> web_sys::Node {
         ctx.clear();
         let element = (self.callback)(ctx);
         ctx.reg_dep(you);
@@ -82,7 +78,7 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
             keep_alive: Vec::new(),
         };
 
-        let node = this.render(ctx, WeakCmpPtr(result_weak));
+        let node = this.render(ctx, &WeakCmpPtr(result_weak));
         this.target_node = node.clone();
 
         *result_owned.0.borrow_mut() = Box::new(this);
@@ -92,7 +88,7 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
 }
 
 impl<C: ComponentData, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
-    fn update(&mut self, ctx: &mut State<C>, you: RcDepWeak<C>) {
+    fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
         self.render_inplace(ctx, you);
     }
 }
@@ -116,7 +112,7 @@ pub(crate) struct SimpleReactive<C, K> {
 }
 
 impl<C: ComponentData, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K> {
-    fn update(&mut self, ctx: &mut State<C>, you: RcDepWeak<C>) {
+    fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
         ctx.clear();
         let value = (self.callback)(ctx);
         ctx.reg_dep(you);
@@ -145,7 +141,7 @@ impl<C: ComponentData, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
             node,
             keep_alive: Vec::new(),
         };
-        this.update(ctx, result_weak);
+        this.update(ctx, &result_weak);
 
         *result.0.borrow_mut() = Box::new(this);
 
