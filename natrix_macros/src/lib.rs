@@ -1,9 +1,24 @@
+//! Derive macros for [Natrix](https://github.com/vivax3794/natrix)
+#![warn(missing_docs, clippy::missing_docs_in_private_items)]
+
 extern crate proc_macro;
 use proc_macro2::TokenStream;
 use quote::format_ident;
 use syn::ItemStruct;
 use template_quote::{ToTokens, quote};
 
+/// Derive the `ComponentBase` trait for a struct, required for implementing `Component`
+///
+/// ```rust
+/// #[derive(Component)]
+/// struct HelloWorld;
+///
+/// impl Component for HelloWorld {
+///     fn render() -> impl Element<Self::Data> {
+///         e::h1().text("Hello World")
+///     }
+/// }
+/// ```
 #[proc_macro_derive(Component)]
 pub fn component_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let item = syn::parse_macro_input!(item as ItemStruct);
@@ -11,6 +26,8 @@ pub fn component_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
     result.into()
 }
 
+/// Actual implementation of the macro, split out to make dealing with the different `TokenStream`
+/// types easier
 fn implementation(item: ItemStruct) -> TokenStream {
     let name = item.ident.clone();
     let (fields, is_named) = get_fields(item.fields);
@@ -63,6 +80,8 @@ fn implementation(item: ItemStruct) -> TokenStream {
     }
 }
 
+/// Retrive abstract fields from a struct, as well as a boolean indicating wether its a named
+/// struct or not (unit structs are considerd named)
 fn get_fields(fields: syn::Fields) -> (Vec<Field>, bool) {
     match fields {
         syn::Fields::Unit => (vec![], true),
@@ -92,7 +111,10 @@ fn get_fields(fields: syn::Fields) -> (Vec<Field>, bool) {
     }
 }
 
+/// A abstract representation of a struct field
 struct Field {
+    /// The type of the field
     type_: TokenStream,
+    /// How one would access the field (identifiers for named structs, a number for tuple)
     access: TokenStream,
 }

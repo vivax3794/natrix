@@ -8,26 +8,66 @@ use crate::get_document;
 use crate::signal::RenderingState;
 use crate::state::{ComponentData, State};
 
+/// The base component, this is implemented by the `#[derive(Component)]` macro and handles
+/// associating a component with its reactive state as well as converting to a struct to its
+/// reactive counter part
 #[diagnostic::on_unimplemented(
     message = "`{Self}` Missing `#[derive(Component)]`.",
     note = "`#[derive(Component)]` Required for implementing `Component`"
 )]
 pub trait ComponentBase: Sized {
+    /// The reactive version of this struct.
+    /// Should be used for most locations where a "Component" is expected.
     type Data: ComponentData;
+
+    /// Convert this struct into its reactive variant.
     fn into_data(self) -> Self::Data;
 
     #[inline(always)]
+    /// Convert this to its reactive variant and wrap it in the component state struct.
     fn into_state(self) -> Rc<RefCell<State<Self::Data>>> {
         State::new(self.into_data())
     }
 }
 
+/// The user facing part of the Component traits.
+///
+/// This requires `ComponentBase` to be implemented, which can be done via the `#[derive(Component)]` macro.
+/// ***You need both `#[derive(Component)]` and `impl Component for ...` to fully implement this
+/// trait***
+///
+/// # Example
+/// ```rust
+/// #[derive(Component)]
+/// struct HelloWorld;
+///
+/// impl Component for HelloWorld {
+///     fn render() -> impl Element<Self::Data> {
+///         e::h1().text("Hello World")
+///     }
+/// }
+/// ```
+///
+/// See the [Reactivity](TODO) chapther in the book for information about using state in a
+/// component
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a component.",
     label = "Expected Component",
     note = "`#[derive(Component)]` does not implement `Component`"
 )]
 pub trait Component: ComponentBase {
+    /// Return the root element of the component.
+    ///
+    /// You **can not** dirrectly reference state in this function, and should use narrowly scoped
+    /// closures in the element tree instead.
+    ///
+    /// ```rust
+    /// fn render() -> impl Element<Self::Data> {
+    ///     e::h1().text(|ctx: &S<Self>| *ctx.welcome_message)
+    /// }
+    /// ```
+    ///
+    /// See the [Reactivity](TODO) chapther in the book for more info
     fn render() -> impl Element<Self::Data>;
 }
 

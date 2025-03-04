@@ -1,15 +1,24 @@
+//! Implementation of the `Element` trait for various abstract types.
+
 use std::borrow::Cow;
 
 use crate::signal::RenderingState;
 use crate::state::{ComponentData, State};
 
+/// The actual implementation of a `Element`.
+/// This is sealed because we need user to be able to refer to `Element`, but we do not want them
+/// to be able to implement it as a incorrect `Element` implementation can lead to runtime panics.
+/// And all usecases *should* be covered by components (both statefull and stateless)
 pub(crate) trait SealedElement<C>: 'static {
+    /// The actual implementation of the rendering.
+    /// This is boxed to allow use as `dyn Element` for storing child nodes.
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
     ) -> web_sys::Node;
 
+    /// A utility wrapper around `render_box` for when you have a concrete type.
     #[inline(always)]
     fn render(self, ctx: &mut State<C>, render_state: &mut RenderingState) -> web_sys::Node
     where
@@ -19,6 +28,11 @@ pub(crate) trait SealedElement<C>: 'static {
     }
 }
 
+/// A `Element` is anything that can produce a dom node, this is most commonly `HtmlElement`, as
+/// well as types such as `String`.
+///
+/// In addition closures (with the approperiate) signature implement this trait, see the
+/// [Reactivity](TODO) chapther in the book for examples.
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a element.",
     label = "Expected valid element"
@@ -37,6 +51,7 @@ impl<C> SealedElement<C> for web_sys::Node {
     }
 }
 
+/// A simple Dom comment, used as a placeholder and replacement target.
 pub struct Comment;
 
 impl<C> SealedElement<C> for Comment {
@@ -131,6 +146,12 @@ impl<C> SealedElement<C> for Cow<'static, str> {
     }
 }
 
+/// Generate a implemention of `Element` for a specific integer type.
+///
+/// This uses the `itoa` crate for fast string conversions.
+///
+/// Note: The reason we can not do a blanket implemention on `itoa::Integer` here is that it would
+/// conflict with the blanket closure implementation of `Element` (Thanks rust :/)
 macro_rules! int_element {
     ($T:ident) => {
         impl<C> SealedElement<C> for $T {
@@ -150,6 +171,7 @@ macro_rules! int_element {
     };
 }
 
+/// Call the `int_element!` macro for all the the specified int types
 macro_rules! int_elements {
     ($($T:ident),*) => {
         $(int_element!{$T})*

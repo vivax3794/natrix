@@ -1,3 +1,16 @@
+//! Implemention of html elements, as well as helper constructors.
+//!
+//! This module is generally used via its alias in the prelude, `e`.
+//! Most commonly you will just use the element functions directly, but you can construct a
+//! `HtmlElement` instance if needed.
+//!
+//! # Example
+//! ```rust
+//! e::div()
+//!     .child(e::button().text("Click me"))
+//!     .child(e::h1().text("Wow!"))
+//! ```
+
 use std::borrow::Cow;
 use std::rc::Weak;
 
@@ -5,17 +18,22 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, intern};
 
 use crate::callbacks::Event;
-use crate::element::SealedElement;
+use crate::element::{Element, SealedElement};
 use crate::get_document;
 use crate::prelude::debug;
 use crate::signal::RenderingState;
 use crate::state::{ComponentData, State};
 
+/// A trait for using a arbitrary type as a attribute value.
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a valid attribute value.",
     note = "Try converting the value to a string"
 )]
 pub(crate) trait ToAttribute<C>: 'static {
+    /// Modify the given node to have the attribute set
+    ///
+    /// We use this apply system instead of returning the value as some types will also need to
+    /// conditionally remove the attribute
     fn apply_attribute(
         self: Box<Self>,
         name: &'static str,
@@ -77,19 +95,30 @@ impl<C> ToAttribute<C> for bool {
     }
 }
 
+/// A Generic html node with a given name.
 #[must_use = "Web elements are useless if not rendered"]
 pub struct HtmlElement<C> {
-    name: &'static str,
-    events: Vec<(&'static str, Box<dyn Fn(&mut State<C>)>)>,
+    /// The name of the tag
+    tag: &'static str,
+    /// List of child elements
     children: Vec<Box<dyn SealedElement<C>>>,
+    /// Events to be registered on the element
+    events: Vec<(&'static str, Box<dyn Fn(&mut State<C>)>)>,
+    // We use `Vec` over `HashMap` here to avoid overhead because we are never doing lookups and
+    // the js side is already doing deduplication.
+    /// Inline css styles to apply
     styles: Vec<(&'static str, Cow<'static, str>)>,
+    /// Potentially dynamic attributes to apply
     attributes: Vec<(&'static str, Box<dyn ToAttribute<C>>)>,
 }
 
 impl<C> HtmlElement<C> {
-    pub fn new(name: &'static str) -> Self {
+    /// Create a new html element with the specific tag
+    ///
+    /// All non-deprecated html elements have a helper function in this module
+    pub fn new(tag: &'static str) -> Self {
         Self {
-            name,
+            tag,
             events: Vec::new(),
             children: Vec::new(),
             styles: Vec::new(),
@@ -97,30 +126,60 @@ impl<C> HtmlElement<C> {
         }
     }
 
+    /// Register a event handler for this element.
+    ///
+    /// The event handler is a closure taking a mutable reference to `S<Self>`.
+    /// ```rust
+    /// e::button().on("click", |ctx: &mut S<Self>| {
+    ///     *ctx.some_value += 1;
+    /// })
+    /// ```
+    /// For more information see [Reactivity](TODO) in the book.
     pub fn on(mut self, event: &'static str, function: impl Event<C>) -> Self {
         self.events.push((event, function.func()));
         self
     }
 
-    pub fn child<E: SealedElement<C> + 'static>(mut self, child: E) -> Self {
+    /// Push a child to this element.
+    /// This accepts any valid element including closures.
+    /// ```rust
+    /// e::div()
+    ///     .child(e::h1().text("Wow!"))
+    ///     .child(|ctx: &S<Self>| {
+    ///         if *ctx.toggle {
+    ///             "Hello"
+    ///         } else {
+    ///             "World"
+    ///         }
+    ///     })
+    /// ```
+    pub fn child<E: Element<C> + 'static>(mut self, child: E) -> Self {
         self.children.push(Box::new(child));
         self
     }
 
-    pub fn text<E: SealedElement<C>>(self, text: E) -> Self {
+    /// This is a simple alias for `child`
+    pub fn text<E: Element<C>>(self, text: E) -> Self {
         self.child(text)
     }
 
+    /// Adds a inline style to the element
+    // (This isnt reactive because in the future we will suggest using proper static css as well as
+    // provide reactive css vars)
     pub fn style(mut self, key: &'static str, value: impl Into<Cow<'static, str>>) -> Self {
         self.styles.push((key, value.into()));
         self
     }
 
+    /// Add a attribute to the node.
+    ///
+    /// See [Html Nodes](TODO) in the book for the schematics of the various valid attribute types.
     pub fn attr(mut self, key: &'static str, value: impl ToAttribute<C>) -> Self {
         self.attributes.push((key, Box::new(value)));
         self
     }
 
+    /// Shorthand for `.attr("id", ...)` with a specific ID.
     pub fn id(self, id: &'static str) -> Self {
         self.attr("id", id)
     }
@@ -133,7 +192,7 @@ impl<C: ComponentData> SealedElement<C> for HtmlElement<C> {
         render_state: &mut RenderingState,
     ) -> web_sys::Node {
         let Self {
-            name,
+            tag: name,
             events,
             children,
             styles,
@@ -154,27 +213,7 @@ impl<C: ComponentData> SealedElement<C> for HtmlElement<C> {
 
         let ctx_weak = ctx.weak();
         for (event, function) in events {
-            let new_ctx = Weak::clone(&ctx_weak);
-            let callback: Box<dyn Fn() + 'static> = Box::new(move || {
-                debug("Running Event Handler");
-                let data = new_ctx
-                    .upgrade()
-                    .expect("Component dropped in event callback");
-
-                let mut data = data.borrow_mut();
-
-                data.clear();
-                function(&mut data);
-                data.update();
-            });
-
-            let closure = Closure::<dyn Fn()>::wrap(callback);
-            let function = closure.as_ref().unchecked_ref();
-            element
-                .add_event_listener_with_callback(intern(event), function)
-                .expect("Failed to add listener");
-
-            render_state.keep_alive.push(Box::new(closure));
+            create_event_handler(&element, event, function, ctx_weak.clone(), render_state);
         }
 
         let style = styles
@@ -194,9 +233,44 @@ impl<C: ComponentData> SealedElement<C> for HtmlElement<C> {
     }
 }
 
+/// Wrap the given function in the needed reactivity machinery and set it as the event handler for
+/// the specified event
+fn create_event_handler<C: ComponentData>(
+    element: &web_sys::Element,
+    event: &str,
+    function: Box<dyn Fn(&mut State<C>)>,
+    ctx_weak: Weak<std::cell::RefCell<State<C>>>,
+    render_state: &mut RenderingState<'_>,
+) {
+    let callback: Box<dyn Fn() + 'static> = Box::new(move || {
+        debug("Running Event Handler");
+        let ctx = ctx_weak
+            .upgrade()
+            .expect("Component dropped in event callback");
+        let mut ctx = ctx.borrow_mut();
+
+        ctx.clear();
+        function(&mut ctx);
+        ctx.update();
+    });
+
+    let closure = Closure::<dyn Fn()>::wrap(callback);
+    let function = closure.as_ref().unchecked_ref();
+    element
+        .add_event_listener_with_callback(intern(event), function)
+        .expect("Failed to add listener");
+
+    render_state.keep_alive.push(Box::new(closure));
+}
+
+/// Implement a factory function that returns a `HtmlElement` with a tag name equal to the
+/// function.
 macro_rules! elements {
     ($($name:ident),*) => {
         $(
+            // Note to self: Do not put every possible html tag inline in your docs
+            #[doc = concat!("`<", stringify!($name), ">`")]
+            #[inline(always)]
             pub fn $name<C>() -> HtmlElement<C> {
                 HtmlElement::new(stringify!($name))
             }

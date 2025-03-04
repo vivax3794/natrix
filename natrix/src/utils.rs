@@ -1,16 +1,26 @@
+//! Utility traits and structs
+
+/// A version of the stdlib `Any` with no type ids, downcasting, etc
+/// Its the minimal possible dyn object, mainly used for keep alive.
 pub(crate) trait SmallAny {}
 impl<T> SmallAny for T {}
 
 use std::hash::Hash;
 use std::rc::{Rc, Weak};
 
+/// A hashset using the the no-hash hasher, our primary hashset usage is pointers, which are unqiue
+/// enough
 #[allow(clippy::disallowed_types)]
 pub(crate) type HashSet<T> = std::collections::HashSet<T, nohash_hasher::BuildNoHashHasher<T>>;
 
+/// A hashmap using the the no-hash hasher, our primary hashmap usage is pointers, which are unqiue
+/// enough
 #[allow(clippy::disallowed_types)]
 pub(crate) type HashMap<K, T> =
     std::collections::HashMap<K, T, nohash_hasher::BuildNoHashHasher<T>>;
 
+/// Hash and Compare a `Rc` based on its pointer.
+/// Used for reactive hooks for deduplication.
 #[derive(Debug)]
 pub(crate) struct RcCmpPtr<T>(pub Rc<T>);
 
@@ -38,6 +48,8 @@ impl<T> Hash for RcCmpPtr<T> {
     }
 }
 
+/// Hash and Compare a `Weak` based on its pointer.
+/// Used for reactive hooks for deduplication.
 #[derive(Debug)]
 pub(crate) struct WeakCmpPtr<T>(pub Weak<T>);
 impl<T> Clone for WeakCmpPtr<T> {

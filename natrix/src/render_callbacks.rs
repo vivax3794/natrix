@@ -1,3 +1,5 @@
+//! Implements the reactive hooks for updating the dom in response to signal changessz.
+
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -10,18 +12,25 @@ use crate::signal::{RcDep, RcDepWeak, ReactiveHook, RenderingState};
 use crate::state::{ComponentData, KeepAlive, State};
 use crate::utils::{RcCmpPtr, WeakCmpPtr};
 
+/// A noop hook used to fill the `Rc<RefCell<...>>` while the inital render pass runs so that that
+/// a real hook can be swapped in once initalized
 struct DummyHook;
 impl<C: ComponentData> ReactiveHook<C> for DummyHook {
     fn update(&mut self, _ctx: &mut State<C>, _you: RcDepWeak<C>) {}
 }
 
+/// Reactive hook for swapping out a entire dom node.
 pub(crate) struct ReactiveNode<C, E> {
+    /// The callback to produce nodes
     callback: Box<dyn Fn(&State<C>) -> E>,
+    /// The current renderd node to replace
     target_node: web_sys::Node,
+    /// Vector of various objects to be kept alive for the duration of the renderd content
     keep_alive: Vec<KeepAlive>,
 }
 
 impl<C: ComponentData, E: SealedElement<C>> ReactiveNode<C, E> {
+    /// Render this hook and replace the target.
     fn render_inplace(&mut self, ctx: &mut State<C>, you: RcDepWeak<C>) {
         let new_node = self.render(ctx, you);
 
@@ -32,6 +41,10 @@ impl<C: ComponentData, E: SealedElement<C>> ReactiveNode<C, E> {
         self.target_node = new_node;
     }
 
+    /// Render this hook and simply return the node
+    ///
+    /// IMPORTANT: This function works with the assumption what it returns will be put in its
+    /// `target_node` field. This function is split out to facilitate `Self::create_inital`
     fn render(
         &mut self,
         ctx: &mut State<C>,
@@ -48,6 +61,8 @@ impl<C: ComponentData, E: SealedElement<C>> ReactiveNode<C, E> {
         element.render(ctx, &mut state)
     }
 
+    /// Create a new `ReactiveNode` registering the inital depdencies and returning both the `Rc`
+    /// reference to it and the inital node (Which should be inserted in the dom)
     pub(crate) fn create_inital(
         callback: Box<dyn Fn(&State<C>) -> E>,
         ctx: &mut State<C>,
@@ -76,13 +91,27 @@ impl<C: ComponentData, E: SealedElement<C>> ReactiveNode<C, E> {
     }
 }
 
+impl<C: ComponentData, E: SealedElement<C>> ReactiveHook<C> for ReactiveNode<C, E> {
+    fn update(&mut self, ctx: &mut State<C>, you: RcDepWeak<C>) {
+        self.render_inplace(ctx, you);
+    }
+}
+
+/// A trait to allow `SimpleReactive` to deduplicate common reactive logic for attributes, classes,
+/// styles, etc
 pub(crate) trait ReactiveValue<C> {
+    /// Actually apply the change
     fn apply(self, ctx: &mut State<C>, render_state: &mut RenderingState, node: &web_sys::Element);
 }
 
+/// A common wrapper for simple reactive operations to deduplicate depdency tracking code
 pub(crate) struct SimpleReactive<C, K> {
+    /// The callback to call, takes state and returns the needed data for the reactive
+    /// transformation
     callback: Box<dyn Fn(&State<C>) -> K>,
+    /// The node to apply transformations to
     node: web_sys::Element,
+    /// Vector of various objects to be kept alive for the duration of the renderd content
     keep_alive: Vec<KeepAlive>,
 }
 
@@ -101,6 +130,8 @@ impl<C: ComponentData, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C
 }
 
 impl<C: ComponentData, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
+    /// Creates a new simple reactive hook, applying the inital transformation.
+    /// Returns a Rc of the hook
     pub(crate) fn init_new(
         callback: Box<dyn Fn(&State<C>) -> K>,
         node: web_sys::Element,
@@ -122,8 +153,11 @@ impl<C: ComponentData, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
     }
 }
 
+/// Reactivly set a element attribute
 pub(crate) struct ReactiveAttribute<T> {
+    /// The attribute name to set
     pub(crate) name: &'static str,
+    /// The attribute value to apply
     pub(crate) data: T,
 }
 

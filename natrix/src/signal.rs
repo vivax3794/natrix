@@ -18,14 +18,25 @@ pub(crate) struct RenderingState<'s> {
     pub(crate) keep_alive: &'s mut Vec<KeepAlive>,
 }
 
+/// A signal tracks reads and writes, as well as
 pub struct Signal<T, C> {
+    /// The data to be tracked.
     data: T,
+    /// The flag for wether this signal has been written to
     written: bool,
+    /// The flag for wether this signal has been read
+    /// this is a `Cell` to allow for modification in `Deref`
     read: Cell<bool>,
+    /// A hashset of the dependencies.
+    ///
+    /// Actually calling said depdencies is the responsibility of the `State` struct.
+    /// Depdencies are also lazily removed by the `State` struct, and hence might contain stale
+    /// pointers.
     deps: HashSet<RcDepWeak<C>>,
 }
 
 impl<T, C> Signal<T, C> {
+    /// Create a new signal with the specified data
     pub fn new(data: T) -> Self {
         Self {
             data,
@@ -36,10 +47,26 @@ impl<T, C> Signal<T, C> {
     }
 }
 
+/// Methods for signals that arent generic over the contained data.
+///
+/// The use case of this trait is allowing the `State` struct
+/// to work on a `Vec<&dyn SignalMethods<C>>`, which means the derive macro does not need to
+/// generate a lot of a delegation methods.
+///
+/// Performance: This approach leads to cleaner-- less macro heavy --code, but does have a
+/// performance hit via vtable and vector allocation overhead.
 pub trait SignalMethods<C> {
+    /// Clear the `read` and `written` flags.
     fn clear(&mut self);
+    /// Adds the given depedency to the hashset if the `read` flag is set.
     fn register_dep(&mut self, dep: RcDepWeak<C>);
+    /// Return a mutable reference to the depdencies to facilitate efficent cleanup and
+    /// deduplication in the `State struct`
+    ///
+    /// We are doing the cleaning in the `State` struct because it lets us deduplicate the changed
+    /// hooks in `.update` without looping over the hashset twice.
     fn deps(&mut self) -> &mut HashSet<RcDepWeak<C>>;
+    /// Return the value of the `written` field
     fn changed(&self) -> bool;
 }
 
@@ -85,6 +112,11 @@ impl<T, C> DerefMut for Signal<T, C> {
     }
 }
 
+/// All reactive hooks will implement this trait to allow them to be stored as `dyn` objects.
 pub(crate) trait ReactiveHook<C: ComponentData> {
+    /// Recalculate the hook and apply its update.
+    ///
+    /// Hooks should recall `ctx.reg_dep` with the you paramater to re-register any potential
+    /// depdencies.
     fn update(&mut self, ctx: &mut State<C>, you: RcDepWeak<C>);
 }
