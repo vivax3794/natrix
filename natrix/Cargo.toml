@@ -29,6 +29,8 @@ rustversion = "1.0.19"
 [features]
 default = ["web_utils", "intern", "nightly_optimization"]
 
+ergonomic_ops = []
+
 web_utils = ["web-sys/console"]
 element_unit = []
 debug_log = ["web_utils"]

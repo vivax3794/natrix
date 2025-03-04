@@ -1,21 +1,7 @@
 //! Signals for tracking reactive depdencies and modifications.
 
 use std::cell::{Cell, RefCell};
-use std::ops::{
-    Add,
-    AddAssign,
-    BitAndAssign,
-    BitOrAssign,
-    BitXorAssign,
-    Deref,
-    DerefMut,
-    DivAssign,
-    MulAssign,
-    RemAssign,
-    ShlAssign,
-    ShrAssign,
-    SubAssign,
-};
+use std::ops::{Deref, DerefMut};
 
 use crate::state::{ComponentData, KeepAlive, State};
 use crate::utils::{RcCmpPtr, WeakCmpPtr};
@@ -36,9 +22,9 @@ pub(crate) struct RenderingState<'s> {
 pub struct Signal<T, C> {
     /// The data to be tracked.
     data: T,
-    /// The flag for wether this signal has been written to
+    /// The flag for whether this signal has been written to
     written: bool,
-    /// The flag for wether this signal has been read
+    /// The flag for whether this signal has been read
     /// this is a `Cell` to allow for modification in `Deref`
     read: Cell<bool>,
     /// A hashset of the dependencies.
@@ -135,55 +121,67 @@ pub(crate) trait ReactiveHook<C: ComponentData> {
     fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>);
 }
 
-impl<T: PartialEq, C> PartialEq for Signal<T, C> {
-    fn eq(&self, other: &Self) -> bool {
-        **self == **other
-    }
-}
-impl<T: PartialEq, C> PartialEq<T> for Signal<T, C> {
-    fn eq(&self, other: &T) -> bool {
-        **self == *other
-    }
-}
-
-impl<T: PartialOrd, C> PartialOrd for Signal<T, C> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        (**self).partial_cmp(&**other)
-    }
-}
-impl<T: PartialOrd, C> PartialOrd<T> for Signal<T, C> {
-    fn partial_cmp(&self, other: &T) -> Option<std::cmp::Ordering> {
-        (**self).partial_cmp(other)
-    }
-}
-
-/// Generate inplace operations for signal
-macro_rules! inplace_op {
-    ($trait:ident. $method:ident()) => {
-        impl<R, T: $trait<R>, C> $trait<R> for Signal<T, C> {
-            fn $method(&mut self, rhs: R) {
-                (**self).$method(rhs);
-            }
-        }
+/// Operations that are more ergonomic but inconsistent
+#[cfg(feature = "ergonomic_ops")]
+mod ergonomin_ops {
+    use std::ops::{
+        AddAssign,
+        BitAndAssign,
+        BitOrAssign,
+        BitXorAssign,
+        DivAssign,
+        MulAssign,
+        RemAssign,
+        ShlAssign,
+        ShrAssign,
+        SubAssign,
     };
-}
 
-inplace_op!(AddAssign.add_assign());
-inplace_op!(SubAssign.sub_assign());
-inplace_op!(MulAssign.mul_assign());
-inplace_op!(DivAssign.div_assign());
-inplace_op!(RemAssign.rem_assign());
-inplace_op!(BitAndAssign.bitand_assign());
-inplace_op!(BitOrAssign.bitor_assign());
-inplace_op!(BitXorAssign.bitxor_assign());
-inplace_op!(ShlAssign.shl_assign());
-inplace_op!(ShrAssign.shr_assign());
+    use super::Signal;
 
-impl<R, T: Add<R> + Copy, C> Add<R> for &Signal<T, C> {
-    type Output = T::Output;
-    fn add(self, rhs: R) -> Self::Output {
-        **self + rhs
+    impl<T: PartialEq, C> PartialEq for Signal<T, C> {
+        fn eq(&self, other: &Self) -> bool {
+            **self == **other
+        }
     }
+    impl<T: PartialEq, C> PartialEq<T> for Signal<T, C> {
+        fn eq(&self, other: &T) -> bool {
+            **self == *other
+        }
+    }
+
+    impl<T: PartialOrd, C> PartialOrd for Signal<T, C> {
+        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+            (**self).partial_cmp(&**other)
+        }
+    }
+    impl<T: PartialOrd, C> PartialOrd<T> for Signal<T, C> {
+        fn partial_cmp(&self, other: &T) -> Option<std::cmp::Ordering> {
+            (**self).partial_cmp(other)
+        }
+    }
+
+    /// Generate inplace operations for signal
+    macro_rules! inplace_op {
+        ($trait:ident. $method:ident()) => {
+            impl<R, T: $trait<R>, C> $trait<R> for Signal<T, C> {
+                fn $method(&mut self, rhs: R) {
+                    (**self).$method(rhs);
+                }
+            }
+        };
+    }
+
+    inplace_op!(AddAssign.add_assign());
+    inplace_op!(SubAssign.sub_assign());
+    inplace_op!(MulAssign.mul_assign());
+    inplace_op!(DivAssign.div_assign());
+    inplace_op!(RemAssign.rem_assign());
+    inplace_op!(BitAndAssign.bitand_assign());
+    inplace_op!(BitOrAssign.bitor_assign());
+    inplace_op!(BitXorAssign.bitxor_assign());
+    inplace_op!(ShlAssign.shl_assign());
+    inplace_op!(ShrAssign.shr_assign());
 }
 
 #[cfg(test)]
@@ -219,27 +217,31 @@ mod tests {
         assert!(foo.0.read.get());
     }
 
-    #[test]
-    fn eq() {
-        let foo = &Holder(Signal::new(10));
+    #[cfg(feature = "ergonomic_ops")]
+    mod ergonomic_ops {
+        use super::*;
 
-        assert_eq!(foo.0, 10);
-        assert_ne!(foo.0, 20);
+        #[test]
+        fn eq() {
+            let foo = &Holder(Signal::new(10));
 
-        assert!(foo.0.read.get());
-    }
+            assert_eq!(foo.0, 10);
+            assert_ne!(foo.0, 20);
 
-    #[test]
-    fn cmp() {
-        let foo = &Holder(Signal::new(10));
+            assert!(foo.0.read.get());
+        }
 
-        assert!(foo.0 > 5);
-        assert!(foo.0 < 20);
+        #[test]
+        fn cmp() {
+            let foo = &Holder(Signal::new(10));
 
-        assert!(foo.0.read.get());
-    }
+            assert!(foo.0 > 5);
+            assert!(foo.0 < 20);
 
-    macro_rules! test_inplace {
+            assert!(foo.0.read.get());
+        }
+
+        macro_rules! test_inplace {
         ($name:ident: $inital:literal $operation:tt $value:literal -> $expected:literal) => {
             #[test]
             fn $name() {
@@ -253,14 +255,15 @@ mod tests {
         };
     }
 
-    test_inplace!(inplace_add: 10 += 5 -> 15);
-    test_inplace!(inplace_sub: 10 -= 5 -> 5);
-    test_inplace!(inplace_mul: 10 *= 4 -> 40);
-    test_inplace!(inplace_div: 10 /= 5 -> 2);
-    test_inplace!(inplace_mod: 12 %= 10 -> 2);
-    test_inplace!(inplace_and: 0b1100 &= 0b1010 -> 0b1000);
-    test_inplace!(inplace_or:  0b0100 |= 0b0010 -> 0b0110);
-    test_inplace!(inplace_xor: 0b1100 ^= 0b1000 -> 0b0100);
-    test_inplace!(inplace_shl: 1 <<= 1 -> 2);
-    test_inplace!(inplace_shr: 4 >>= 1 -> 2);
+        test_inplace!(inplace_add: 10 += 5 -> 15);
+        test_inplace!(inplace_sub: 10 -= 5 -> 5);
+        test_inplace!(inplace_mul: 10 *= 4 -> 40);
+        test_inplace!(inplace_div: 10 /= 5 -> 2);
+        test_inplace!(inplace_mod: 12 %= 10 -> 2);
+        test_inplace!(inplace_and: 0b1100 &= 0b1010 -> 0b1000);
+        test_inplace!(inplace_or:  0b0100 |= 0b0010 -> 0b0110);
+        test_inplace!(inplace_xor: 0b1100 ^= 0b1000 -> 0b0100);
+        test_inplace!(inplace_shl: 1 <<= 1 -> 2);
+        test_inplace!(inplace_shr: 4 >>= 1 -> 2);
+    }
 }

@@ -4,6 +4,21 @@
 Enables nightly only public facing features, which currently are:
 * ... none xD
 
+## `ergonomic_ops`
+Allows using inplace operations (`+=`, `-=`, etc) as well as comparissons (`==`, `>`) on signals without dereferencing them.
+```rust
+|ctx: &S<Self>| {
+    if ctx.value > 10 {
+        ctx.value += 2;
+    }
+}
+```
+This is off by default as it is inconsistent with builtin smart pointers such as `Box` and `Rc`, and also can not get rid of the dereference in all possible situations. for example the following cases still need an explicit `*`.
+```rust
+*ctx.value = 10;
+let foo = *ctx.value + 10;
+```
+
 ## `element_unit`
 Allows `()` to be used as an element (Same handling as `None`).
 This is off by default as there are very few legitemate usecases for this, and it can hide errors such as in the following code:

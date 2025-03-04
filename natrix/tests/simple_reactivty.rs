@@ -19,7 +19,7 @@ impl Component for Counter {
         e::button()
             .id(BUTTON_ID)
             .child(|ctx: &S<Self>| *ctx.value)
-            .on("click", |ctx: &mut S<Self>| ctx.value += 1)
+            .on("click", |ctx: &mut S<Self>| *ctx.value += 1)
     }
 }
 

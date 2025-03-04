@@ -21,13 +21,13 @@ impl Component for DoulbeCounter {
     fn render() -> impl Element<Self::Data> {
         e::div()
             .child(e::button().id(BUTTON_1).on("click", |ctx: &mut S<Self>| {
-                ctx.value_one += 1;
+                *ctx.value_one += 1;
             }))
             .child(e::button().id(BUTTON_2).on("click", |ctx: &mut S<Self>| {
-                ctx.value_two += 1;
+                *ctx.value_two += 1;
             }))
             .child(|ctx: &S<Self>| {
-                (ctx.value_one >= 2)
+                (*ctx.value_one >= 2)
                     .then_some(e::div().id(TEXT).child(|ctx: &S<Self>| *ctx.value_two))
             })
     }
