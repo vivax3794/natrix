@@ -90,7 +90,6 @@ impl<C: ComponentData> Element<C> for () {
 }
 
 impl<T: Element<C>, C: ComponentData> Element<C> for Option<T> {
-    #[inline]
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
@@ -104,7 +103,6 @@ impl<T: Element<C>, C: ComponentData> Element<C> for Option<T> {
 }
 
 impl<T: Element<C>, E: Element<C>, C: ComponentData> Element<C> for Result<T, E> {
-    #[inline]
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
