@@ -25,13 +25,6 @@ pub struct Signal<T, C> {
     deps: HashSet<RcDepWeak<C>>,
 }
 
-pub trait SignalMethods<C> {
-    fn clear(&mut self);
-    fn register_dep(&mut self, dep: RcDepWeak<C>);
-    fn deps(&mut self) -> &mut HashSet<RcDepWeak<C>>;
-    fn changed(&self) -> bool;
-}
-
 impl<T, C> Signal<T, C> {
     pub fn new(data: T) -> Self {
         Self {
@@ -41,6 +34,13 @@ impl<T, C> Signal<T, C> {
             deps: HashSet::default(),
         }
     }
+}
+
+pub trait SignalMethods<C> {
+    fn clear(&mut self);
+    fn register_dep(&mut self, dep: RcDepWeak<C>);
+    fn deps(&mut self) -> &mut HashSet<RcDepWeak<C>>;
+    fn changed(&self) -> bool;
 }
 
 impl<T, C> SignalMethods<C> for Signal<T, C> {
