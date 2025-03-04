@@ -66,3 +66,91 @@ impl<T> Hash for WeakCmpPtr<T> {
 
 impl<T> nohash_hasher::IsEnabled for WeakCmpPtr<T> {}
 impl<T> nohash_hasher::IsEnabled for RcCmpPtr<T> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Debug)]
+    struct NoCmp;
+
+    #[test]
+    fn eq_rc() {
+        let foo = RcCmpPtr(Rc::new(NoCmp));
+        let bar = RcCmpPtr(Rc::clone(&foo.0));
+
+        assert_eq!(foo, bar);
+    }
+
+    #[test]
+    fn ne_rc() {
+        let foo = RcCmpPtr(Rc::new(NoCmp));
+        let bar = RcCmpPtr(Rc::new(NoCmp));
+
+        assert_ne!(foo, bar);
+    }
+
+    #[test]
+    fn hash_eq_rc() {
+        let foo = RcCmpPtr(Rc::new(NoCmp));
+        let bar = RcCmpPtr(Rc::clone(&foo.0));
+
+        let mut set = HashSet::default();
+        set.insert(foo);
+        set.insert(bar);
+
+        assert_eq!(set.len(), 1);
+    }
+
+    #[test]
+    fn hash_ne_rc() {
+        let foo = RcCmpPtr(Rc::new(NoCmp));
+        let bar = RcCmpPtr(Rc::new(NoCmp));
+
+        let mut set = HashSet::default();
+        set.insert(foo);
+        set.insert(bar);
+
+        assert_eq!(set.len(), 2);
+    }
+
+    #[test]
+    fn eq_weak() {
+        let foo = WeakCmpPtr(Rc::downgrade(&Rc::new(NoCmp)));
+        let bar = WeakCmpPtr(Weak::clone(&foo.0));
+
+        assert_eq!(foo, bar);
+    }
+
+    #[test]
+    fn ne_weak() {
+        let foo = WeakCmpPtr(Rc::downgrade(&Rc::new(NoCmp)));
+        let bar = WeakCmpPtr(Rc::downgrade(&Rc::new(NoCmp)));
+
+        assert_ne!(foo, bar);
+    }
+
+    #[test]
+    fn hash_eq_weak() {
+        let foo = WeakCmpPtr(Rc::downgrade(&Rc::new(NoCmp)));
+        let bar = WeakCmpPtr(Weak::clone(&foo.0));
+
+        let mut set = HashSet::default();
+        set.insert(foo);
+        set.insert(bar);
+
+        assert_eq!(set.len(), 1);
+    }
+
+    #[test]
+    fn hash_ne_weak() {
+        let foo = WeakCmpPtr(Rc::downgrade(&Rc::new(NoCmp)));
+        let bar = WeakCmpPtr(Rc::downgrade(&Rc::new(NoCmp)));
+
+        let mut set = HashSet::default();
+        set.insert(foo);
+        set.insert(bar);
+
+        assert_eq!(set.len(), 2);
+    }
+}

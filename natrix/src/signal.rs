@@ -35,6 +35,12 @@ pub struct Signal<T, C> {
     deps: Vec<RcDepWeak<C>>,
 }
 
+impl<T: std::fmt::Debug, C> std::fmt::Debug for Signal<T, C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        (**self).fmt(f)
+    }
+}
+
 impl<T, C> Signal<T, C> {
     /// Create a new signal with the specified data
     pub fn new(data: T) -> Self {
@@ -158,3 +164,96 @@ impl<R, T: DivAssign<R>, C> DivAssign<R> for Signal<T, C> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::{Signal, SignalMethods};
+    // We put signals in a struct to simulate the real usage pattern where they are always fields
+    // in a &ref
+    struct Holder<T>(Signal<T, ()>);
+
+    #[test]
+    fn reading() {
+        let foo = Holder(Signal::new(10));
+        assert_eq!(*foo.0, 10);
+        assert!(foo.0.read.get());
+    }
+
+    #[test]
+    fn modify() {
+        let mut foo = Holder(Signal::new(10));
+        *foo.0 = 20;
+
+        assert!(foo.0.changed());
+        assert_eq!(*foo.0, 20);
+    }
+
+    #[test]
+    fn debug() {
+        let data = "Hello World";
+        let foo = Holder(Signal::new(data));
+
+        assert_eq!(format!("{:?}", foo.0), format!("{data:?}"));
+
+        assert!(foo.0.read.get());
+    }
+
+    #[test]
+    fn eq() {
+        let foo = Holder(Signal::new(10));
+
+        assert_eq!(foo.0, 10);
+        assert_ne!(foo.0, 20);
+
+        assert!(foo.0.read.get());
+    }
+
+    #[test]
+    fn cmp() {
+        let foo = Holder(Signal::new(10));
+
+        assert!(foo.0 > 5);
+        assert!(foo.0 < 20);
+
+        assert!(foo.0.read.get());
+    }
+
+    #[test]
+    fn inplace_add() {
+        let mut foo = Holder(Signal::new(10));
+
+        foo.0 += 10;
+
+        assert!(foo.0.changed());
+        assert_eq!(foo.0, 20);
+    }
+
+    #[test]
+    fn inplace_sub() {
+        let mut foo = Holder(Signal::new(10));
+
+        foo.0 -= 5;
+
+        assert!(foo.0.changed());
+        assert_eq!(foo.0, 5);
+    }
+
+    #[test]
+    fn inplace_mul() {
+        let mut foo = Holder(Signal::new(10));
+
+        foo.0 *= 4;
+
+        assert!(foo.0.changed());
+        assert_eq!(foo.0, 40);
+    }
+
+    #[test]
+    fn inplace_div() {
+        let mut foo = Holder(Signal::new(10));
+
+        foo.0 /= 5;
+
+        assert!(foo.0.changed());
+        assert_eq!(foo.0, 2);
+    }
+}
