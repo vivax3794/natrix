@@ -1,3 +1,6 @@
+# Lint and run tests
+check: test lint
+
 # Run the test suit
 [working-directory: './natrix']
 test:
@@ -25,7 +28,7 @@ docs_internal:
 
 
 # Publish the crate to crates.io
-publish: test lint
+publish: check
     cargo publish -p natrix_macros
     cargo publish -p natrix
 
