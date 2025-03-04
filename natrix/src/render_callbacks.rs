@@ -30,17 +30,6 @@ pub(crate) struct ReactiveNode<C, E> {
 }
 
 impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
-    /// Render this hook and replace the target.
-    fn render_inplace(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
-        let new_node = self.render(ctx, you);
-
-        let parent = self.target_node.parent_node().expect("No parent found");
-        parent
-            .replace_child(&new_node, &self.target_node)
-            .expect("Failed to replace node");
-        self.target_node = new_node;
-    }
-
     /// Render this hook and simply return the node
     ///
     /// IMPORTANT: This function works with the assumption what it returns will be put in its
@@ -89,7 +78,14 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
 
 impl<C: ComponentData, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
     fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
-        self.render_inplace(ctx, you);
+        let this = &mut *self;
+        let new_node = this.render(ctx, you);
+
+        let parent = this.target_node.parent_node().expect("No parent found");
+        parent
+            .replace_child(&new_node, &this.target_node)
+            .expect("Failed to replace node");
+        this.target_node = new_node;
     }
 }
 
