@@ -32,6 +32,7 @@ fn implementation(item: ItemStruct) -> TokenStream {
     let name = item.ident.clone();
     let (fields, is_named) = get_fields(item.fields);
 
+    let field_count = proc_macro2::Literal::usize_unsuffixed(fields.len());
     let data_name = format_ident!("_{name}Data");
 
     quote! {
@@ -51,15 +52,10 @@ fn implementation(item: ItemStruct) -> TokenStream {
         }
 
         impl ::natrix::macro_ref::ComponentData for #data_name {
-            fn signals(&self) -> ::std::vec::Vec<&dyn ::natrix::macro_ref::SignalMethods<Self>> {
-                ::std::vec![
-                    #(for field in &fields) {
-                        &self.#{field.access.clone()},
-                    }
-                ]
-            }
-            fn signals_mut(&mut self) -> ::std::vec::Vec<&mut dyn ::natrix::macro_ref::SignalMethods<Self>> {
-                ::std::vec![
+            type FieldRef<'s> = [&'s mut dyn ::natrix::macro_ref::SignalMethods<Self>; #field_count];
+
+            fn signals_mut(&mut self) -> Self::FieldRef<'_> {
+                [
                     #(for field in &fields) {
                         &mut self.#{field.access.clone()},
                     }
