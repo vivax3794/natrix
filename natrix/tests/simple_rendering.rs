@@ -10,7 +10,7 @@ mod common;
 const HELLO_ID: &str = "__HELLO";
 
 #[derive(Component)]
-struct HelloWorld {}
+struct HelloWorld;
 
 impl Component for HelloWorld {
     fn render() -> impl Element<Self::Data> {
@@ -21,7 +21,7 @@ impl Component for HelloWorld {
 #[wasm_bindgen_test]
 fn renders_fine() {
     common::setup();
-    mount_component(HelloWorld {}, common::MOUNT_POINT);
+    mount_component(HelloWorld, common::MOUNT_POINT);
 
     let element = common::get(HELLO_ID);
     assert_eq!(element.text_content(), Some("Hello World!".to_owned()));
