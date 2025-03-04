@@ -1,7 +1,21 @@
 //! Signals for tracking reactive depdencies and modifications.
 
 use std::cell::{Cell, RefCell};
-use std::ops::{AddAssign, Deref, DerefMut, DivAssign, MulAssign, SubAssign};
+use std::ops::{
+    Add,
+    AddAssign,
+    BitAndAssign,
+    BitOrAssign,
+    BitXorAssign,
+    Deref,
+    DerefMut,
+    DivAssign,
+    MulAssign,
+    RemAssign,
+    ShlAssign,
+    ShrAssign,
+    SubAssign,
+};
 
 use crate::state::{ComponentData, KeepAlive, State};
 use crate::utils::{RcCmpPtr, WeakCmpPtr};
@@ -143,24 +157,32 @@ impl<T: PartialOrd, C> PartialOrd<T> for Signal<T, C> {
     }
 }
 
-impl<R, T: AddAssign<R>, C> AddAssign<R> for Signal<T, C> {
-    fn add_assign(&mut self, rhs: R) {
-        **self += rhs;
-    }
+/// Generate inplace operations for signal
+macro_rules! inplace_op {
+    ($trait:ident. $method:ident()) => {
+        impl<R, T: $trait<R>, C> $trait<R> for Signal<T, C> {
+            fn $method(&mut self, rhs: R) {
+                (**self).$method(rhs);
+            }
+        }
+    };
 }
-impl<R, T: SubAssign<R>, C> SubAssign<R> for Signal<T, C> {
-    fn sub_assign(&mut self, rhs: R) {
-        **self -= rhs;
-    }
-}
-impl<R, T: MulAssign<R>, C> MulAssign<R> for Signal<T, C> {
-    fn mul_assign(&mut self, rhs: R) {
-        **self *= rhs;
-    }
-}
-impl<R, T: DivAssign<R>, C> DivAssign<R> for Signal<T, C> {
-    fn div_assign(&mut self, rhs: R) {
-        **self /= rhs;
+
+inplace_op!(AddAssign.add_assign());
+inplace_op!(SubAssign.sub_assign());
+inplace_op!(MulAssign.mul_assign());
+inplace_op!(DivAssign.div_assign());
+inplace_op!(RemAssign.rem_assign());
+inplace_op!(BitAndAssign.bitand_assign());
+inplace_op!(BitOrAssign.bitor_assign());
+inplace_op!(BitXorAssign.bitxor_assign());
+inplace_op!(ShlAssign.shl_assign());
+inplace_op!(ShrAssign.shr_assign());
+
+impl<R, T: Add<R> + Copy, C> Add<R> for &Signal<T, C> {
+    type Output = T::Output;
+    fn add(self, rhs: R) -> Self::Output {
+        **self + rhs
     }
 }
 
@@ -173,14 +195,14 @@ mod tests {
 
     #[test]
     fn reading() {
-        let foo = Holder(Signal::new(10));
+        let foo = &Holder(Signal::new(10));
         assert_eq!(*foo.0, 10);
         assert!(foo.0.read.get());
     }
 
     #[test]
     fn modify() {
-        let mut foo = Holder(Signal::new(10));
+        let foo = &mut Holder(Signal::new(10));
         *foo.0 = 20;
 
         assert!(foo.0.changed());
@@ -190,7 +212,7 @@ mod tests {
     #[test]
     fn debug() {
         let data = "Hello World";
-        let foo = Holder(Signal::new(data));
+        let foo = &Holder(Signal::new(data));
 
         assert_eq!(format!("{:?}", foo.0), format!("{data:?}"));
 
@@ -199,7 +221,7 @@ mod tests {
 
     #[test]
     fn eq() {
-        let foo = Holder(Signal::new(10));
+        let foo = &Holder(Signal::new(10));
 
         assert_eq!(foo.0, 10);
         assert_ne!(foo.0, 20);
@@ -209,7 +231,7 @@ mod tests {
 
     #[test]
     fn cmp() {
-        let foo = Holder(Signal::new(10));
+        let foo = &Holder(Signal::new(10));
 
         assert!(foo.0 > 5);
         assert!(foo.0 < 20);
@@ -217,43 +239,28 @@ mod tests {
         assert!(foo.0.read.get());
     }
 
-    #[test]
-    fn inplace_add() {
-        let mut foo = Holder(Signal::new(10));
+    macro_rules! test_inplace {
+        ($name:ident: $inital:literal $operation:tt $value:literal -> $expected:literal) => {
+            #[test]
+            fn $name() {
+                let foo = &mut Holder(Signal::new($inital));
 
-        foo.0 += 10;
+                foo.0 $operation $value;
 
-        assert!(foo.0.changed());
-        assert_eq!(foo.0, 20);
+                assert!(foo.0.changed());
+                assert_eq!(foo.0, $expected);
+            }
+        };
     }
 
-    #[test]
-    fn inplace_sub() {
-        let mut foo = Holder(Signal::new(10));
-
-        foo.0 -= 5;
-
-        assert!(foo.0.changed());
-        assert_eq!(foo.0, 5);
-    }
-
-    #[test]
-    fn inplace_mul() {
-        let mut foo = Holder(Signal::new(10));
-
-        foo.0 *= 4;
-
-        assert!(foo.0.changed());
-        assert_eq!(foo.0, 40);
-    }
-
-    #[test]
-    fn inplace_div() {
-        let mut foo = Holder(Signal::new(10));
-
-        foo.0 /= 5;
-
-        assert!(foo.0.changed());
-        assert_eq!(foo.0, 2);
-    }
+    test_inplace!(inplace_add: 10 += 5 -> 15);
+    test_inplace!(inplace_sub: 10 -= 5 -> 5);
+    test_inplace!(inplace_mul: 10 *= 4 -> 40);
+    test_inplace!(inplace_div: 10 /= 5 -> 2);
+    test_inplace!(inplace_mod: 12 %= 10 -> 2);
+    test_inplace!(inplace_and: 0b1100 &= 0b1010 -> 0b1000);
+    test_inplace!(inplace_or:  0b0100 |= 0b0010 -> 0b0110);
+    test_inplace!(inplace_xor: 0b1100 ^= 0b1000 -> 0b0100);
+    test_inplace!(inplace_shl: 1 <<= 1 -> 2);
+    test_inplace!(inplace_shr: 4 >>= 1 -> 2);
 }
