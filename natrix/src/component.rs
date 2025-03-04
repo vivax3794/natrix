@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::element::{Element, SealedElement};
+use crate::element::Element;
 use crate::get_document;
 use crate::signal::RenderingState;
 use crate::state::{ComponentData, State};

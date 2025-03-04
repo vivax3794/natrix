@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use wasm_bindgen::JsCast;
 
-use crate::element::SealedElement;
+use crate::element::Element;
 use crate::get_document;
 use crate::html_elements::ToAttribute;
 use crate::signal::{RcDep, RcDepWeak, ReactiveHook, RenderingState};
@@ -29,7 +29,7 @@ pub(crate) struct ReactiveNode<C, E> {
     keep_alive: Vec<KeepAlive>,
 }
 
-impl<C: ComponentData, E: SealedElement<C>> ReactiveNode<C, E> {
+impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
     /// Render this hook and replace the target.
     fn render_inplace(&mut self, ctx: &mut State<C>, you: RcDepWeak<C>) {
         let new_node = self.render(ctx, you);
@@ -91,7 +91,7 @@ impl<C: ComponentData, E: SealedElement<C>> ReactiveNode<C, E> {
     }
 }
 
-impl<C: ComponentData, E: SealedElement<C>> ReactiveHook<C> for ReactiveNode<C, E> {
+impl<C: ComponentData, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
     fn update(&mut self, ctx: &mut State<C>, you: RcDepWeak<C>) {
         self.render_inplace(ctx, you);
     }

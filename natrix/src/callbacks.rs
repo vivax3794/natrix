@@ -1,15 +1,15 @@
 //! Implementations of various traits for closures.
 
-use crate::element::SealedElement;
+use crate::element::Element;
 use crate::html_elements::ToAttribute;
 use crate::render_callbacks::{ReactiveAttribute, ReactiveNode, SimpleReactive};
 use crate::signal::RenderingState;
 use crate::state::{ComponentData, State};
 
-impl<F, C, R> SealedElement<C> for F
+impl<F, C, R> Element<C> for F
 where
     F: Fn(&State<C>) -> R + 'static,
-    R: SealedElement<C> + 'static,
+    R: Element<C> + 'static,
     C: ComponentData,
 {
     fn render_box(

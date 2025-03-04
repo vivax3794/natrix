@@ -5,13 +5,38 @@ use std::borrow::Cow;
 use crate::signal::RenderingState;
 use crate::state::{ComponentData, State};
 
-/// The actual implementation of a `Element`.
-/// This is sealed because we need user to be able to refer to `Element`, but we do not want them
-/// to be able to implement it as a incorrect `Element` implementation can lead to runtime panics.
-/// And all usecases *should* be covered by components (both statefull and stateless)
-pub(crate) trait SealedElement<C>: 'static {
+/// An `Element` is anything that can produce a DOM node.
+/// The most common examples include `HtmlElement` and types like `String`.
+///
+/// Additionally, closures with the appropriate signature also implement this trait.
+/// See the [Reactivity](TODO) chapter in the book for more examples.
+///
+/// 🚨 **You should generally NOT implement this trait manually.**
+/// Instead, prefer **sub-components** (for stateful elements) or **stateless components**
+/// (which are simply functions returning an `Element`).
+///
+/// ## ❌ Don't
+/// Avoid manually implementing `Element` for custom components:
+///
+/// ```rust
+/// struct MyFancyButton(&'static str);
+/// impl<C> Element<C> for MyFancyButton {/* ... */}
+/// ```
+///
+/// ## ✅ Do
+/// Instead, use a **function-based stateless component**:
+///
+/// ```rust
+/// fn my_fancy_button<C>(name: &'static str) -> impl Element<C> {
+///     e::button() /* ... */
+/// }
+/// ```
+///
+/// This keeps your UI **cleaner, more composable, and easier to maintain**. 🚀✨
+pub trait Element<C>: 'static {
     /// The actual implementation of the rendering.
     /// This is boxed to allow use as `dyn Element` for storing child nodes.
+    #[doc(hidden)]
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
@@ -20,6 +45,7 @@ pub(crate) trait SealedElement<C>: 'static {
 
     /// A utility wrapper around `render_box` for when you have a concrete type.
     #[inline(always)]
+    #[doc(hidden)]
     fn render(self, ctx: &mut State<C>, render_state: &mut RenderingState) -> web_sys::Node
     where
         Self: Sized,
@@ -28,19 +54,7 @@ pub(crate) trait SealedElement<C>: 'static {
     }
 }
 
-/// A `Element` is anything that can produce a dom node, this is most commonly `HtmlElement`, as
-/// well as types such as `String`.
-///
-/// In addition closures (with the approperiate) signature implement this trait, see the
-/// [Reactivity](TODO) chapther in the book for examples.
-#[diagnostic::on_unimplemented(
-    message = "`{Self}` is not a element.",
-    label = "Expected valid element"
-)]
-pub trait Element<C>: SealedElement<C> {}
-impl<C, T: SealedElement<C>> Element<C> for T {}
-
-impl<C> SealedElement<C> for web_sys::Node {
+impl<C> Element<C> for web_sys::Node {
     #[inline(always)]
     fn render_box(
         self: Box<Self>,
@@ -54,7 +68,7 @@ impl<C> SealedElement<C> for web_sys::Node {
 /// A simple Dom comment, used as a placeholder and replacement target.
 pub struct Comment;
 
-impl<C> SealedElement<C> for Comment {
+impl<C> Element<C> for Comment {
     #[inline(always)]
     fn render_box(
         self: Box<Self>,
@@ -68,18 +82,18 @@ impl<C> SealedElement<C> for Comment {
 }
 
 #[cfg(feature = "element_unit")]
-impl<C: ComponentData> SealedElement<C> for () {
+impl<C: ComponentData> Element<C> for () {
     #[inline]
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
     ) -> web_sys::Node {
-        SealedElement::<C>::render(Comment, ctx, render_state)
+        Element::<C>::render(Comment, ctx, render_state)
     }
 }
 
-impl<T: SealedElement<C>, C: ComponentData> SealedElement<C> for Option<T> {
+impl<T: Element<C>, C: ComponentData> Element<C> for Option<T> {
     #[inline]
     fn render_box(
         self: Box<Self>,
@@ -88,12 +102,12 @@ impl<T: SealedElement<C>, C: ComponentData> SealedElement<C> for Option<T> {
     ) -> web_sys::Node {
         match *self {
             Some(element) => element.render(ctx, render_state),
-            None => SealedElement::<C>::render(Comment, ctx, render_state),
+            None => Element::<C>::render(Comment, ctx, render_state),
         }
     }
 }
 
-impl<T: SealedElement<C>, E: SealedElement<C>, C: ComponentData> SealedElement<C> for Result<T, E> {
+impl<T: Element<C>, E: Element<C>, C: ComponentData> Element<C> for Result<T, E> {
     #[inline]
     fn render_box(
         self: Box<Self>,
@@ -107,7 +121,7 @@ impl<T: SealedElement<C>, E: SealedElement<C>, C: ComponentData> SealedElement<C
     }
 }
 
-impl<C> SealedElement<C> for &'static str {
+impl<C> Element<C> for &'static str {
     #[inline]
     fn render_box(
         self: Box<Self>,
@@ -120,7 +134,7 @@ impl<C> SealedElement<C> for &'static str {
     }
 }
 
-impl<C> SealedElement<C> for String {
+impl<C> Element<C> for String {
     #[inline]
     fn render_box(
         self: Box<Self>,
@@ -133,7 +147,7 @@ impl<C> SealedElement<C> for String {
     }
 }
 
-impl<C> SealedElement<C> for Cow<'static, str> {
+impl<C> Element<C> for Cow<'static, str> {
     #[inline]
     fn render_box(
         self: Box<Self>,
@@ -154,7 +168,7 @@ impl<C> SealedElement<C> for Cow<'static, str> {
 /// conflict with the blanket closure implementation of `Element` (Thanks rust :/)
 macro_rules! int_element {
     ($T:ident) => {
-        impl<C> SealedElement<C> for $T {
+        impl<C> Element<C> for $T {
             fn render_box(
                 self: Box<Self>,
                 _ctx: &mut State<C>,

@@ -18,7 +18,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, intern};
 
 use crate::callbacks::Event;
-use crate::element::{Element, SealedElement};
+use crate::element::Element;
 use crate::get_document;
 use crate::prelude::debug;
 use crate::signal::RenderingState;
@@ -101,7 +101,7 @@ pub struct HtmlElement<C> {
     /// The name of the tag
     tag: &'static str,
     /// List of child elements
-    children: Vec<Box<dyn SealedElement<C>>>,
+    children: Vec<Box<dyn Element<C>>>,
     /// Events to be registered on the element
     events: Vec<(&'static str, Box<dyn Fn(&mut State<C>)>)>,
     // We use `Vec` over `HashMap` here to avoid overhead because we are never doing lookups and
@@ -185,7 +185,7 @@ impl<C> HtmlElement<C> {
     }
 }
 
-impl<C: ComponentData> SealedElement<C> for HtmlElement<C> {
+impl<C: ComponentData> Element<C> for HtmlElement<C> {
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
