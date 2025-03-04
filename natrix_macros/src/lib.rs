@@ -4,7 +4,7 @@
 extern crate proc_macro;
 use proc_macro2::TokenStream;
 use quote::format_ident;
-use syn::ItemStruct;
+use syn::{ItemStruct, parse_quote};
 use template_quote::{ToTokens, quote};
 
 /// Derive the `ComponentBase` trait for a struct, required for implementing `Component`
@@ -35,23 +35,29 @@ fn implementation(item: ItemStruct) -> TokenStream {
     let field_count = proc_macro2::Literal::usize_unsuffixed(fields.len());
     let data_name = format_ident!("_{name}Data");
 
+    let generics = item.generics;
+    let mut bounds = generics.clone();
+    for type_ in bounds.type_params_mut() {
+        type_.bounds.push(parse_quote!('static));
+    }
+
     quote! {
         #[doc(hidden)]
         #(if is_named) {
-            pub struct #data_name {
+            pub struct #data_name #generics {
                 #(for field in &fields) {
                         pub #{field.access.clone()}: ::natrix::macro_ref::Signal<#{field.type_.clone()}, Self>,
                 }
             }
         } #(else) {
-            pub struct #data_name(
+            pub struct #data_name #generics (
                 #(for field in &fields) {
                         pub ::natrix::macro_ref::Signal<#{field.type_.clone()}, Self>,
                 }
             );
         }
 
-        impl ::natrix::macro_ref::ComponentData for #data_name {
+        impl #bounds ::natrix::macro_ref::ComponentData for #data_name #generics {
             type FieldRef<'s> = [&'s mut dyn ::natrix::macro_ref::SignalMethods<Self>; #field_count];
 
             fn signals_mut(&mut self) -> Self::FieldRef<'_> {
@@ -63,8 +69,8 @@ fn implementation(item: ItemStruct) -> TokenStream {
             }
         }
 
-        impl ::natrix::macro_ref::ComponentBase for #name {
-            type Data = #data_name;
+        impl #bounds ::natrix::macro_ref::ComponentBase for #name #generics {
+            type Data = #data_name #generics;
             fn into_data(self) -> Self::Data {
                 #data_name {
                     #(for field in fields) {
