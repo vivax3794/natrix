@@ -99,6 +99,35 @@ impl<C> ToAttribute<C> for bool {
     }
 }
 
+impl<C, T: ToAttribute<C>> ToAttribute<C> for Option<T> {
+    fn apply_attribute(
+        self: Box<Self>,
+        name: &'static str,
+        node: &web_sys::Element,
+        ctx: &mut State<C>,
+        rendering_state: &mut RenderingState,
+    ) {
+        match *self {
+            Some(inner) => Box::new(inner).apply_attribute(name, node, ctx, rendering_state),
+            None => node.remove_attribute(name).unwrap(),
+        }
+    }
+}
+impl<C, T: ToAttribute<C>, E: ToAttribute<C>> ToAttribute<C> for Result<T, E> {
+    fn apply_attribute(
+        self: Box<Self>,
+        name: &'static str,
+        node: &web_sys::Element,
+        ctx: &mut State<C>,
+        rendering_state: &mut RenderingState,
+    ) {
+        match *self {
+            Ok(inner) => Box::new(inner).apply_attribute(name, node, ctx, rendering_state),
+            Err(inner) => Box::new(inner).apply_attribute(name, node, ctx, rendering_state),
+        }
+    }
+}
+
 /// A Generic html node with a given name.
 #[must_use = "Web elements are useless if not rendered"]
 pub struct HtmlElement<C> {

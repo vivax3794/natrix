@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use natrix::html_elements::ToAttribute;
 use natrix::prelude::*;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 wasm_bindgen_test_configure!(run_in_browser);
@@ -9,39 +10,53 @@ mod common;
 const ROOT: &str = "ROOT";
 
 #[derive(Component, Default)]
-struct BoolTrue;
+struct Generic<T>(T);
 
-impl Component for BoolTrue {
+impl<T: ToAttribute<Self::Data> + Copy> Component for Generic<T> {
     fn render() -> impl Element<Self::Data> {
-        e::button().attr("disabled", true).id(ROOT)
+        e::div().attr("abc", |ctx: &S<Self>| *ctx.0).id(ROOT)
     }
 }
 
 #[wasm_bindgen_test]
 fn simple_true() {
     common::setup();
-    mount_component(BoolTrue, common::MOUNT_POINT);
+    mount_component(Generic(true), common::MOUNT_POINT);
 
     let button = common::get(ROOT);
-    assert_eq!(button.get_attribute("disabled"), Some("".to_owned()));
+    assert_eq!(button.get_attribute("abc"), Some("".to_owned()));
 }
-
-#[derive(Component, Default)]
-struct BoolFalse;
-
-impl Component for BoolFalse {
-    fn render() -> impl Element<Self::Data> {
-        e::button().attr("disabled", false).id(ROOT)
-    }
-}
-
 #[wasm_bindgen_test]
 fn simple_false() {
     common::setup();
-    mount_component(BoolFalse, common::MOUNT_POINT);
+    mount_component(Generic(false), common::MOUNT_POINT);
 
     let button = common::get(ROOT);
-    assert_eq!(button.get_attribute("disabled"), None)
+    assert_eq!(button.get_attribute("abc"), None);
+}
+#[wasm_bindgen_test]
+fn simple_string() {
+    common::setup();
+    mount_component(Generic("hello"), common::MOUNT_POINT);
+
+    let button = common::get(ROOT);
+    assert_eq!(button.get_attribute("abc"), Some("hello".to_owned()));
+}
+#[wasm_bindgen_test]
+fn simple_some() {
+    common::setup();
+    mount_component(Generic(Some("hello")), common::MOUNT_POINT);
+
+    let button = common::get(ROOT);
+    assert_eq!(button.get_attribute("abc"), Some("hello".to_owned()));
+}
+#[wasm_bindgen_test]
+fn simple_none() {
+    common::setup();
+    mount_component(Generic(None::<u8>), common::MOUNT_POINT);
+
+    let button = common::get(ROOT);
+    assert_eq!(button.get_attribute("abc"), None);
 }
 
 #[derive(Component, Default)]
