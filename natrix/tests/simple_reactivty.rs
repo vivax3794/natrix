@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use natrix::prelude::*;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
