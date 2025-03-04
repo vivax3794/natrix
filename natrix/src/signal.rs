@@ -1,7 +1,7 @@
 //! Signals for tracking reactive depdencies and modifications.
 
 use std::cell::{Cell, RefCell};
-use std::ops::{Deref, DerefMut};
+use std::ops::{AddAssign, Deref, DerefMut, DivAssign, MulAssign, SubAssign};
 
 use crate::state::{ComponentData, KeepAlive, State};
 use crate::utils::{RcCmpPtr, WeakCmpPtr};
@@ -114,3 +114,47 @@ pub(crate) trait ReactiveHook<C: ComponentData> {
     /// depdencies.
     fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>);
 }
+
+impl<T: PartialEq, C> PartialEq for Signal<T, C> {
+    fn eq(&self, other: &Self) -> bool {
+        **self == **other
+    }
+}
+impl<T: PartialEq, C> PartialEq<T> for Signal<T, C> {
+    fn eq(&self, other: &T) -> bool {
+        **self == *other
+    }
+}
+
+impl<T: PartialOrd, C> PartialOrd for Signal<T, C> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        (**self).partial_cmp(&**other)
+    }
+}
+impl<T: PartialOrd, C> PartialOrd<T> for Signal<T, C> {
+    fn partial_cmp(&self, other: &T) -> Option<std::cmp::Ordering> {
+        (**self).partial_cmp(other)
+    }
+}
+
+impl<R, T: AddAssign<R>, C> AddAssign<R> for Signal<T, C> {
+    fn add_assign(&mut self, rhs: R) {
+        **self += rhs;
+    }
+}
+impl<R, T: SubAssign<R>, C> SubAssign<R> for Signal<T, C> {
+    fn sub_assign(&mut self, rhs: R) {
+        **self -= rhs;
+    }
+}
+impl<R, T: MulAssign<R>, C> MulAssign<R> for Signal<T, C> {
+    fn mul_assign(&mut self, rhs: R) {
+        **self *= rhs;
+    }
+}
+impl<R, T: DivAssign<R>, C> DivAssign<R> for Signal<T, C> {
+    fn div_assign(&mut self, rhs: R) {
+        **self /= rhs;
+    }
+}
+

@@ -135,7 +135,7 @@ impl<C> HtmlElement<C> {
     /// The event handler is a closure taking a mutable reference to `S<Self>`.
     /// ```rust
     /// e::button().on("click", |ctx: &mut S<Self>| {
-    ///     *ctx.some_value += 1;
+    ///     ctx.some_value += 1;
     /// })
     /// ```
     /// For more information see [Reactivity](TODO) in the book.

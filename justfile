@@ -4,6 +4,8 @@ check: test lint
 # Run the test suit
 [working-directory: './natrix']
 test:
+    rustup run stable cargo nextest run
+    rustup run stable cargo nextest run --all-features
     rustup run stable wasm-pack test --headless --chrome 
     rustup run nightly wasm-pack test --headless --chrome --features nightly
 
