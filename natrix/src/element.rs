@@ -1,9 +1,8 @@
 //! Implementation of the `Element` trait for various abstract types.
 
-use std::borrow::Cow;
-
 use crate::signal::RenderingState;
 use crate::state::{ComponentData, State};
+use crate::type_macros;
 
 /// An `Element` is anything that can produce a DOM node.
 /// The most common examples include `HtmlElement` and types like `String`.
@@ -115,44 +114,24 @@ impl<T: Element<C>, E: Element<C>, C: ComponentData> Element<C> for Result<T, E>
     }
 }
 
-impl<C> Element<C> for &'static str {
-    #[inline]
-    fn render_box(
-        self: Box<Self>,
-        _ctx: &mut State<C>,
-        _render_state: &mut RenderingState,
-    ) -> web_sys::Node {
-        let text = web_sys::Text::new().expect("Failed to make text");
-        text.set_text_content(Some(*self));
-        text.into()
-    }
+/// Generate a Element implementation for a type that can be converted to `&str`
+macro_rules! string_element {
+    ($t:ty) => {
+        impl<C> Element<C> for $t {
+            fn render_box(
+                self: Box<Self>,
+                _ctx: &mut State<C>,
+                _render_state: &mut RenderingState,
+            ) -> web_sys::Node {
+                let text = web_sys::Text::new().expect("Failed to make text");
+                text.set_text_content(Some(&self));
+                text.into()
+            }
+        }
+    };
 }
 
-impl<C> Element<C> for String {
-    #[inline]
-    fn render_box(
-        self: Box<Self>,
-        _ctx: &mut State<C>,
-        _render_state: &mut RenderingState,
-    ) -> web_sys::Node {
-        let text = web_sys::Text::new().expect("Failed to make text");
-        text.set_text_content(Some(&self));
-        text.into()
-    }
-}
-
-impl<C> Element<C> for Cow<'static, str> {
-    #[inline]
-    fn render_box(
-        self: Box<Self>,
-        _ctx: &mut State<C>,
-        _render_state: &mut RenderingState,
-    ) -> web_sys::Node {
-        let text = web_sys::Text::new().expect("Failed to make text");
-        text.set_text_content(Some(&self));
-        text.into()
-    }
-}
+type_macros::strings!(string_element);
 
 /// Generate a implemention of `Element` for a specific integer type.
 ///
@@ -179,11 +158,4 @@ macro_rules! int_element {
     };
 }
 
-/// Call the `int_element!` macro for all the the specified int types
-macro_rules! int_elements {
-    ($($T:ident),*) => {
-        $(int_element!{$T})*
-    };
-}
-
-int_elements! {u8, u16, u32, u64, u128, i8, i16, i32, i128, usize, isize }
+type_macros::ints!(int_element);

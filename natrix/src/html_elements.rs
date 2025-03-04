@@ -19,17 +19,17 @@ use wasm_bindgen::{JsCast, intern};
 
 use crate::callbacks::Event;
 use crate::element::Element;
-use crate::get_document;
 use crate::prelude::debug;
 use crate::signal::RenderingState;
 use crate::state::{ComponentData, State};
+use crate::{get_document, type_macros};
 
 /// A trait for using a arbitrary type as a attribute value.
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a valid attribute value.",
     note = "Try converting the value to a string"
 )]
-pub(crate) trait ToAttribute<C>: 'static {
+pub trait ToAttribute<C>: 'static {
     /// Modify the given node to have the attribute set
     ///
     /// We use this apply system instead of returning the value as some types will also need to
@@ -43,41 +43,45 @@ pub(crate) trait ToAttribute<C>: 'static {
     );
 }
 
-impl<C> ToAttribute<C> for &'static str {
-    fn apply_attribute(
-        self: Box<Self>,
-        name: &'static str,
-        node: &web_sys::Element,
-        _ctx: &mut State<C>,
-        _rendering_state: &mut RenderingState,
-    ) {
-        node.set_attribute(name, *self).unwrap();
-    }
+/// generate a `ToAttribute` implementation for a string type
+macro_rules! attribute_string {
+    ($type:ty) => {
+        impl<C> ToAttribute<C> for $type {
+            fn apply_attribute(
+                self: Box<Self>,
+                name: &'static str,
+                node: &web_sys::Element,
+                _ctx: &mut State<C>,
+                _rendering_state: &mut RenderingState,
+            ) {
+                node.set_attribute(name, &self).unwrap();
+            }
+        }
+    };
 }
 
-impl<C> ToAttribute<C> for String {
-    fn apply_attribute(
-        self: Box<Self>,
-        name: &'static str,
-        node: &web_sys::Element,
-        _ctx: &mut State<C>,
-        _rendering_state: &mut RenderingState,
-    ) {
-        node.set_attribute(name, &self).unwrap();
-    }
+type_macros::strings!(attribute_string);
+
+/// generate `ToAttribute` for a int using itoa
+macro_rules! attribute_int {
+    ($T:ident) => {
+        impl<C> ToAttribute<C> for $T {
+            fn apply_attribute(
+                self: Box<Self>,
+                name: &'static str,
+                node: &web_sys::Element,
+                _ctx: &mut State<C>,
+                _rendering_state: &mut RenderingState,
+            ) {
+                let mut buffer = itoa::Buffer::new();
+                let result = buffer.format(*self);
+                node.set_attribute(name, result).unwrap();
+            }
+        }
+    };
 }
 
-impl<C> ToAttribute<C> for Cow<'static, str> {
-    fn apply_attribute(
-        self: Box<Self>,
-        name: &'static str,
-        node: &web_sys::Element,
-        _ctx: &mut State<C>,
-        _rendering_state: &mut RenderingState,
-    ) {
-        node.set_attribute(name, &self).unwrap();
-    }
-}
+type_macros::ints!(attribute_int);
 
 impl<C> ToAttribute<C> for bool {
     fn apply_attribute(

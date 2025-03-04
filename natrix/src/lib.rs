@@ -12,6 +12,7 @@ pub mod html_elements;
 mod render_callbacks;
 mod signal;
 mod state;
+mod type_macros;
 mod utils;
 
 thread_local! {
