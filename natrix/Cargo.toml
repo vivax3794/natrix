@@ -14,8 +14,10 @@ wasm-bindgen = {version= "0.2.100"}
 web-sys = { version = "0.3.77", features = ["Comment", "Element", "Event", "Text", "Document", "Window", "HtmlElement"] }
 
 natrix_macros = {path = "../natrix_macros", version="0.1.0"}
+
 itoa = { version = "1.0.14" }
 nohash-hasher = "0.2.0"
+ryu = "1.0.20"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.50"

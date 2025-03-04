@@ -140,14 +140,14 @@ type_macros::strings!(string_element);
 /// Note: The reason we can not do a blanket implemention on `itoa::Integer` here is that it would
 /// conflict with the blanket closure implementation of `Element` (Thanks rust :/)
 macro_rules! int_element {
-    ($T:ident) => {
+    ($T:ident, $fmt:ident) => {
         impl<C> Element<C> for $T {
             fn render_box(
                 self: Box<Self>,
                 _ctx: &mut State<C>,
                 _render_state: &mut RenderingState,
             ) -> web_sys::Node {
-                let mut buffer = itoa::Buffer::new();
+                let mut buffer = $fmt::Buffer::new();
                 let result = buffer.format(*self);
 
                 let text = web_sys::Text::new().expect("Failed to make text");
@@ -158,4 +158,4 @@ macro_rules! int_element {
     };
 }
 
-type_macros::ints!(int_element);
+type_macros::numberics!(int_element);

@@ -64,7 +64,7 @@ type_macros::strings!(attribute_string);
 
 /// generate `ToAttribute` for a int using itoa
 macro_rules! attribute_int {
-    ($T:ident) => {
+    ($T:ident, $fmt:ident) => {
         impl<C> ToAttribute<C> for $T {
             fn apply_attribute(
                 self: Box<Self>,
@@ -73,7 +73,7 @@ macro_rules! attribute_int {
                 _ctx: &mut State<C>,
                 _rendering_state: &mut RenderingState,
             ) {
-                let mut buffer = itoa::Buffer::new();
+                let mut buffer = $fmt::Buffer::new();
                 let result = buffer.format(*self);
                 node.set_attribute(name, result).unwrap();
             }
@@ -81,7 +81,7 @@ macro_rules! attribute_int {
     };
 }
 
-type_macros::ints!(attribute_int);
+type_macros::numberics!(attribute_int);
 
 impl<C> ToAttribute<C> for bool {
     fn apply_attribute(

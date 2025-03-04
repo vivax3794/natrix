@@ -13,21 +13,23 @@ macro_rules! strings {
 }
 
 /// Call the given macro with every int type
-macro_rules! ints {
+macro_rules! numberics {
     ($macro:ident) => {
-        $macro!(u8);
-        $macro!(u16);
-        $macro!(u32);
-        $macro!(u64);
-        $macro!(u128);
-        $macro!(usize);
-        $macro!(i8);
-        $macro!(i16);
-        $macro!(i32);
-        $macro!(i64);
-        $macro!(i128);
-        $macro!(isize);
+        $macro!(u8, itoa);
+        $macro!(u16, itoa);
+        $macro!(u32, itoa);
+        $macro!(u64, itoa);
+        $macro!(u128, itoa);
+        $macro!(usize, itoa);
+        $macro!(i8, itoa);
+        $macro!(i16, itoa);
+        $macro!(i32, itoa);
+        $macro!(i64, itoa);
+        $macro!(i128, itoa);
+        $macro!(isize, itoa);
+        $macro!(f32, ryu);
+        $macro!(f64, ryu);
     };
 }
 
-pub(crate) use {ints, strings};
+pub(crate) use {numberics, strings};
