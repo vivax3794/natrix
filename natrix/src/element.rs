@@ -77,17 +77,6 @@ impl<C> Element<C> for Comment {
     }
 }
 
-#[cfg(feature = "element_unit")]
-impl<C: ComponentData> Element<C> for () {
-    fn render_box(
-        self: Box<Self>,
-        ctx: &mut State<C>,
-        render_state: &mut RenderingState,
-    ) -> web_sys::Node {
-        Element::<C>::render(Comment, ctx, render_state)
-    }
-}
-
 impl<T: Element<C>, C: ComponentData> Element<C> for Option<T> {
     fn render_box(
         self: Box<Self>,

@@ -5,8 +5,6 @@ use wasm_bindgen_test::*;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-mod common;
-
 const ROOT_ID: &str = "__HELLO";
 
 #[derive(Component, Default)]
@@ -20,18 +18,18 @@ impl<T: Element<Self::Data> + Copy> Component for Generic<T> {
 
 #[wasm_bindgen_test]
 fn generic_int() {
-    common::setup();
-    mount_component(Generic::<u8>::default(), common::MOUNT_POINT);
+    crate::setup();
+    mount_component(Generic::<u8>::default(), crate::MOUNT_POINT);
 
-    let element = common::get(ROOT_ID);
+    let element = crate::get(ROOT_ID);
     assert_eq!(element.text_content(), Some("0".to_owned()));
 }
 
 #[wasm_bindgen_test]
 fn generic_str() {
-    common::setup();
-    mount_component(Generic("Hello World"), common::MOUNT_POINT);
+    crate::setup();
+    mount_component(Generic("Hello World"), crate::MOUNT_POINT);
 
-    let element = common::get(ROOT_ID);
+    let element = crate::get(ROOT_ID);
     assert_eq!(element.text_content(), Some("Hello World".to_owned()));
 }

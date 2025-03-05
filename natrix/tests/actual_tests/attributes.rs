@@ -5,8 +5,6 @@ use natrix::prelude::*;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 wasm_bindgen_test_configure!(run_in_browser);
 
-mod common;
-
 const ROOT: &str = "ROOT";
 
 #[derive(Component, Default)]
@@ -20,42 +18,42 @@ impl<T: ToAttribute<Self::Data> + Copy> Component for Generic<T> {
 
 #[wasm_bindgen_test]
 fn simple_true() {
-    common::setup();
-    mount_component(Generic(true), common::MOUNT_POINT);
+    crate::setup();
+    mount_component(Generic(true), crate::MOUNT_POINT);
 
-    let button = common::get(ROOT);
+    let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("".to_owned()));
 }
 #[wasm_bindgen_test]
 fn simple_false() {
-    common::setup();
-    mount_component(Generic(false), common::MOUNT_POINT);
+    crate::setup();
+    mount_component(Generic(false), crate::MOUNT_POINT);
 
-    let button = common::get(ROOT);
+    let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), None);
 }
 #[wasm_bindgen_test]
 fn simple_string() {
-    common::setup();
-    mount_component(Generic("hello"), common::MOUNT_POINT);
+    crate::setup();
+    mount_component(Generic("hello"), crate::MOUNT_POINT);
 
-    let button = common::get(ROOT);
+    let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("hello".to_owned()));
 }
 #[wasm_bindgen_test]
 fn simple_some() {
-    common::setup();
-    mount_component(Generic(Some("hello")), common::MOUNT_POINT);
+    crate::setup();
+    mount_component(Generic(Some("hello")), crate::MOUNT_POINT);
 
-    let button = common::get(ROOT);
+    let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("hello".to_owned()));
 }
 #[wasm_bindgen_test]
 fn simple_none() {
-    common::setup();
-    mount_component(Generic(None::<u8>), common::MOUNT_POINT);
+    crate::setup();
+    mount_component(Generic(None::<u8>), crate::MOUNT_POINT);
 
-    let button = common::get(ROOT);
+    let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), None);
 }
 
@@ -77,10 +75,10 @@ impl Component for Counter {
 
 #[wasm_bindgen_test]
 fn reactive_attribute() {
-    common::setup();
-    mount_component(Counter::default(), common::MOUNT_POINT);
+    crate::setup();
+    mount_component(Counter::default(), crate::MOUNT_POINT);
 
-    let button = common::get(ROOT);
+    let button = crate::get(ROOT);
 
     assert_eq!(button.get_attribute("abc"), Some("0".to_owned()));
 
@@ -115,10 +113,10 @@ impl Component for Toggle {
 
 #[wasm_bindgen_test]
 fn reactive_bool() {
-    common::setup();
-    mount_component(Toggle::default(), common::MOUNT_POINT);
+    crate::setup();
+    mount_component(Toggle::default(), crate::MOUNT_POINT);
 
-    let button = common::get(ROOT);
+    let button = crate::get(ROOT);
 
     assert_eq!(button.get_attribute("abc"), None);
 

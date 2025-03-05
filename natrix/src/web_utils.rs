@@ -1,8 +1,15 @@
 //! Wrappers for js apis
+#[cfg(feature = "async")]
+use std::time::Duration;
 
-/// Log the given string to browser console
-pub fn log(msg: &str) {
-    let msg = wasm_bindgen::JsValue::from_str(msg);
-    web_sys::console::log_1(&msg);
+pub use gloo;
+
+/// Sleeps for the given duration using js `setTimeout`.
+///
+/// # Panics
+/// If duration in miliseconds cant fit in a u32
+#[cfg(feature = "async")]
+pub async fn sleep(time: Duration) {
+    let milis = u32::try_from(time.as_millis()).unwrap();
+    gloo::timers::future::TimeoutFuture::new(milis).await;
 }
-

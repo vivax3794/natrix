@@ -2,16 +2,17 @@
 #![deny(unsafe_code, clippy::todo)]
 #![warn(missing_docs, clippy::missing_docs_in_private_items, clippy::pedantic)]
 #![allow(private_interfaces, private_bounds, clippy::type_complexity)]
+#![cfg_attr(feature = "nightly", feature(must_not_suspend))]
 
 use std::cell::OnceCell;
 
-mod callbacks;
-mod component;
-mod element;
+pub mod callbacks;
+pub mod component;
+pub mod element;
 pub mod html_elements;
 mod render_callbacks;
 mod signal;
-mod state;
+pub mod state;
 mod type_macros;
 mod utils;
 #[cfg(feature = "web_utils")]

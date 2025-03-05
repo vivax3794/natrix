@@ -3,8 +3,6 @@
 use natrix::prelude::*;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
-mod common;
-
 wasm_bindgen_test_configure!(run_in_browser);
 
 const BUTTON_1: &str = "_BUTTON_1";
@@ -35,18 +33,18 @@ impl Component for DoulbeCounter {
 
 #[wasm_bindgen_test]
 fn update_affects_inner_node() {
-    common::setup();
-    mount_component(DoulbeCounter::default(), common::MOUNT_POINT);
+    crate::setup();
+    mount_component(DoulbeCounter::default(), crate::MOUNT_POINT);
 
-    let button_1 = common::get(BUTTON_1);
-    let button_2 = common::get(BUTTON_2);
+    let button_1 = crate::get(BUTTON_1);
+    let button_2 = crate::get(BUTTON_2);
 
     button_1.click();
     button_1.click();
     button_1.click();
     button_1.click();
 
-    let text = common::get(TEXT);
+    let text = crate::get(TEXT);
     assert_eq!(text.text_content(), Some("0".to_owned()));
 
     button_2.click();

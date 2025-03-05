@@ -1,8 +1,22 @@
 # Features
 
 ## `nightly`
-Enables nightly only public facing features, which currently are:
-* ... none xD
+Enables features, which currently are:
+### `must_not_suspend`
+Annotates specific types with [`#[must_not_suspend]`](https://github.com/rust-lang/rust/issues/83310) which allow the compiler to warn you if you pass it across a await point. For this lint to take affect your code also needs to enable the feature (if you used the project template and selected nightly this is done already).
+```rust
+#![feature(must_not_suspend)]
+#![forbid(must_not_suspend)] // can make `warn` if you want
+```
+This will catch issues like this in `use_async` contexts.
+```rust
+let borrow = ctx.borrow_mut().unwrap();
+foo().await;
+let x = borrow; // ERROR
+```
+
+## `async` (Default)
+Enables the `ctx.use_async()` method, see the [Async](TODO) chapther for more information.
 
 ## `ergonomic_ops`
 Allows using inplace operations (`+=`, `-=`, etc) as well as comparissons (`==`, `>`) on signals without dereferencing them.
@@ -19,21 +33,5 @@ This is off by default as it is inconsistent with builtin smart pointers such as
 let foo = *ctx.value + 10;
 ```
 
-## `element_unit`
-Allows `()` to be used as an element (Same handling as `None`).
-This is off by default as there are very few legitemate usecases for this, and it can hide errors such as in the following code:
-```rust
-fn render() -> impl Element<Self::Data> {
-    e::div();
-}
-```
-> Although you will get a "unused `#[must_use]`" in this case
-
 ## `web_utils` (Default)
-Enables convnient wrappers around certain web apis such as `console.log`
-
-## `nightly_optimization` (Default)
-Internal only nightly optimizations, this feature flag is a noop on stable (i.e its safe to enable even if you target stable).
-
-## `intern` (Default)
-enabled [`wasm_bindgen` interning] of strings, its generally recommended to keep this on as it massively speeds up dom creation.
+Enables convnient wrappers around certain web apis such as `console.log`, see the [`web_utils`](TODO) module for details.

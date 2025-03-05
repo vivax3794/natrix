@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+mod actual_tests;
 
 use wasm_bindgen::JsCast;
 use web_sys::HtmlElement;
