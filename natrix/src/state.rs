@@ -207,17 +207,18 @@ pub mod async_impl {
     impl<T: ComponentData> State<T> {
         /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
         /// framework assumptions.
-        fn detach(&mut self) -> AsyncCtx<T> {
+        fn get_async_ctx(&mut self) -> AsyncCtx<T> {
             AsyncCtx { inner: self.weak() }
         }
 
         /// Spawn a async task in the local event loop, which will run on the next possible moment.
+        // This is `&mut` to make sure it cant be called in render callbacks.
         pub fn use_async<C, F>(&mut self, func: C)
         where
             C: FnOnce(AsyncCtx<T>) -> F,
             F: Future<Output = ()> + 'static,
         {
-            wasm_bindgen_futures::spawn_local(func(self.detach()));
+            wasm_bindgen_futures::spawn_local(func(self.get_async_ctx()));
         }
     }
 }
