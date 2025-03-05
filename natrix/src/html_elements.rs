@@ -19,7 +19,6 @@ use wasm_bindgen::{JsCast, intern};
 
 use crate::callbacks::Event;
 use crate::element::Element;
-use crate::prelude::debug;
 use crate::signal::RenderingState;
 use crate::state::{ComponentData, State};
 use crate::{get_document, type_macros};
@@ -275,7 +274,6 @@ fn create_event_handler<C: ComponentData>(
     render_state: &mut RenderingState<'_>,
 ) {
     let callback: Box<dyn Fn() + 'static> = Box::new(move || {
-        debug("Running Event Handler");
         let ctx = ctx_weak
             .upgrade()
             .expect("Component dropped in event callback");

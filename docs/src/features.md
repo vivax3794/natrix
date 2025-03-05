@@ -37,7 +37,3 @@ Internal only nightly optimizations, this feature flag is a noop on stable (i.e 
 
 ## `intern` (Default)
 enabled [`wasm_bindgen` interning] of strings, its generally recommended to keep this on as it massively speeds up dom creation.
-
-## `debug_log`
-This enables a bunch of internal logs (to `console.log`), has no affect in release builds.
-

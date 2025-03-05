@@ -33,7 +33,6 @@ ergonomic_ops = []
 
 web_utils = ["web-sys/console"]
 element_unit = []
-debug_log = ["web_utils"]
 nightly = ["nightly_optimization"]
 
 intern = ["wasm-bindgen/enable-interning"]
