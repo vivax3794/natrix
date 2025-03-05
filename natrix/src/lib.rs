@@ -14,6 +14,8 @@ mod signal;
 mod state;
 mod type_macros;
 mod utils;
+#[cfg(feature = "web_utils")]
+pub mod web_utils;
 
 thread_local! {
     /// A lazy initlized reference to the js document.
@@ -41,23 +43,6 @@ pub mod prelude {
     pub use super::element::Element;
     pub use super::html_elements as e;
     pub use super::state::{ComponentData, S, State};
-
-    /// Log the given string to browser console
-    #[cfg(feature = "web_utils")]
-    pub fn log(msg: &str) {
-        let msg = wasm_bindgen::JsValue::from_str(msg);
-        web_sys::console::log_1(&msg);
-    }
-
-    #[allow(unused_variables)]
-    /// Log the given string to browser console.
-    /// *Has no effect in release mode*
-    pub fn debug(msg: &str) {
-        #[cfg(debug_log)]
-        {
-            crate::prelude::log(msg);
-        }
-    }
 }
 
 /// Public exports of internal data structures for `natrix_macros` to use in generated code.
