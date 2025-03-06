@@ -71,7 +71,7 @@ fn implementation(item: ItemStruct) -> TokenStream {
 
         impl #bounds ::natrix::macro_ref::ComponentBase for #name #generics {
             type Data = #data_name #generics;
-            fn into_data(self) -> Self::Data {
+             fn into_data(self) -> Self::Data {
                 #data_name {
                     #(for field in fields) {
                         #{field.access.clone()}: ::natrix::macro_ref::Signal::new(self.#{field.access}),

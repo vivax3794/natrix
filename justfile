@@ -17,7 +17,7 @@ test_full: && test_web_full
     cargo +nightly hack nextest run --feature-powerset --features nightly --ignore-unknown-features --no-tests warn
 
 test_small: && test_web_small
-    cargo +nightly hack nextest run --each-feature --no-tests warn
+    cargo +nightly nextest run --all-features
 
 [working-directory: "./natrix"]
 test_web_full:
@@ -29,30 +29,25 @@ test_web_full:
         eval "$modified_line"
     done < <(cargo hack wasm-pack test --headless --chrome --feature-powerset --skip nightly --print-command-list --no-manifest-path)
 
-    #!/usr/bin/bash
     while IFS= read -r line || [ -n "$line" ]; do
         modified_line=$(echo "$line" | sed 's/cargo/rustup run nightly/g')
         echo "Executing: $modified_line 🎀"
         eval "$modified_line"
     done < <(cargo hack wasm-pack test --headless --chrome --feature-powerset --features nightly --print-command-list --no-manifest-path)
+    
+    # Firefox is ungodly slow
+    rustup run nightly wasm-pack test --headless --firefox --all-features
 
 [working-directory: "./natrix"]
 test_web_small:
-    #!/usr/bin/bash
-    set -e
-    while IFS= read -r line || [ -n "$line" ]; do
-        modified_line=$(echo "$line" | sed 's/cargo/rustup run nightly/g')
-        echo "Executing: $modified_line 🎀"
-        eval "$modified_line"
-    done < <(cargo hack wasm-pack test --headless --chrome --each-feature --print-command-list --no-manifest-path)
-
+    rustup run nightly wasm-pack test --headless --chrome --all-features
 
 lint_full:
     cargo +stable hack clippy --feature-powerset --skip nightly -- -Dwarnings
     cargo +nightly hack clippy --feature-powerset -- -Dwarnings
 
 lint_small:
-    cargo +nightly hack clippy --each-feature -- -Dwarnings
+    cargo +nightly clippy --all-features -- -Dwarnings
 
 fmt:
     cargo fmt
@@ -64,11 +59,11 @@ book:
 
 # Generate and open public docs
 docs:
-    cargo doc --open -p natrix --lib
+    cargo doc --open -p natrix --lib --all-features
 
 # Generate and open docs for internal items
 docs_internal:
-    cargo doc --open -p natrix --lib --document-private-items
+    cargo doc --open -p natrix --lib --all-features --document-private-items
 
 
 

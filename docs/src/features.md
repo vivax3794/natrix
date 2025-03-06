@@ -32,6 +32,3 @@ This is off by default as it is inconsistent with builtin smart pointers such as
 *ctx.value = 10;
 let foo = *ctx.value + 10;
 ```
-
-## `web_utils` (Default)
-Enables convnient wrappers around certain web apis such as `console.log`, see the [`web_utils`](TODO) module for details.

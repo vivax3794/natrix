@@ -80,7 +80,7 @@ macro_rules! attribute_int {
     };
 }
 
-type_macros::numberics!(attribute_int);
+type_macros::numerics!(attribute_int);
 
 impl<C> ToAttribute<C> for bool {
     fn apply_attribute(

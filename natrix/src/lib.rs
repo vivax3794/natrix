@@ -6,6 +6,8 @@
 
 use std::cell::OnceCell;
 
+#[cfg(feature = "async")]
+pub mod async_utils;
 pub mod callbacks;
 pub mod component;
 pub mod element;
@@ -15,8 +17,6 @@ mod signal;
 pub mod state;
 mod type_macros;
 mod utils;
-#[cfg(feature = "web_utils")]
-pub mod web_utils;
 
 thread_local! {
     /// A lazy initlized reference to the js document.

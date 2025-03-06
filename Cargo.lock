@@ -288,6 +288,7 @@ name = "natrix"
 version = "0.1.0"
 dependencies = [
  "cfg_aliases",
+ "futures",
  "gloo",
  "itoa",
  "natrix_macros",

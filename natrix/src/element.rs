@@ -147,4 +147,4 @@ macro_rules! int_element {
     };
 }
 
-type_macros::numberics!(int_element);
+type_macros::numerics!(int_element);
