@@ -139,24 +139,14 @@ mod ergonomin_ops {
 
     use super::Signal;
 
-    impl<T: PartialEq, C> PartialEq for Signal<T, C> {
-        fn eq(&self, other: &Self) -> bool {
-            **self == **other
-        }
-    }
-    impl<T: PartialEq, C> PartialEq<T> for Signal<T, C> {
-        fn eq(&self, other: &T) -> bool {
+    impl<R, T: PartialEq<R>, C> PartialEq<R> for Signal<T, C> {
+        fn eq(&self, other: &R) -> bool {
             **self == *other
         }
     }
 
-    impl<T: PartialOrd, C> PartialOrd for Signal<T, C> {
-        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-            (**self).partial_cmp(&**other)
-        }
-    }
-    impl<T: PartialOrd, C> PartialOrd<T> for Signal<T, C> {
-        fn partial_cmp(&self, other: &T) -> Option<std::cmp::Ordering> {
+    impl<R, T: PartialOrd<R>, C> PartialOrd<R> for Signal<T, C> {
+        fn partial_cmp(&self, other: &R) -> Option<std::cmp::Ordering> {
             (**self).partial_cmp(other)
         }
     }

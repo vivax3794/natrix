@@ -57,6 +57,29 @@ fn simple_none() {
     assert_eq!(button.get_attribute("abc"), None);
 }
 
+#[wasm_bindgen_test]
+fn simple_ok() {
+    crate::setup();
+    mount_component(
+        Generic(Ok::<&'static str, &'static str>("hello")),
+        crate::MOUNT_POINT,
+    );
+
+    let button = crate::get(ROOT);
+    assert_eq!(button.get_attribute("abc"), Some("hello".to_owned()));
+}
+#[wasm_bindgen_test]
+fn simple_err() {
+    crate::setup();
+    mount_component(
+        Generic(Err::<&'static str, &'static str>("world")),
+        crate::MOUNT_POINT,
+    );
+
+    let button = crate::get(ROOT);
+    assert_eq!(button.get_attribute("abc"), Some("world".to_owned()));
+}
+
 #[derive(Component, Default)]
 struct Counter {
     value: u8,

@@ -20,4 +20,5 @@ fn main() {
     cfg_aliases! {
         debug_log: { all(feature="debug_log", debug_assertions) },
     }
+    println!("cargo::rustc-check-cfg=cfg(mutants)");
 }

@@ -22,7 +22,7 @@ impl Component for AsyncComponent {
             .text(|ctx: &S<Self>| *ctx.data)
             .on("click", |ctx: &mut S<Self>| {
                 ctx.use_async(async |mut ctx| {
-                    async_utils::sleep(Duration::from_millis(200)).await;
+                    async_utils::sleep(Duration::from_millis(10)).await;
                     *ctx.borrow_mut().unwrap().data += 10;
                 });
             })
@@ -37,7 +37,7 @@ async fn async_works() {
     let button = crate::get(BUTTON_ID);
 
     button.click();
-    async_utils::sleep(Duration::from_millis(300)).await;
+    async_utils::sleep(Duration::from_millis(20)).await;
     assert_eq!(button.text_content(), Some("10".to_owned()));
 }
 
@@ -51,6 +51,6 @@ async fn async_multiple() {
     button.click();
     button.click();
     button.click();
-    async_utils::sleep(Duration::from_millis(400)).await;
+    async_utils::sleep(Duration::from_millis(30)).await;
     assert_eq!(button.text_content(), Some("30".to_owned()));
 }

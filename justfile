@@ -5,12 +5,15 @@ alias f := check_full
 alias p := publish
 
 check_small: test_small lint_small
-check_full: test_full lint_full
+check_full: test_full lint_full mutation
 
 # Publish the crate to crates.io
 publish: fmt check_full
     cargo publish -p natrix_macros
     cargo publish -p natrix
+
+mutation:
+    RUSTFLAGS="--cfg=mutants -C codegen-units=1" cargo mutants --workspace --test-workspace true --jobs 2 -- --lib --all-features
 
 test_full: && test_web_full
     cargo +stable hack nextest run --feature-powerset --skip nightly --no-tests warn
@@ -35,7 +38,9 @@ test_web_full:
         eval "$modified_line"
     done < <(cargo hack wasm-pack test --headless --chrome --feature-powerset --features nightly --print-command-list --no-manifest-path)
     
-    # Firefox is ungodly slow
+    # Firefox is ungodly slow so we only do one run with all features
+    # Which should realisticly catch any bugs
+    # (We run the full feature matrix on chrome and native tests because they are much faster to do so, so might as well)
     rustup run nightly wasm-pack test --headless --firefox --all-features
 
 [working-directory: "./natrix"]
@@ -43,11 +48,11 @@ test_web_small:
     rustup run nightly wasm-pack test --headless --chrome --all-features
 
 lint_full:
-    cargo +stable hack clippy --feature-powerset --skip nightly -- -Dwarnings
-    cargo +nightly hack clippy --feature-powerset -- -Dwarnings
+    cargo +stable hack clippy --feature-powerset --skip nightly --tests -- -Dwarnings
+    cargo +nightly hack clippy --feature-powerset --tests -- -Dwarnings
 
 lint_small:
-    cargo +nightly clippy --all-features -- -Dwarnings
+    cargo +nightly clippy --all-features -- -Dwarnings 
 
 fmt:
     cargo fmt
@@ -71,3 +76,4 @@ docs_internal:
 clean:
     cargo clean
     rm -rv docs/book || true
+    rm -rv mutants.out* || true

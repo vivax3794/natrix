@@ -69,10 +69,20 @@ impl<T> nohash_hasher::IsEnabled for RcCmpPtr<T> {}
 
 #[cfg(test)]
 mod tests {
+    use std::hash::Hasher;
+
+    use nohash_hasher::NoHashHasher;
+
     use super::*;
 
     #[derive(Debug)]
     struct NoCmp;
+
+    fn hash_of<T: Hash + nohash_hasher::IsEnabled>(value: &T) -> u64 {
+        let mut hasher = NoHashHasher::<T>::default();
+        value.hash(&mut hasher);
+        hasher.finish()
+    }
 
     #[test]
     fn eq_rc() {
@@ -115,6 +125,22 @@ mod tests {
     }
 
     #[test]
+    fn hash_direct_eq_rc() {
+        let foo = RcCmpPtr(Rc::new(NoCmp));
+        let bar = RcCmpPtr(Rc::clone(&foo.0));
+
+        assert_eq!(hash_of(&foo), hash_of(&bar));
+    }
+
+    #[test]
+    fn hash_direct_ne_rc() {
+        let foo = RcCmpPtr(Rc::new(NoCmp));
+        let bar = RcCmpPtr(Rc::new(NoCmp));
+
+        assert_ne!(hash_of(&foo), hash_of(&bar));
+    }
+
+    #[test]
     fn eq_weak() {
         let foo = WeakCmpPtr(Rc::downgrade(&Rc::new(NoCmp)));
         let bar = WeakCmpPtr(Weak::clone(&foo.0));
@@ -152,5 +178,21 @@ mod tests {
         set.insert(bar);
 
         assert_eq!(set.len(), 2);
+    }
+
+    #[test]
+    fn hash_direct_eq_weak() {
+        let foo = WeakCmpPtr(Rc::downgrade(&Rc::new(NoCmp)));
+        let bar = WeakCmpPtr(Weak::clone(&foo.0));
+
+        assert_eq!(hash_of(&foo), hash_of(&bar));
+    }
+
+    #[test]
+    fn hash_direct_ne_weak() {
+        let foo = WeakCmpPtr(Rc::downgrade(&Rc::new(NoCmp)));
+        let bar = WeakCmpPtr(Rc::downgrade(&Rc::new(NoCmp)));
+
+        assert_ne!(hash_of(&foo), hash_of(&bar));
     }
 }
