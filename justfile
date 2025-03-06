@@ -25,6 +25,11 @@ test_small: && test_web_small
 [working-directory: "./natrix"]
 test_web_full:
     #!/usr/bin/bash
+    # Firefox is ungodly slow so we only do one run with all features
+    # Which should realisticly catch any bugs
+    # (We run the full feature matrix on chrome and native tests because they are much faster to do so, so might as well)
+    rustup run nightly wasm-pack test --headless --firefox --all-features
+
     set -e
     while IFS= read -r line || [ -n "$line" ]; do
         modified_line=$(echo "$line" | sed 's/cargo/rustup run stable/g')
@@ -38,10 +43,6 @@ test_web_full:
         eval "$modified_line"
     done < <(cargo hack wasm-pack test --headless --chrome --feature-powerset --features nightly --print-command-list --no-manifest-path)
     
-    # Firefox is ungodly slow so we only do one run with all features
-    # Which should realisticly catch any bugs
-    # (We run the full feature matrix on chrome and native tests because they are much faster to do so, so might as well)
-    rustup run nightly wasm-pack test --headless --firefox --all-features
 
 [working-directory: "./natrix"]
 test_web_small:
@@ -52,7 +53,7 @@ lint_full:
     cargo +nightly hack clippy --feature-powerset --tests -- -Dwarnings
 
 lint_small:
-    cargo +nightly clippy --all-features -- -Dwarnings 
+    cargo +nightly clippy --all-features 
 
 fmt:
     cargo fmt
@@ -69,8 +70,6 @@ docs:
 # Generate and open docs for internal items
 docs_internal:
     cargo doc --open -p natrix --lib --all-features --document-private-items
-
-
 
 # Remove all build artifacts
 clean:

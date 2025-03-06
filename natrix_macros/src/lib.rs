@@ -22,13 +22,13 @@ use template_quote::{ToTokens, quote};
 #[proc_macro_derive(Component)]
 pub fn component_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let item = syn::parse_macro_input!(item as ItemStruct);
-    let result = implementation(item);
+    let result = component_derive_implementation(item);
     result.into()
 }
 
 /// Actual implementation of the macro, split out to make dealing with the different `TokenStream`
 /// types easier
-fn implementation(item: ItemStruct) -> TokenStream {
+fn component_derive_implementation(item: ItemStruct) -> TokenStream {
     let name = item.ident.clone();
     let (fields, is_named) = get_fields(item.fields);
 
@@ -72,10 +72,18 @@ fn implementation(item: ItemStruct) -> TokenStream {
         impl #bounds ::natrix::macro_ref::ComponentBase for #name #generics {
             type Data = #data_name #generics;
              fn into_data(self) -> Self::Data {
-                #data_name {
-                    #(for field in fields) {
-                        #{field.access.clone()}: ::natrix::macro_ref::Signal::new(self.#{field.access}),
+                #(if is_named) {
+                    #data_name {
+                        #(for field in fields) {
+                            #{field.access.clone()}: ::natrix::macro_ref::Signal::new(self.#{field.access}),
+                        }
                     }
+                } #(else) {
+                    #data_name(
+                        #(for field in fields) {
+                            ::natrix::macro_ref::Signal::new(self.#{field.access}),
+                        }
+                    )
                 }
             }
         }
