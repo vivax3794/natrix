@@ -4,11 +4,11 @@ use crate::element::Element;
 use crate::html_elements::ToAttribute;
 use crate::render_callbacks::{ReactiveAttribute, ReactiveNode, SimpleReactive};
 use crate::signal::RenderingState;
-use crate::state::{ComponentData, State};
+use crate::state::{ComponentData, RenderCtx, State};
 
 impl<F, C, R> Element<C> for F
 where
-    F: Fn(&State<C>) -> R + 'static,
+    F: Fn(RenderCtx<C>) -> R + 'static,
     R: Element<C> + 'static,
     C: ComponentData,
 {
@@ -26,7 +26,7 @@ where
 
 impl<F, C, R> ToAttribute<C> for F
 where
-    F: Fn(&State<C>) -> R + 'static,
+    F: Fn(RenderCtx<C>) -> R + 'static,
     R: ToAttribute<C>,
     C: ComponentData,
 {

@@ -24,9 +24,9 @@ impl Component for DoulbeCounter {
             .child(e::button().id(BUTTON_2).on("click", |ctx: &mut S<Self>| {
                 *ctx.value_two += 1;
             }))
-            .child(|ctx: &S<Self>| {
+            .child(|ctx: R<Self>| {
                 (*ctx.value_one >= 2)
-                    .then_some(e::div().id(TEXT).child(|ctx: &S<Self>| *ctx.value_two))
+                    .then_some(e::div().id(TEXT).child(|ctx: R<Self>| *ctx.value_two))
             })
     }
 }

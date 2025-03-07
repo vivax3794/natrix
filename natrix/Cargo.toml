@@ -28,7 +28,6 @@ futures = { version = "0.3.31", optional = true, default-features = false }
 wasm-bindgen-test = {version="0.3.50"}
 
 [build-dependencies]
-cfg_aliases = "0.2.1"
 rustversion = "1.0.19"
 
 [features]

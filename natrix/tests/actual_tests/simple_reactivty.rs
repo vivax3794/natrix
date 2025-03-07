@@ -16,7 +16,7 @@ impl Component for Counter {
     fn render() -> impl Element<Self::Data> {
         e::button()
             .id(BUTTON_ID)
-            .child(|ctx: &S<Self>| *ctx.value)
+            .child(|ctx: R<Self>| *ctx.value)
             .on("click", |ctx: &mut S<Self>| *ctx.value += 1)
     }
 }

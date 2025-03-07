@@ -43,7 +43,7 @@ pub mod prelude {
     pub use super::component::{Component, mount_component};
     pub use super::element::Element;
     pub use super::html_elements as e;
-    pub use super::state::{ComponentData, S, State};
+    pub use super::state::{ComponentData, R, S, State};
 }
 
 /// Public exports of internal data structures for `natrix_macros` to use in generated code.

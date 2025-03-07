@@ -19,7 +19,7 @@ impl Component for AsyncComponent {
     fn render() -> impl Element<Self::Data> {
         e::button()
             .id(BUTTON_ID)
-            .text(|ctx: &S<Self>| *ctx.data)
+            .text(|ctx: R<Self>| *ctx.data)
             .on("click", |ctx: &mut S<Self>| {
                 ctx.use_async(async |mut ctx| {
                     async_utils::sleep(Duration::from_millis(10)).await;

@@ -1,24 +1,14 @@
-use cfg_aliases::cfg_aliases;
-
 #[rustversion::nightly]
 fn nightly() {
-    cfg_aliases! {
-        nightly_optimization: { feature="nightly_optimization" },
-    }
+    println!("cargo::rustc-cfg=nightly");
 }
 
 #[rustversion::not(nightly)]
 fn nightly() {
-    cfg_aliases! {
-        nightly_optimization: {false},
-    }
+    println!("cargo::rustc-check-cfg=cfg(nightly)");
 }
 
 fn main() {
     nightly();
-
-    cfg_aliases! {
-        debug_log: { all(feature="debug_log", debug_assertions) },
-    }
     println!("cargo::rustc-check-cfg=cfg(mutants)");
 }

@@ -50,6 +50,10 @@ impl<T> DerefMut for State<T> {
 /// such as `|ctx: &S<Self>| ...`
 pub type S<C> = State<<C as ComponentBase>::Data>;
 
+/// A type alias for `RenderCtx<C::Data>`, should be prefered in closure argument hints.
+/// such as `|ctx: R<Self>| ...`
+pub type R<'c, C> = RenderCtx<'c, <C as ComponentBase>::Data>;
+
 impl<T> State<T> {
     /// Create a new instance of the state, returning a `Rc` to it
     pub(crate) fn new(data: T) -> Rc<RefCell<Self>> {
@@ -95,11 +99,31 @@ impl<T: ComponentData> State<T> {
             }
         }
 
+        let mut current_valid_hooks = Vec::new();
         for hook in hooks {
+            if let Some(hook_strong) = hook.0.upgrade() {
+                hook_strong.borrow_mut().drop_children_early();
+                current_valid_hooks.push(hook);
+            }
+        }
+        for hook in current_valid_hooks {
             if let Some(hook_strong) = hook.0.upgrade() {
                 hook_strong.borrow_mut().update(self, &hook);
             }
         }
+    }
+}
+
+/// Wrapper around a mutable state that only allows read-only access
+///
+/// This holds a mutable state to faciliate a few rendering features such as `.watch`
+pub struct RenderCtx<'c, C>(pub(crate) &'c mut State<C>);
+
+impl<C> Deref for RenderCtx<'_, C> {
+    type Target = C;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0.data
     }
 }
 

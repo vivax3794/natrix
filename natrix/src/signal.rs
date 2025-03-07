@@ -51,6 +51,13 @@ impl<T, C> Signal<T, C> {
             deps: Vec::new(),
         }
     }
+
+    /// Get the raw data without setting the read field.
+    /// The caller needs to handle registering depdencies
+    #[doc(hidden)]
+    pub fn get_raw(&self) -> &T {
+        &self.data
+    }
 }
 
 /// Methods for signals that arent generic over the contained data.
@@ -117,8 +124,11 @@ pub(crate) trait ReactiveHook<C: ComponentData> {
     /// Recalculate the hook and apply its update.
     ///
     /// Hooks should recall `ctx.reg_dep` with the you paramater to re-register any potential
-    /// depdencies.
+    /// depdencies as the update method uses `.drain(..)` on depdencies (this is also to ensure
+    /// reactive state that is only accesed in some conditions is recorded).
     fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>);
+    /// Drop keep alives and other state that will be invalidated in `update`
+    fn drop_children_early(&mut self);
 }
 
 /// Operations that are more ergonomic but inconsistent

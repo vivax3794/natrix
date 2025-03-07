@@ -12,7 +12,7 @@ struct Generic<T>(T);
 
 impl<T: ToAttribute<Self::Data> + Copy> Component for Generic<T> {
     fn render() -> impl Element<Self::Data> {
-        e::div().attr("abc", |ctx: &S<Self>| *ctx.0).id(ROOT)
+        e::div().attr("abc", |ctx: R<Self>| *ctx.0).id(ROOT)
     }
 }
 
@@ -89,7 +89,7 @@ impl Component for Counter {
     fn render() -> impl Element<Self::Data> {
         e::button()
             .id(ROOT)
-            .attr("abc", |ctx: &S<Self>| format!("{}", *ctx.value))
+            .attr("abc", |ctx: R<Self>| format!("{}", *ctx.value))
             .on("click", |ctx: &mut S<Self>| {
                 *ctx.value += 1;
             })
@@ -127,7 +127,7 @@ impl Component for Toggle {
     fn render() -> impl Element<Self::Data> {
         e::button()
             .id(ROOT)
-            .attr("abc", |ctx: &S<Self>| *ctx.value)
+            .attr("abc", |ctx: R<Self>| *ctx.value)
             .on("click", |ctx: &mut S<Self>| {
                 *ctx.value = !*ctx.value;
             })

@@ -12,7 +12,7 @@ struct Generic<T>(T);
 
 impl<T: Element<Self::Data> + Copy> Component for Generic<T> {
     fn render() -> impl Element<Self::Data> {
-        e::div().id(ROOT_ID).text(|ctx: &S<Self>| *ctx.0)
+        e::div().id(ROOT_ID).text(|ctx: R<Self>| *ctx.0)
     }
 }
 
