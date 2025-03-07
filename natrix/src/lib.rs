@@ -3,6 +3,7 @@
 #![warn(missing_docs, clippy::missing_docs_in_private_items, clippy::pedantic)]
 #![allow(private_interfaces, private_bounds, clippy::type_complexity)]
 #![cfg_attr(feature = "nightly", feature(must_not_suspend))]
+#![cfg_attr(nightly, feature(min_specialization))]
 
 use std::cell::OnceCell;
 

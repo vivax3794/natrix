@@ -6,11 +6,11 @@ use std::rc::Rc;
 use wasm_bindgen::JsCast;
 
 use crate::element::Element;
-use crate::get_document;
 use crate::html_elements::ToAttribute;
 use crate::signal::{RcDep, RcDepWeak, ReactiveHook, RenderingState};
 use crate::state::{ComponentData, KeepAlive, RenderCtx, State};
 use crate::utils::{RcCmpPtr, WeakCmpPtr};
+use crate::{get_document, type_macros};
 
 /// A noop hook used to fill the `Rc<RefCell<...>>` while the inital render pass runs so that that
 /// a real hook can be swapped in once initalized
@@ -83,24 +83,84 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
 
         (result_owned, node)
     }
+
+    /// Pulled out update method to facilite marking it as `default` on nightly
+    fn update(&mut self, ctx: &mut State<C>, you: &WeakCmpPtr<RefCell<Box<dyn ReactiveHook<C>>>>) {
+        let new_node = self.render(ctx, you);
+
+        let parent = self.target_node.parent_node().expect("No parent found");
+        parent
+            .replace_child(&new_node, &self.target_node)
+            .expect("Failed to replace node");
+        self.target_node = new_node;
+    }
 }
 
 impl<C: ComponentData, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
+    #[cfg(not(nightly))]
     fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
-        let this = &mut *self;
-        let new_node = this.render(ctx, you);
+        self.update(ctx, you);
+    }
 
-        let parent = this.target_node.parent_node().expect("No parent found");
-        parent
-            .replace_child(&new_node, &this.target_node)
-            .expect("Failed to replace node");
-        this.target_node = new_node;
+    #[cfg(nightly)]
+    default fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
+        self.update(ctx, you);
     }
 
     fn drop_children_early(&mut self) {
         self.keep_alive.clear();
     }
 }
+
+#[cfg(nightly)]
+impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, String> {
+    fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
+        ctx.clear();
+        let element = (self.callback)(RenderCtx {
+            ctx,
+            render_state: RenderingState {
+                keep_alive: &mut self.keep_alive,
+                parent_dep: you,
+            },
+        });
+        ctx.reg_dep(you);
+
+        self.target_node
+            .dyn_ref::<web_sys::Text>()
+            .unwrap()
+            .set_text_content(Some(&element));
+    }
+}
+
+/// generate nightly only optimization for ints and floats
+macro_rules! node_specialize_int {
+    ($type:ty, $fmt:ident) => {
+        #[cfg(nightly)]
+        impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, $type> {
+            fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
+                ctx.clear();
+                let element = (self.callback)(RenderCtx {
+                    ctx,
+                    render_state: RenderingState {
+                        keep_alive: &mut self.keep_alive,
+                        parent_dep: you,
+                    },
+                });
+                ctx.reg_dep(you);
+
+                let mut buffer = $fmt::Buffer::new();
+                let result = buffer.format(element);
+
+                self.target_node
+                    .dyn_ref::<web_sys::Text>()
+                    .unwrap()
+                    .set_text_content(Some(result));
+            }
+        }
+    };
+}
+
+type_macros::numerics!(node_specialize_int);
 
 /// A trait to allow `SimpleReactive` to deduplicate common reactive logic for attributes, classes,
 /// styles, etc
