@@ -50,7 +50,7 @@ pub mod prelude {
 #[doc(hidden)]
 pub mod macro_ref {
     pub use super::component::ComponentBase;
-    pub use super::signal::{Signal, SignalMethods};
+    pub use super::signal::{Signal, SignalMethods, SignalState};
     pub use super::state::ComponentData;
 }
 

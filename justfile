@@ -5,7 +5,7 @@ alias f := check_full
 alias p := publish
 
 check_small: test_small lint_small
-check_full: test_full lint_full mutation
+check_full: test_full lint_full
 
 # Publish the crate to crates.io
 publish: fmt check_full

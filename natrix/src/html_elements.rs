@@ -38,7 +38,7 @@ pub trait ToAttribute<C>: 'static {
         name: &'static str,
         node: &web_sys::Element,
         ctx: &mut State<C>,
-        rendering_state: &mut RenderingState,
+        rendering_state: &mut RenderingState<C>,
     );
 }
 
@@ -51,7 +51,7 @@ macro_rules! attribute_string {
                 name: &'static str,
                 node: &web_sys::Element,
                 _ctx: &mut State<C>,
-                _rendering_state: &mut RenderingState,
+                _rendering_state: &mut RenderingState<C>,
             ) {
                 node.set_attribute(name, &self).unwrap();
             }
@@ -70,7 +70,7 @@ macro_rules! attribute_int {
                 name: &'static str,
                 node: &web_sys::Element,
                 _ctx: &mut State<C>,
-                _rendering_state: &mut RenderingState,
+                _rendering_state: &mut RenderingState<C>,
             ) {
                 let mut buffer = $fmt::Buffer::new();
                 let result = buffer.format(*self);
@@ -88,7 +88,7 @@ impl<C> ToAttribute<C> for bool {
         name: &'static str,
         node: &web_sys::Element,
         _ctx: &mut State<C>,
-        _rendering_state: &mut RenderingState,
+        _rendering_state: &mut RenderingState<C>,
     ) {
         if *self {
             node.set_attribute(name, "").unwrap();
@@ -104,7 +104,7 @@ impl<C, T: ToAttribute<C>> ToAttribute<C> for Option<T> {
         name: &'static str,
         node: &web_sys::Element,
         ctx: &mut State<C>,
-        rendering_state: &mut RenderingState,
+        rendering_state: &mut RenderingState<C>,
     ) {
         match *self {
             Some(inner) => Box::new(inner).apply_attribute(name, node, ctx, rendering_state),
@@ -118,7 +118,7 @@ impl<C, T: ToAttribute<C>, E: ToAttribute<C>> ToAttribute<C> for Result<T, E> {
         name: &'static str,
         node: &web_sys::Element,
         ctx: &mut State<C>,
-        rendering_state: &mut RenderingState,
+        rendering_state: &mut RenderingState<C>,
     ) {
         match *self {
             Ok(inner) => Box::new(inner).apply_attribute(name, node, ctx, rendering_state),
@@ -221,7 +221,7 @@ impl<C: ComponentData> Element<C> for HtmlElement<C> {
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
-        render_state: &mut RenderingState,
+        render_state: &mut RenderingState<C>,
     ) -> web_sys::Node {
         let Self {
             tag: name,
@@ -271,7 +271,7 @@ fn create_event_handler<C: ComponentData>(
     event: &str,
     function: Box<dyn Fn(&mut State<C>)>,
     ctx_weak: Weak<std::cell::RefCell<State<C>>>,
-    render_state: &mut RenderingState<'_>,
+    render_state: &mut RenderingState<'_, C>,
 ) {
     let callback: Box<dyn Fn() + 'static> = Box::new(move || {
         let ctx = ctx_weak

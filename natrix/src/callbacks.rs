@@ -15,7 +15,7 @@ where
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
-        render_state: &mut RenderingState,
+        render_state: &mut RenderingState<C>,
     ) -> web_sys::Node {
         let (hook, node) = ReactiveNode::create_inital(Box::new(self), ctx);
 
@@ -35,7 +35,7 @@ where
         name: &'static str,
         node: &web_sys::Element,
         ctx: &mut State<C>,
-        rendering_state: &mut RenderingState,
+        rendering_state: &mut RenderingState<C>,
     ) {
         let hook = SimpleReactive::init_new(
             Box::new(move |ctx| ReactiveAttribute {

@@ -13,9 +13,11 @@ pub type RcDep<C> = RcCmpPtr<RefCell<Box<dyn ReactiveHook<C>>>>;
 pub type RcDepWeak<C> = WeakCmpPtr<RefCell<Box<dyn ReactiveHook<C>>>>;
 
 /// State passed to rendering callbacks
-pub(crate) struct RenderingState<'s> {
+pub(crate) struct RenderingState<'s, C> {
     /// Push objects to this array to keep them alive as long as the parent context is valid.
     pub(crate) keep_alive: &'s mut Vec<KeepAlive>,
+    /// The parent render context, can be used to register it as a depdency of yourself
+    pub(crate) parent_dep: &'s RcDepWeak<C>,
 }
 
 /// A signal tracks reads and writes, as well as
@@ -35,6 +37,15 @@ pub struct Signal<T, C> {
     deps: Vec<RcDepWeak<C>>,
 }
 
+/// The `written` and `read` flags of a signal extracted
+#[derive(Copy, Clone)]
+pub struct SignalState {
+    /// Was the signal written to
+    written: bool,
+    /// Was the signal read
+    read: bool,
+}
+
 impl<T: std::fmt::Debug, C> std::fmt::Debug for Signal<T, C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         (**self).fmt(f)
@@ -52,11 +63,20 @@ impl<T, C> Signal<T, C> {
         }
     }
 
-    /// Get the raw data without setting the read field.
-    /// The caller needs to handle registering depdencies
     #[doc(hidden)]
-    pub fn get_raw(&self) -> &T {
-        &self.data
+    pub fn pop_state(&mut self) -> SignalState {
+        let result = SignalState {
+            written: self.written,
+            read: self.read.get(),
+        };
+        self.clear();
+        result
+    }
+
+    #[doc(hidden)]
+    pub fn set_state(&mut self, state: SignalState) {
+        self.written = state.written;
+        self.read.set(state.read);
     }
 }
 
@@ -126,9 +146,25 @@ pub(crate) trait ReactiveHook<C: ComponentData> {
     /// Hooks should recall `ctx.reg_dep` with the you paramater to re-register any potential
     /// depdencies as the update method uses `.drain(..)` on depdencies (this is also to ensure
     /// reactive state that is only accesed in some conditions is recorded).
-    fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>);
+    fn update(&mut self, _ctx: &mut State<C>, _you: &RcDepWeak<C>) {}
     /// Drop keep alives and other state that will be invalidated in `update`
-    fn drop_children_early(&mut self);
+    fn drop_children_early(&mut self) {}
+
+    /// Ran in a loop before the main update, may be used to filter yourself out, or to register a
+    /// new hook in your place
+    fn pre_update(&mut self, _ctx: &mut State<C>, _you: &RcDepWeak<C>) -> PreUpdateResult<C> {
+        PreUpdateResult::KeepMe
+    }
+}
+
+/// The result of pre-update
+pub(crate) enum PreUpdateResult<C> {
+    /// Keep the hook for the later stages
+    KeepMe,
+    /// Remove the hook
+    RemoveMe,
+    /// Register the given depdency then remove this hook
+    RegisterThenRemove(RcDepWeak<C>),
 }
 
 /// Operations that are more ergonomic but inconsistent

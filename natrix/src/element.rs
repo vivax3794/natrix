@@ -39,12 +39,12 @@ pub trait Element<C>: 'static {
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
-        render_state: &mut RenderingState,
+        render_state: &mut RenderingState<C>,
     ) -> web_sys::Node;
 
     /// A utility wrapper around `render_box` for when you have a concrete type.
     #[doc(hidden)]
-    fn render(self, ctx: &mut State<C>, render_state: &mut RenderingState) -> web_sys::Node
+    fn render(self, ctx: &mut State<C>, render_state: &mut RenderingState<C>) -> web_sys::Node
     where
         Self: Sized,
     {
@@ -56,7 +56,7 @@ impl<C> Element<C> for web_sys::Node {
     fn render_box(
         self: Box<Self>,
         _ctx: &mut State<C>,
-        _render_state: &mut RenderingState,
+        _render_state: &mut RenderingState<C>,
     ) -> web_sys::Node {
         *self
     }
@@ -69,7 +69,7 @@ impl<C> Element<C> for Comment {
     fn render_box(
         self: Box<Self>,
         _ctx: &mut State<C>,
-        _render_state: &mut RenderingState,
+        _render_state: &mut RenderingState<C>,
     ) -> web_sys::Node {
         web_sys::Comment::new()
             .expect("Failed to make comment")
@@ -81,7 +81,7 @@ impl<T: Element<C>, C: ComponentData> Element<C> for Option<T> {
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
-        render_state: &mut RenderingState,
+        render_state: &mut RenderingState<C>,
     ) -> web_sys::Node {
         match *self {
             Some(element) => element.render(ctx, render_state),
@@ -94,7 +94,7 @@ impl<T: Element<C>, E: Element<C>, C: ComponentData> Element<C> for Result<T, E>
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
-        render_state: &mut RenderingState,
+        render_state: &mut RenderingState<C>,
     ) -> web_sys::Node {
         match *self {
             Ok(element) => element.render(ctx, render_state),
@@ -110,7 +110,7 @@ macro_rules! string_element {
             fn render_box(
                 self: Box<Self>,
                 _ctx: &mut State<C>,
-                _render_state: &mut RenderingState,
+                _render_state: &mut RenderingState<C>,
             ) -> web_sys::Node {
                 let text = web_sys::Text::new().expect("Failed to make text");
                 text.set_text_content(Some(&self));
@@ -134,7 +134,7 @@ macro_rules! int_element {
             fn render_box(
                 self: Box<Self>,
                 _ctx: &mut State<C>,
-                _render_state: &mut RenderingState,
+                _render_state: &mut RenderingState<C>,
             ) -> web_sys::Node {
                 let mut buffer = $fmt::Buffer::new();
                 let result = buffer.format(*self);

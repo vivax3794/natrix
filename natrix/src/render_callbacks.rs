@@ -14,7 +14,7 @@ use crate::utils::{RcCmpPtr, WeakCmpPtr};
 
 /// A noop hook used to fill the `Rc<RefCell<...>>` while the inital render pass runs so that that
 /// a real hook can be swapped in once initalized
-struct DummyHook;
+pub(crate) struct DummyHook;
 impl<C: ComponentData> ReactiveHook<C> for DummyHook {
     fn update(&mut self, _ctx: &mut State<C>, _you: &RcDepWeak<C>) {}
     fn drop_children_early(&mut self) {}
@@ -37,12 +37,21 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
     /// `target_node` field. This function is split out to facilitate `Self::create_inital`
     fn render(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) -> web_sys::Node {
         ctx.clear();
-        let element = (self.callback)(RenderCtx(ctx));
+
+        let element = (self.callback)(RenderCtx {
+            ctx,
+            render_state: RenderingState {
+                keep_alive: &mut self.keep_alive,
+                parent_dep: you,
+            },
+        });
         ctx.reg_dep(you);
 
         let mut state = RenderingState {
             keep_alive: &mut self.keep_alive,
+            parent_dep: you,
         };
+
         element.render(ctx, &mut state)
     }
 
@@ -97,7 +106,12 @@ impl<C: ComponentData, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
 /// styles, etc
 pub(crate) trait ReactiveValue<C> {
     /// Actually apply the change
-    fn apply(self, ctx: &mut State<C>, render_state: &mut RenderingState, node: &web_sys::Element);
+    fn apply(
+        self,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState<C>,
+        node: &web_sys::Element,
+    );
 }
 
 /// A common wrapper for simple reactive operations to deduplicate depdency tracking code
@@ -114,13 +128,23 @@ pub(crate) struct SimpleReactive<C, K> {
 impl<C: ComponentData, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K> {
     fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
         ctx.clear();
-        let value = (self.callback)(RenderCtx(ctx));
+        let value = (self.callback)(RenderCtx {
+            ctx,
+            render_state: RenderingState {
+                keep_alive: &mut self.keep_alive,
+                parent_dep: you,
+            },
+        });
         ctx.reg_dep(you);
 
-        let mut state = RenderingState {
-            keep_alive: &mut self.keep_alive,
-        };
-        value.apply(ctx, &mut state, &self.node);
+        value.apply(
+            ctx,
+            &mut RenderingState {
+                keep_alive: &mut self.keep_alive,
+                parent_dep: you,
+            },
+            &self.node,
+        );
     }
     fn drop_children_early(&mut self) {
         self.keep_alive.clear();
@@ -160,7 +184,12 @@ pub(crate) struct ReactiveAttribute<T> {
 }
 
 impl<C, T: ToAttribute<C>> ReactiveValue<C> for ReactiveAttribute<T> {
-    fn apply(self, ctx: &mut State<C>, render_state: &mut RenderingState, node: &web_sys::Element) {
+    fn apply(
+        self,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState<C>,
+        node: &web_sys::Element,
+    ) {
         Box::new(self.data).apply_attribute(self.name, node, ctx, render_state);
     }
 }
