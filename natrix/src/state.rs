@@ -157,6 +157,14 @@ impl<T: ComponentData> State<T> {
             }
         }
     }
+
+    /// Get the unwraped data referenced by this guard
+    pub fn get<F, A>(&self, guard: &Guard<F>) -> A
+    where
+        F: Fn(&Self) -> A,
+    {
+        (guard.getter)(self)
+    }
 }
 
 /// Wrapper around a mutable state that only allows read-only access
@@ -205,6 +213,14 @@ impl<C: ComponentData> RenderCtx<'_, '_, C> {
 
         result
     }
+
+    /// Get the unwraped data referenced by this guard
+    pub fn get<F, A>(&self, guard: &Guard<F>) -> A
+    where
+        F: Fn(&State<C>) -> A,
+    {
+        self.ctx.get(guard)
+    }
 }
 
 /// The wather hook / signal
@@ -233,6 +249,61 @@ where
         } else {
             PreUpdateResult::RegisterThenRemove(self.dep.clone())
         }
+    }
+}
+
+/// This guard ensures that when it is in scope the data it was created for is `Some`
+#[derive(Clone, Copy)]
+pub struct Guard<F> {
+    /// The closure for getting the value from a ctx
+    getter: F,
+}
+
+/// Get a guard handle that can be used to retrive the `Some` variant of a option without having to
+/// use `.unwrap`.
+/// Should be used to achive find-grained reactivity (internally this uses `.watch` on `.is_some()`)
+/// ```rust
+/// if let Some(value_guard) = guard_option!(ctx.value) {
+///     e::div().text(move |ctx: R<Self>| ctx.get(&value_guard))
+/// } else {
+///     e::div().text("Is none")
+/// }
+/// ```
+#[macro_export]
+macro_rules! guard_option {
+    ($ctx:ident. $($getter:tt)+) => {
+        if $ctx.watch(move |ctx| ctx.$($getter)+.is_some()) {
+            Some(::natrix::macro_ref::Guard::new(
+                move |ctx: &::natrix::macro_ref::S<Self>| ctx.$($getter)+.unwrap(),
+            ))
+        } else {
+            None
+        }
+    };
+}
+
+/// Get a guard handle that can be used to retrive the `Ok` variant of a option without having to
+/// use `.unwrap`, or the `Err` variant.
+/// ```
+#[macro_export]
+macro_rules! guard_result {
+    ($ctx:ident. $($getter:tt)+) => {
+        if $ctx.watch(move |ctx| ctx.$($getter)+.is_ok()) {
+            Ok(::natrix::macro_ref::Guard::new(
+                move |ctx: &::natrix::macro_ref::S<Self>| ctx.$($getter)+.unwrap(),
+            ))
+        } else {
+            Err(::natrix::macro_ref::Guard::new(
+                move |ctx: &::natrix::macro_ref::S<Self>| ctx.$($getter)+.unwrap_err(),
+            ))
+        }
+    };
+}
+
+impl<F> Guard<F> {
+    #[doc(hidden)]
+    pub fn new(getter: F) -> Self {
+        Self { getter }
     }
 }
 

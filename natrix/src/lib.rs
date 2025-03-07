@@ -43,8 +43,8 @@ pub mod prelude {
     pub use super::callbacks::Event;
     pub use super::component::{Component, mount_component};
     pub use super::element::Element;
-    pub use super::html_elements as e;
     pub use super::state::{ComponentData, R, S, State};
+    pub use super::{guard_option, guard_result, html_elements as e};
 }
 
 /// Public exports of internal data structures for `natrix_macros` to use in generated code.
@@ -52,7 +52,7 @@ pub mod prelude {
 pub mod macro_ref {
     pub use super::component::ComponentBase;
     pub use super::signal::{Signal, SignalMethods, SignalState};
-    pub use super::state::ComponentData;
+    pub use super::state::{ComponentData, Guard, S};
 }
 
 // Cargo-mutants cant run `wasm-pack`, this is a workaround to ensure its tests get included
