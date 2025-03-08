@@ -19,7 +19,7 @@ impl Component for GuardTester {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on("click", |ctx: &mut S<Self>| match &mut *ctx.value {
+                    .on::<events::Click>(|ctx: &mut S<Self>, _| match &mut *ctx.value {
                         Some(value) => *value += 1,
                         None => *ctx.value = Some(0),
                     }),
@@ -67,7 +67,7 @@ impl Component for GuardTesterResult {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on("click", |ctx: &mut S<Self>| match &mut *ctx.value {
+                    .on::<events::Click>(|ctx: &mut S<Self>, _| match &mut *ctx.value {
                         Ok(value) => *value += 1,
                         Err(_) => *ctx.value = Ok(0),
                     }),
@@ -114,7 +114,7 @@ impl Component for GuardTesterNested {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on("click", |ctx: &mut S<Self>| match &mut *ctx.value {
+                    .on::<events::Click>(|ctx: &mut S<Self>, _| match &mut *ctx.value {
                         Some(Some(value)) => *value += 1,
                         Some(None) => *ctx.value = Some(Some(0)),
                         None => *ctx.value = Some(None),

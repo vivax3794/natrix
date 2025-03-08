@@ -24,7 +24,7 @@ impl Component for Counter {
                     e::div()
                 }
             })
-            .on("click", |ctx: &mut S<Self>| *ctx.value += 1)
+            .on::<events::Click>(|ctx: &mut S<Self>, _| *ctx.value += 1)
     }
 }
 

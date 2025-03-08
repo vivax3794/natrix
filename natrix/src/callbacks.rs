@@ -54,16 +54,16 @@ where
 /// the whole function trait yourself.
 ///
 /// ```
-/// fn my_button<C>(click: impl Event<C>) -> impl Element<C> {
+/// fn my_button<C>(click: impl EventHandler<C>) -> impl Element<C> {
 ///     e::button().on("click", click)
 /// }
 /// ```
-pub trait Event<C> {
+pub trait EventHandler<C, E> {
     /// Return a boxed version of the function in this event
-    fn func(self) -> Box<dyn Fn(&mut State<C>)>;
+    fn func(self) -> impl Fn(&mut State<C>, E) + 'static;
 }
-impl<C, F: Fn(&mut State<C>) + 'static> Event<C> for F {
-    fn func(self) -> Box<dyn Fn(&mut State<C>)> {
-        Box::new(self)
+impl<C, E, F: Fn(&mut State<C>, E) + 'static> EventHandler<C, E> for F {
+    fn func(self) -> impl Fn(&mut State<C>, E) + 'static {
+        self
     }
 }

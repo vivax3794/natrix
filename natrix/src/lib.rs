@@ -41,10 +41,9 @@ pub(crate) fn get_document() -> web_sys::Document {
 pub mod prelude {
     pub use natrix_macros::Component;
 
-    pub use super::callbacks::Event;
     pub use super::component::{Component, mount_component};
     pub use super::element::Element;
-    pub use super::state::{ComponentData, R, S, State};
+    pub use super::state::{R, S};
     pub use super::{events, guard_option, guard_result, html_elements as e};
 }
 

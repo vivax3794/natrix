@@ -17,8 +17,9 @@ use std::rc::Weak;
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, intern};
 
-use crate::callbacks::Event;
+use crate::callbacks::EventHandler;
 use crate::element::Element;
+use crate::events::Event;
 use crate::signal::RenderingState;
 use crate::state::{ComponentData, State};
 use crate::{get_document, type_macros};
@@ -135,7 +136,7 @@ pub struct HtmlElement<C> {
     /// List of child elements
     children: Vec<Box<dyn Element<C>>>,
     /// Events to be registered on the element
-    events: Vec<(&'static str, Box<dyn Fn(&mut State<C>)>)>,
+    events: Vec<(&'static str, Box<dyn Fn(&mut State<C>, web_sys::Event)>)>,
     // We use `Vec` over `HashMap` here to avoid overhead because we are never doing lookups and
     // the js side is already doing deduplication.
     /// Inline css styles to apply
@@ -167,8 +168,16 @@ impl<C> HtmlElement<C> {
     /// })
     /// ```
     /// For more information see [Reactivity](TODO) in the book.
-    pub fn on(mut self, event: &'static str, function: impl Event<C>) -> Self {
-        self.events.push((event, function.func()));
+    #[allow(clippy::missing_panics_doc)]
+    pub fn on<E: Event>(mut self, function: impl EventHandler<C, E::JsEvent>) -> Self {
+        let function = function.func();
+        self.events.push((
+            E::EVENT_NAME,
+            Box::new(move |ctx, event| {
+                let event = event.dyn_into::<E::JsEvent>().unwrap();
+                function(ctx, event);
+            }),
+        ));
         self
     }
 
@@ -269,22 +278,19 @@ impl<C: ComponentData> Element<C> for HtmlElement<C> {
 fn create_event_handler<C: ComponentData>(
     element: &web_sys::Element,
     event: &str,
-    function: Box<dyn Fn(&mut State<C>)>,
+    function: Box<dyn Fn(&mut State<C>, web_sys::Event)>,
     ctx_weak: Weak<std::cell::RefCell<State<C>>>,
     render_state: &mut RenderingState<'_>,
 ) {
-    let callback: Box<dyn Fn() + 'static> = Box::new(move || {
-        let ctx = ctx_weak
-            .upgrade()
-            .expect("Component dropped in event callback");
+    let callback: Box<dyn Fn(web_sys::Event) + 'static> = Box::new(move |event| {
+        let ctx = ctx_weak.upgrade().unwrap();
         let mut ctx = ctx.borrow_mut();
 
         ctx.clear();
-        function(&mut ctx);
+        function(&mut ctx, event.dyn_into().unwrap());
         ctx.update();
     });
-
-    let closure = Closure::<dyn Fn()>::wrap(callback);
+    let closure = Closure::wrap(callback);
     let function = closure.as_ref().unchecked_ref();
     element
         .add_event_listener_with_callback(intern(event), function)

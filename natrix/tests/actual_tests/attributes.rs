@@ -90,7 +90,7 @@ impl Component for Counter {
         e::button()
             .id(ROOT)
             .attr("abc", |ctx: R<Self>| format!("{}", *ctx.value))
-            .on("click", |ctx: &mut S<Self>| {
+            .on::<events::Click>(|ctx: &mut S<Self>, _| {
                 *ctx.value += 1;
             })
     }
@@ -128,7 +128,7 @@ impl Component for Toggle {
         e::button()
             .id(ROOT)
             .attr("abc", |ctx: R<Self>| *ctx.value)
-            .on("click", |ctx: &mut S<Self>| {
+            .on::<events::Click>(|ctx: &mut S<Self>, _| {
                 *ctx.value = !*ctx.value;
             })
     }

@@ -15,7 +15,7 @@ impl Component for Counter {
         e::button()
             .text(|ctx: &S<Self>| *ctx.0)
             .style("font-size", "4rem")
-            .on("click", |ctx: &mut S<Self>| {
+            .on::<events::Click>(|ctx: &mut S<Self>, _| {
                 *ctx.0 += 1;
             })
     }

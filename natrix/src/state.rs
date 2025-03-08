@@ -216,6 +216,15 @@ impl<C: ComponentData> RenderCtx<'_, '_, C> {
     /// Then whenever any signals read in the function are modified re-run the function and check
     /// if the new result is different.
     /// Only reruns the caller when the item is different.
+    ///
+    /// # Example
+    /// ```rust
+    /// if ctx.watch(|ctx| *ctx.value > 2) {
+    ///     e::div().text(|ctx: &S<Self>| *ctx.value)
+    /// } else {
+    ///     // ...
+    /// }
+    /// ```
     pub fn watch<T, F>(&mut self, func: F) -> T
     where
         F: Fn(&State<C>) -> T + 'static,
@@ -261,7 +270,7 @@ struct WatchState<F, T> {
 impl<C, F, T> ReactiveHook<C> for WatchState<F, T>
 where
     C: ComponentData,
-    T: PartialEq + Clone,
+    T: PartialEq,
     F: Fn(&State<C>) -> T,
 {
     fn pre_update(&mut self, ctx: &mut State<C>, you: HookKey) -> PreUpdateResult {
