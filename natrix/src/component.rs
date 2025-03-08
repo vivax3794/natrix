@@ -70,6 +70,40 @@ pub trait Component: ComponentBase {
     fn render() -> impl Element<Self::Data>;
 }
 
+/// Wrapper around a component to let it be used as a subcomponet, `.child(C(MyComponent))`
+///
+/// This exsists because of type system limitations.
+pub struct C<I>(pub I);
+
+impl<I, P> Element<P> for C<I>
+where
+    I: Component + 'static,
+{
+    fn render_box(
+        self: Box<Self>,
+        _ctx: &mut State<P>,
+        render_state: &mut RenderingState,
+    ) -> web_sys::Node {
+        let data = self.0.into_state();
+        let element = I::render();
+
+        let mut borrow_data = data.borrow_mut();
+
+        let mut hooks = Vec::new();
+
+        let mut state = RenderingState {
+            keep_alive: render_state.keep_alive,
+            hooks: &mut hooks,
+            parent_dep: HookKey::default(),
+        };
+
+        let node = element.render(&mut borrow_data, &mut state);
+        drop(borrow_data);
+        render_state.keep_alive.push(Box::new(data));
+        node
+    }
+}
+
 /// Mounts the component at the target id
 /// Replacing the element with the component
 /// This should be the entry point to your application
