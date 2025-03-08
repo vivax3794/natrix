@@ -47,7 +47,7 @@ fn component_derive_implementation(item: ItemStruct) -> TokenStream {
         #(if is_named) {
             struct #data_name #generics {
                 #(for field in &fields) {
-                    #{field.access.clone()}: ::natrix::macro_ref::Signal<#{field.type_.clone()}, Self>,
+                    #{field.access.clone()}: ::natrix::macro_ref::Signal<#{field.type_.clone()}>,
                 }
             }
             struct #signal_state_name {
@@ -58,7 +58,7 @@ fn component_derive_implementation(item: ItemStruct) -> TokenStream {
         } #(else) {
             struct #data_name #generics (
                 #(for field in &fields) {
-                    ::natrix::macro_ref::Signal<#{field.type_.clone()}, Self>,
+                    ::natrix::macro_ref::Signal<#{field.type_.clone()}>,
                 }
             );
             struct #signal_state_name (
@@ -70,7 +70,7 @@ fn component_derive_implementation(item: ItemStruct) -> TokenStream {
 
         #[automatically_derived]
         impl #bounds ::natrix::macro_ref::ComponentData for #data_name #generics {
-            type FieldRef<'s> = [&'s mut dyn ::natrix::macro_ref::SignalMethods<Self>; #field_count];
+            type FieldRef<'s> = [&'s mut dyn ::natrix::macro_ref::SignalMethods; #field_count];
             type SignalState = #signal_state_name;
 
             fn signals_mut(&mut self) -> Self::FieldRef<'_> {

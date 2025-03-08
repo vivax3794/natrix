@@ -15,11 +15,10 @@ where
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
-        render_state: &mut RenderingState<C>,
+        render_state: &mut RenderingState,
     ) -> web_sys::Node {
-        let (hook, node) = ReactiveNode::create_inital(Box::new(self), ctx);
-
-        render_state.keep_alive.push(Box::new(hook.0));
+        let (me, node) = ReactiveNode::create_inital(Box::new(self), ctx);
+        render_state.hooks.push(me);
         node
     }
 }
@@ -35,7 +34,7 @@ where
         name: &'static str,
         node: &web_sys::Element,
         ctx: &mut State<C>,
-        rendering_state: &mut RenderingState<C>,
+        rendering_state: &mut RenderingState,
     ) {
         let hook = SimpleReactive::init_new(
             Box::new(move |ctx| ReactiveAttribute {
@@ -45,7 +44,7 @@ where
             node.clone(),
             ctx,
         );
-        rendering_state.keep_alive.push(Box::new(hook));
+        rendering_state.hooks.push(hook);
     }
 }
 

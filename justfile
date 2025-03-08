@@ -13,7 +13,7 @@ publish: fmt check_full
     cargo publish -p natrix
 
 mutation:
-    RUSTFLAGS="--cfg=mutants -C codegen-units=1" cargo mutants --workspace --test-workspace true --jobs 2 -v -- --lib --all-features
+    RUSTFLAGS="--cfg=mutants -C codegen-units=1" cargo mutants --workspace --test-workspace true --jobs 4 -- --lib --all-features
 
 test_full: && test_web_full
     cargo +stable hack nextest run --feature-powerset --skip nightly --no-tests warn

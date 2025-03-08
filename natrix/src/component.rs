@@ -5,10 +5,8 @@ use std::rc::Rc;
 
 use crate::element::Element;
 use crate::get_document;
-use crate::render_callbacks::DummyHook;
 use crate::signal::RenderingState;
-use crate::state::{ComponentData, State};
-use crate::utils::WeakCmpPtr;
+use crate::state::{ComponentData, HookKey, State};
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
 /// associating a component with its reactive state as well as converting to a struct to its
@@ -86,10 +84,14 @@ pub fn mount_component<C: Component>(component: C, target_id: &'static str) {
     let element = C::render();
 
     let mut borrow_data = data.borrow_mut();
+
     let mut keep_alive = Vec::new();
+    let mut hooks = Vec::new();
+
     let mut state = RenderingState {
         keep_alive: &mut keep_alive,
-        parent_dep: &WeakCmpPtr(Rc::downgrade(&Rc::new(RefCell::new(Box::new(DummyHook))))),
+        hooks: &mut hooks,
+        parent_dep: HookKey::default(),
     };
     let node = element.render(&mut borrow_data, &mut state);
 

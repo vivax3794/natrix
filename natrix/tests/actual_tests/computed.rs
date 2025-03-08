@@ -29,7 +29,7 @@ impl Component for Counter {
 }
 
 #[wasm_bindgen_test]
-fn one_value() {
+fn works() {
     crate::setup();
     mount_component(Counter { value: 0 }, crate::MOUNT_POINT);
 

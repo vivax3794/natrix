@@ -1,19 +1,16 @@
 //! Types for handling the component state
 
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 
+use slotmap::{SlotMap, new_key_type};
+
 use crate::component::ComponentBase;
-use crate::signal::{
-    PreUpdateResult,
-    RcDep,
-    RcDepWeak,
-    ReactiveHook,
-    RenderingState,
-    SignalMethods,
-};
-use crate::utils::{HashSet, RcCmpPtr, SmallAny, WeakCmpPtr};
+use crate::render_callbacks::DummyHook;
+use crate::signal::{PreUpdateResult, ReactiveHook, RenderingState, SignalMethods};
+use crate::utils::SmallAny;
 
 /// The cap for how many loops `update` will do before panicing
 ///
@@ -24,7 +21,7 @@ const UPDATE_ITERATION_CAP: u8 = 2;
 pub trait ComponentData: Sized + 'static {
     /// The type of the returned signal fields.
     /// This should be a [...; N]
-    type FieldRef<'a>: IntoIterator<Item = &'a mut dyn SignalMethods<Self>>;
+    type FieldRef<'a>: IntoIterator<Item = &'a mut dyn SignalMethods>;
     /// The type used to represent a snapshot of the signal state.
     type SignalState;
 
@@ -41,6 +38,8 @@ pub trait ComponentData: Sized + 'static {
 /// for keeping specific objects alive in memory such as `Closure` and `Rc`
 pub(crate) type KeepAlive = Box<dyn SmallAny>;
 
+new_key_type! { pub(crate) struct HookKey; }
+
 /// The core component state, stores all framework data
 pub struct State<T> {
     /// The user (macro) defined reactive struct
@@ -48,6 +47,8 @@ pub struct State<T> {
     /// A weak reference to ourself, so that event handlers can easially get a weak reference
     /// without having to pass it around in every api
     this: Option<Weak<RefCell<Self>>>,
+    /// Reactive hooks
+    pub(crate) hooks: SlotMap<HookKey, Box<dyn ReactiveHook<T>>>,
 }
 
 impl<T> Deref for State<T> {
@@ -75,7 +76,11 @@ pub type R<'c, 's, C> = RenderCtx<'c, 's, <C as ComponentBase>::Data>;
 impl<T> State<T> {
     /// Create a new instance of the state, returning a `Rc` to it
     pub(crate) fn new(data: T) -> Rc<RefCell<Self>> {
-        let this = Self { data, this: None };
+        let this = Self {
+            data,
+            this: None,
+            hooks: SlotMap::default(),
+        };
         let this = Rc::new(RefCell::new(this));
 
         this.borrow_mut().this = Some(Rc::downgrade(&this));
@@ -99,19 +104,38 @@ impl<T: ComponentData> State<T> {
     }
 
     /// Register a dependency for all read signals
-    pub(crate) fn reg_dep(&mut self, dep: &RcDepWeak<T>) {
+    pub(crate) fn reg_dep(&mut self, dep: HookKey) {
         for signal in self.data.signals_mut() {
-            signal.register_dep(dep.clone());
+            signal.register_dep(dep);
         }
+    }
+
+    /// Remove the hook from the slotmap, runs the function on it, then puts it back.
+    ///
+    /// This is to allow mut access to both the hook and self
+    fn run_with_hook_and_self<F>(&mut self, hook: HookKey, func: F) -> Option<()>
+    where
+        F: FnOnce(&mut Self, &mut Box<dyn ReactiveHook<T>>),
+    {
+        let slot_ref = self.hooks.get_mut(hook)?;
+        let mut temp_hook: Box<dyn ReactiveHook<T>> = Box::new(DummyHook);
+        std::mem::swap(slot_ref, &mut temp_hook);
+
+        func(self, &mut temp_hook);
+
+        let slot_ref = self.hooks.get_mut(hook)?;
+        *slot_ref = temp_hook;
+
+        Some(())
     }
 
     /// Loop over signals and update any depdant hooks for changed signals
     pub(crate) fn update(&mut self) {
         #[allow(clippy::mutable_key_type)]
-        let mut hooks = HashSet::default();
+        let mut hooks = HashSet::new();
         for signal in self.data.signals_mut() {
             if signal.changed() {
-                for hook in signal.deps().drain(..) {
+                for hook in signal.deps() {
                     hooks.insert(hook);
                 }
             }
@@ -121,14 +145,16 @@ impl<T: ComponentData> State<T> {
         let mut iteration = 0;
         loop {
             let mut new_hook_added = false;
-            for hook in hooks.drain() {
-                if let Some(hook_strong) = hook.0.upgrade() {
-                    let mut hook_borrow = hook_strong.borrow_mut();
-
-                    match hook_borrow.pre_update(self, &hook) {
+            for hook_key in hooks.drain() {
+                self.run_with_hook_and_self(hook_key, |ctx, hook| {
+                    match hook.pre_update(ctx, hook_key) {
                         PreUpdateResult::KeepMe => {
-                            hook_borrow.drop_children_early();
-                            hooks_two.insert(hook);
+                            if let Some(invalid_hooks) = hook.drop_deps() {
+                                for invalid_hook in invalid_hooks {
+                                    let _ = ctx.hooks.remove(invalid_hook);
+                                }
+                            }
+                            hooks_two.insert(hook_key);
                         }
                         PreUpdateResult::RemoveMe => {}
                         PreUpdateResult::RegisterThenRemove(dep) => {
@@ -136,7 +162,7 @@ impl<T: ComponentData> State<T> {
                             new_hook_added = true;
                         }
                     }
-                }
+                });
             }
 
             std::mem::swap(&mut hooks, &mut hooks_two);
@@ -151,10 +177,10 @@ impl<T: ComponentData> State<T> {
             );
         }
 
-        for hook in hooks {
-            if let Some(hook_strong) = hook.0.upgrade() {
-                hook_strong.borrow_mut().update(self, &hook);
-            }
+        for hook_key in hooks {
+            self.run_with_hook_and_self(hook_key, |ctx, hook| {
+                hook.update(ctx, hook_key);
+            });
         }
     }
 
@@ -174,7 +200,7 @@ pub struct RenderCtx<'c, 's, C> {
     /// The inner context
     pub(crate) ctx: &'c mut State<C>,
     /// The render state for this state
-    pub(crate) render_state: RenderingState<'s, C>,
+    pub(crate) render_state: RenderingState<'s>,
 }
 
 impl<C> Deref for RenderCtx<'_, '_, C> {
@@ -202,12 +228,11 @@ impl<C: ComponentData> RenderCtx<'_, '_, C> {
         let hook = WatchState {
             calc_value: Box::new(func),
             last_value: result.clone(),
-            dep: self.render_state.parent_dep.clone(),
+            dep: self.render_state.parent_dep,
         };
-        let hook: RcDep<_> = RcCmpPtr(Rc::new(RefCell::new(Box::new(hook))));
-        self.ctx.reg_dep(&WeakCmpPtr(Rc::downgrade(&hook.0)));
-
-        self.render_state.keep_alive.push(Box::new(hook));
+        let me = self.ctx.hooks.insert(Box::new(hook));
+        self.ctx.reg_dep(me);
+        self.render_state.hooks.push(me);
 
         self.ctx.set_signals(signal_state);
 
@@ -224,22 +249,22 @@ impl<C: ComponentData> RenderCtx<'_, '_, C> {
 }
 
 /// The wather hook / signal
-struct WatchState<F, T, C> {
+struct WatchState<F, T> {
     /// Function to calculate the state
     calc_value: F,
     /// The previous cached value
     last_value: T,
     /// The depdency that owns us.
-    dep: RcDepWeak<C>,
+    dep: HookKey,
 }
 
-impl<C, F, T> ReactiveHook<C> for WatchState<F, T, C>
+impl<C, F, T> ReactiveHook<C> for WatchState<F, T>
 where
     C: ComponentData,
     T: PartialEq + Clone,
     F: Fn(&State<C>) -> T,
 {
-    fn pre_update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) -> PreUpdateResult<C> {
+    fn pre_update(&mut self, ctx: &mut State<C>, you: HookKey) -> PreUpdateResult {
         ctx.clear();
         let new_value = (self.calc_value)(ctx);
         ctx.reg_dep(you);
@@ -247,7 +272,7 @@ where
         if new_value == self.last_value {
             PreUpdateResult::RemoveMe
         } else {
-            PreUpdateResult::RegisterThenRemove(self.dep.clone())
+            PreUpdateResult::RegisterThenRemove(self.dep)
         }
     }
 }

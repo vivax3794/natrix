@@ -1,23 +1,18 @@
 //! Implements the reactive hooks for updating the dom in response to signal changessz.
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use wasm_bindgen::JsCast;
 
 use crate::element::Element;
 use crate::html_elements::ToAttribute;
-use crate::signal::{RcDep, RcDepWeak, ReactiveHook, RenderingState};
-use crate::state::{ComponentData, KeepAlive, RenderCtx, State};
-use crate::utils::{RcCmpPtr, WeakCmpPtr};
+use crate::signal::{ReactiveHook, RenderingState};
+use crate::state::{ComponentData, HookKey, KeepAlive, RenderCtx, State};
 use crate::{get_document, type_macros};
 
 /// A noop hook used to fill the `Rc<RefCell<...>>` while the inital render pass runs so that that
 /// a real hook can be swapped in once initalized
 pub(crate) struct DummyHook;
 impl<C: ComponentData> ReactiveHook<C> for DummyHook {
-    fn update(&mut self, _ctx: &mut State<C>, _you: &RcDepWeak<C>) {}
-    fn drop_children_early(&mut self) {}
+    fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) {}
 }
 
 /// Reactive hook for swapping out a entire dom node.
@@ -28,6 +23,8 @@ pub(crate) struct ReactiveNode<C, E> {
     target_node: web_sys::Node,
     /// Vector of various objects to be kept alive for the duration of the renderd content
     keep_alive: Vec<KeepAlive>,
+    /// Hooks that are a child of this
+    hooks: Vec<HookKey>,
 }
 
 impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
@@ -35,13 +32,14 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
     ///
     /// IMPORTANT: This function works with the assumption what it returns will be put in its
     /// `target_node` field. This function is split out to facilitate `Self::create_inital`
-    fn render(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) -> web_sys::Node {
+    fn render(&mut self, ctx: &mut State<C>, you: HookKey) -> web_sys::Node {
         ctx.clear();
 
         let element = (self.callback)(RenderCtx {
             ctx,
             render_state: RenderingState {
                 keep_alive: &mut self.keep_alive,
+                hooks: &mut self.hooks,
                 parent_dep: you,
             },
         });
@@ -49,6 +47,7 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
 
         let mut state = RenderingState {
             keep_alive: &mut self.keep_alive,
+            hooks: &mut self.hooks,
             parent_dep: you,
         };
 
@@ -60,32 +59,30 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
     pub(crate) fn create_inital(
         callback: Box<dyn Fn(RenderCtx<C>) -> E>,
         ctx: &mut State<C>,
-    ) -> (RcDep<C>, web_sys::Node) {
+    ) -> (HookKey, web_sys::Node) {
         let dummy_node = get_document()
             .body()
-            .expect("WHAT?")
+            .expect("BODY NOT FOUND")
             .dyn_into()
-            .expect("HUH?!");
+            .expect("BODY ISNT A NODE?");
 
-        let result_owned: RcDep<C> = RcCmpPtr(Rc::new(RefCell::new(Box::new(DummyHook))));
-        let result_weak = Rc::downgrade(&result_owned.0);
+        let me = ctx.hooks.insert(Box::new(DummyHook));
 
         let mut this = Self {
             callback,
             target_node: dummy_node,
             keep_alive: Vec::new(),
+            hooks: Vec::new(),
         };
-
-        let node = this.render(ctx, &WeakCmpPtr(result_weak));
+        let node = this.render(ctx, me);
         this.target_node = node.clone();
+        *ctx.hooks.get_mut(me).unwrap() = Box::new(this);
 
-        *result_owned.0.borrow_mut() = Box::new(this);
-
-        (result_owned, node)
+        (me, node)
     }
 
     /// Pulled out update method to facilite marking it as `default` on nightly
-    fn update(&mut self, ctx: &mut State<C>, you: &WeakCmpPtr<RefCell<Box<dyn ReactiveHook<C>>>>) {
+    fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
         let new_node = self.render(ctx, you);
 
         let parent = self.target_node.parent_node().expect("No parent found");
@@ -98,28 +95,30 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
 
 impl<C: ComponentData, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
     #[cfg(not(nightly))]
-    fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
+    fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
         self.update(ctx, you);
     }
 
     #[cfg(nightly)]
-    default fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
+    default fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
         self.update(ctx, you);
     }
 
-    fn drop_children_early(&mut self) {
+    fn drop_deps(&mut self) -> Option<std::vec::Drain<'_, HookKey>> {
         self.keep_alive.clear();
+        Some(self.hooks.drain(..))
     }
 }
 
 #[cfg(nightly)]
 impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, String> {
-    fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
+    fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
         ctx.clear();
         let element = (self.callback)(RenderCtx {
             ctx,
             render_state: RenderingState {
                 keep_alive: &mut self.keep_alive,
+                hooks: &mut self.hooks,
                 parent_dep: you,
             },
         });
@@ -137,12 +136,13 @@ macro_rules! node_specialize_int {
     ($type:ty, $fmt:ident) => {
         #[cfg(nightly)]
         impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, $type> {
-            fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
+            fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
                 ctx.clear();
                 let element = (self.callback)(RenderCtx {
                     ctx,
                     render_state: RenderingState {
                         keep_alive: &mut self.keep_alive,
+                        hooks: &mut self.hooks,
                         parent_dep: you,
                     },
                 });
@@ -166,12 +166,7 @@ type_macros::numerics!(node_specialize_int);
 /// styles, etc
 pub(crate) trait ReactiveValue<C> {
     /// Actually apply the change
-    fn apply(
-        self,
-        ctx: &mut State<C>,
-        render_state: &mut RenderingState<C>,
-        node: &web_sys::Element,
-    );
+    fn apply(self, ctx: &mut State<C>, render_state: &mut RenderingState, node: &web_sys::Element);
 }
 
 /// A common wrapper for simple reactive operations to deduplicate depdency tracking code
@@ -183,15 +178,18 @@ pub(crate) struct SimpleReactive<C, K> {
     node: web_sys::Element,
     /// Vector of various objects to be kept alive for the duration of the renderd content
     keep_alive: Vec<KeepAlive>,
+    /// Hooks to use
+    hooks: Vec<HookKey>,
 }
 
 impl<C: ComponentData, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K> {
-    fn update(&mut self, ctx: &mut State<C>, you: &RcDepWeak<C>) {
+    fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
         ctx.clear();
         let value = (self.callback)(RenderCtx {
             ctx,
             render_state: RenderingState {
                 keep_alive: &mut self.keep_alive,
+                hooks: &mut self.hooks,
                 parent_dep: you,
             },
         });
@@ -201,13 +199,16 @@ impl<C: ComponentData, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C
             ctx,
             &mut RenderingState {
                 keep_alive: &mut self.keep_alive,
+                hooks: &mut self.hooks,
                 parent_dep: you,
             },
             &self.node,
         );
     }
-    fn drop_children_early(&mut self) {
+
+    fn drop_deps(&mut self) -> Option<std::vec::Drain<'_, HookKey>> {
         self.keep_alive.clear();
+        Some(self.hooks.drain(..))
     }
 }
 
@@ -218,20 +219,20 @@ impl<C: ComponentData, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
         callback: Box<dyn Fn(RenderCtx<C>) -> K>,
         node: web_sys::Element,
         ctx: &mut State<C>,
-    ) -> RcDep<C> {
-        let result: RcDep<C> = RcCmpPtr(Rc::new(RefCell::new(Box::new(DummyHook))));
-        let result_weak = WeakCmpPtr(Rc::downgrade(&result.0));
+    ) -> HookKey {
+        let me = ctx.hooks.insert(Box::new(DummyHook));
 
         let mut this = Self {
             callback,
             node,
             keep_alive: Vec::new(),
+            hooks: Vec::new(),
         };
-        this.update(ctx, &result_weak);
+        this.update(ctx, me);
 
-        *result.0.borrow_mut() = Box::new(this);
+        *ctx.hooks.get_mut(me).unwrap() = Box::new(this);
 
-        result
+        me
     }
 }
 
@@ -244,12 +245,7 @@ pub(crate) struct ReactiveAttribute<T> {
 }
 
 impl<C, T: ToAttribute<C>> ReactiveValue<C> for ReactiveAttribute<T> {
-    fn apply(
-        self,
-        ctx: &mut State<C>,
-        render_state: &mut RenderingState<C>,
-        node: &web_sys::Element,
-    ) {
+    fn apply(self, ctx: &mut State<C>, render_state: &mut RenderingState, node: &web_sys::Element) {
         Box::new(self.data).apply_attribute(self.name, node, ctx, render_state);
     }
 }
