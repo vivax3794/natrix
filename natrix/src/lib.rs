@@ -12,6 +12,7 @@ pub mod async_utils;
 pub mod callbacks;
 pub mod component;
 pub mod element;
+pub mod events;
 pub mod html_elements;
 mod render_callbacks;
 mod signal;
@@ -44,7 +45,7 @@ pub mod prelude {
     pub use super::component::{Component, mount_component};
     pub use super::element::Element;
     pub use super::state::{ComponentData, R, S, State};
-    pub use super::{guard_option, guard_result, html_elements as e};
+    pub use super::{events, guard_option, guard_result, html_elements as e};
 }
 
 /// Public exports of internal data structures for `natrix_macros` to use in generated code.

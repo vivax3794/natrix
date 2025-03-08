@@ -262,6 +262,32 @@ pub struct Guard<F> {
 /// Get a guard handle that can be used to retrive the `Some` variant of a option without having to
 /// use `.unwrap`.
 /// Should be used to achive find-grained reactivity (internally this uses `.watch` on `.is_some()`)
+///
+/// # Why?
+/// The usecase can be seen by considering this logic:
+/// ```rust
+/// if let Some(value) = *ctx.value {
+///     e::div().text(value)
+/// } else {
+///     e::div().text("Is none")
+/// }
+/// ```
+/// The issue here is that the outer div (which might be a more expensive structure to create) is
+/// recreated everytime `value` changes, even if it is `Some(0) -> Some(1)`
+/// This is where you might reach for `ctx.watch`, and in fact that works perfectly:
+/// ```rust
+/// if ctx.watch(|ctx| ctx.value.is_some()) {
+///     e::div().text(|ctx: R<Self>| ctx.value.unwrap())
+/// } else {
+///     e::div().text("Is none")
+/// }
+/// ```
+/// And this works, Now a change from `Some(0)` to `Some(1)` will only run the inner closure and
+/// the outer div is reused. but there is one downside, we need `.unwrap` because the inner closure is
+/// technically isolated, and this is ugly, and its easy to do by accident. and you might forget
+/// the outer condition.
+///
+/// This is where guards come into play:
 /// ```rust
 /// if let Some(value_guard) = guard_option!(ctx.value) {
 ///     e::div().text(move |ctx: R<Self>| ctx.get(&value_guard))
@@ -269,6 +295,11 @@ pub struct Guard<F> {
 ///     e::div().text("Is none")
 /// }
 /// ```
+/// Here `value_guard` is actually not the value at all, its a lightweight value thats can be
+/// captured my child closures and basically is a way to say "I know that in this context this
+/// value is `Some`"
+///
+/// Internally this uses `ctx.watch` and `.unwrap` (which should never fail)
 #[macro_export]
 macro_rules! guard_option {
     ($ctx:ident. $($getter:tt)+) => {
@@ -284,7 +315,6 @@ macro_rules! guard_option {
 
 /// Get a guard handle that can be used to retrive the `Ok` variant of a option without having to
 /// use `.unwrap`, or the `Err` variant.
-/// ```
 #[macro_export]
 macro_rules! guard_result {
     ($ctx:ident. $($getter:tt)+) => {
