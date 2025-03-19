@@ -4,7 +4,7 @@ use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 
-use slotmap::{SecondaryMap, SlotMap, new_key_type};
+use slotmap::{SlotMap, new_key_type};
 
 use crate::component::ComponentBase;
 use crate::render_callbacks::DummyHook;
@@ -42,12 +42,9 @@ pub struct State<T> {
     /// without having to pass it around in every api
     this: Option<Weak<RefCell<Self>>>,
     /// Reactive hooks
-    hooks: SlotMap<HookKey, Box<dyn ReactiveHook<T>>>,
+    hooks: SlotMap<HookKey, (Box<dyn ReactiveHook<T>>, usize)>,
     /// The next value to use in the insertion order map
     next_insertion_order_value: usize,
-    /// Maintain the insertion order in order to be able to sort passed on it to ensure correct
-    /// execution order
-    hooks_insertion_order: SecondaryMap<HookKey, usize>,
 }
 
 impl<T> Deref for State<T> {
@@ -80,7 +77,6 @@ impl<T> State<T> {
             this: None,
             hooks: SlotMap::default(),
             next_insertion_order_value: 0,
-            hooks_insertion_order: SecondaryMap::default(),
         };
         let this = Rc::new(RefCell::new(this));
 
@@ -106,9 +102,7 @@ impl<T: ComponentData> State<T> {
 
     /// Insert a hook and keep track of insertion order
     pub(crate) fn insert_hook(&mut self, hook: Box<dyn ReactiveHook<T>>) -> HookKey {
-        let key = self.hooks.insert(hook);
-        self.hooks_insertion_order
-            .insert(key, self.next_insertion_order_value);
+        let key = self.hooks.insert((hook, self.next_insertion_order_value));
         self.next_insertion_order_value += 1;
         key
     }
@@ -116,7 +110,7 @@ impl<T: ComponentData> State<T> {
     /// Update the value for a hook
     pub(crate) fn set_hook(&mut self, key: HookKey, hook: Box<dyn ReactiveHook<T>>) {
         if let Some(slot) = self.hooks.get_mut(key) {
-            *slot = hook;
+            slot.0 = hook;
         }
     }
 
@@ -136,12 +130,12 @@ impl<T: ComponentData> State<T> {
     {
         let slot_ref = self.hooks.get_mut(hook)?;
         let mut temp_hook: Box<dyn ReactiveHook<T>> = Box::new(DummyHook);
-        std::mem::swap(slot_ref, &mut temp_hook);
+        std::mem::swap(&mut slot_ref.0, &mut temp_hook);
 
         let res = func(self, &mut temp_hook);
 
         let slot_ref = self.hooks.get_mut(hook)?;
-        *slot_ref = temp_hook;
+        slot_ref.0 = temp_hook;
 
         Some(res)
     }
@@ -152,13 +146,11 @@ impl<T: ComponentData> State<T> {
         let mut hooks = Vec::new();
         for signal in self.data.signals_mut() {
             if signal.changed() {
-                for hook in signal.deps() {
-                    hooks.push(hook);
-                }
+                hooks.extend(signal.deps());
             }
         }
 
-        hooks.sort_unstable_by_key(|hook_key| self.hooks_insertion_order.get(*hook_key));
+        hooks.sort_unstable_by_key(|hook_key| Some(self.hooks.get(*hook_key)?.1));
         while !hooks.is_empty() {
             for hook_key in std::mem::take(&mut hooks) {
                 self.run_with_hook_and_self(hook_key, |ctx, hook| {
@@ -191,7 +183,7 @@ fn drop_hook_children<T: ComponentData>(ctx: &mut State<T>, hook: &mut Box<dyn R
     if let Some(invalid_hooks) = hook.drop_deps() {
         for invalid_hook in invalid_hooks {
             if let Some(mut hook) = ctx.hooks.remove(invalid_hook) {
-                drop_hook_children(ctx, &mut hook);
+                drop_hook_children(ctx, &mut hook.0);
             }
         }
     }
@@ -243,7 +235,7 @@ impl<C: ComponentData> RenderCtx<'_, '_, C> {
             last_value: result.clone(),
             dep: self.render_state.parent_dep,
         };
-        let me = self.ctx.hooks.insert(Box::new(hook));
+        let me = self.ctx.insert_hook(Box::new(hook));
         self.ctx.reg_dep(me);
         self.render_state.hooks.push(me);
 
