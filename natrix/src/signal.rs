@@ -2,7 +2,6 @@
 
 use std::cell::Cell;
 use std::ops::{Deref, DerefMut};
-use std::rc::{Rc, Weak};
 
 use crate::state::{ComponentData, HookKey, KeepAlive, State};
 
@@ -142,27 +141,19 @@ pub(crate) trait ReactiveHook<C: ComponentData> {
     /// Hooks should recall `ctx.reg_dep` with the you paramater to re-register any potential
     /// depdencies as the update method uses `.drain(..)` on depdencies (this is also to ensure
     /// reactive state that is only accesed in some conditions is recorded).
-    fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) {}
+    fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) -> UpdateResult;
     /// Drop keep alives and other state that will be invalidated in `update`
     fn drop_deps(&mut self) -> Option<std::vec::Drain<'_, HookKey>> {
         None
     }
-
-    /// Ran in a loop before the main update, may be used to filter yourself out, or to register a
-    /// new hook in your place
-    fn pre_update(&mut self, _ctx: &mut State<C>, _you: HookKey) -> PreUpdateResult {
-        PreUpdateResult::KeepMe
-    }
 }
 
 /// The result of pre-update
-pub(crate) enum PreUpdateResult {
-    /// Keep the hook for the later stages
-    KeepMe,
-    /// Remove the hook
-    RemoveMe,
-    /// Register the given depdency then remove this hook
-    RegisterThenRemove(HookKey),
+pub(crate) enum UpdateResult {
+    /// Do nothing extra
+    Nothing,
+    /// Run this hook after this one
+    RunHook(HookKey),
 }
 
 /// Operations that are more ergonomic but inconsistent

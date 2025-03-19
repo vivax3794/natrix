@@ -4,7 +4,7 @@ use wasm_bindgen::JsCast;
 
 use crate::element::Element;
 use crate::html_elements::ToAttribute;
-use crate::signal::{ReactiveHook, RenderingState};
+use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
 use crate::state::{ComponentData, HookKey, KeepAlive, RenderCtx, State};
 use crate::{get_document, type_macros};
 
@@ -12,7 +12,9 @@ use crate::{get_document, type_macros};
 /// a real hook can be swapped in once initalized
 pub(crate) struct DummyHook;
 impl<C: ComponentData> ReactiveHook<C> for DummyHook {
-    fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) {}
+    fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) -> UpdateResult {
+        UpdateResult::Nothing
+    }
 }
 
 /// Reactive hook for swapping out a entire dom node.
@@ -66,7 +68,7 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
             .dyn_into()
             .expect("BODY ISNT A NODE?");
 
-        let me = ctx.hooks.insert(Box::new(DummyHook));
+        let me = ctx.insert_hook(Box::new(DummyHook));
 
         let mut this = Self {
             callback,
@@ -76,7 +78,7 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
         };
         let node = this.render(ctx, me);
         this.target_node = node.clone();
-        *ctx.hooks.get_mut(me).unwrap() = Box::new(this);
+        ctx.set_hook(me, Box::new(this));
 
         (me, node)
     }
@@ -95,13 +97,15 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
 
 impl<C: ComponentData, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
     #[cfg(not(nightly))]
-    fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
+    fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         self.update(ctx, you);
+        UpdateResult::Nothing
     }
 
     #[cfg(nightly)]
-    default fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
+    default fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         self.update(ctx, you);
+        UpdateResult::Nothing
     }
 
     fn drop_deps(&mut self) -> Option<std::vec::Drain<'_, HookKey>> {
@@ -112,7 +116,7 @@ impl<C: ComponentData, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
 
 #[cfg(nightly)]
 impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, String> {
-    fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
+    fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         ctx.clear();
         let element = (self.callback)(RenderCtx {
             ctx,
@@ -128,6 +132,8 @@ impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, String> {
             .dyn_ref::<web_sys::Text>()
             .unwrap()
             .set_text_content(Some(&element));
+
+        UpdateResult::Nothing
     }
 }
 
@@ -136,7 +142,7 @@ macro_rules! node_specialize_int {
     ($type:ty, $fmt:ident) => {
         #[cfg(nightly)]
         impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, $type> {
-            fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
+            fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
                 ctx.clear();
                 let element = (self.callback)(RenderCtx {
                     ctx,
@@ -155,6 +161,8 @@ macro_rules! node_specialize_int {
                     .dyn_ref::<web_sys::Text>()
                     .unwrap()
                     .set_text_content(Some(result));
+
+                UpdateResult::Nothing
             }
         }
     };
@@ -183,7 +191,7 @@ pub(crate) struct SimpleReactive<C, K> {
 }
 
 impl<C: ComponentData, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K> {
-    fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
+    fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         ctx.clear();
         let value = (self.callback)(RenderCtx {
             ctx,
@@ -204,6 +212,7 @@ impl<C: ComponentData, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C
             },
             &self.node,
         );
+        UpdateResult::Nothing
     }
 
     fn drop_deps(&mut self) -> Option<std::vec::Drain<'_, HookKey>> {
@@ -220,7 +229,7 @@ impl<C: ComponentData, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
         node: web_sys::Element,
         ctx: &mut State<C>,
     ) -> HookKey {
-        let me = ctx.hooks.insert(Box::new(DummyHook));
+        let me = ctx.insert_hook(Box::new(DummyHook));
 
         let mut this = Self {
             callback,
@@ -230,7 +239,7 @@ impl<C: ComponentData, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
         };
         this.update(ctx, me);
 
-        *ctx.hooks.get_mut(me).unwrap() = Box::new(this);
+        ctx.set_hook(me, Box::new(this));
 
         me
     }

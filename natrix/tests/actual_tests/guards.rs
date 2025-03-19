@@ -20,6 +20,7 @@ impl Component for GuardTester {
                 e::button()
                     .id(BUTTON)
                     .on::<events::Click>(|ctx: &mut S<Self>, _| match &mut *ctx.value {
+                        Some(2) => *ctx.value = None,
                         Some(value) => *value += 1,
                         None => *ctx.value = Some(0),
                     }),
@@ -54,6 +55,10 @@ fn guard_works() {
 
     button.click();
     assert_eq!(text.text_content(), Some("2".to_owned()));
+
+    button.click();
+    let text = crate::get(TEXT);
+    assert_eq!(text.text_content(), Some("NO VALUE".to_owned()));
 }
 
 #[derive(Component)]
@@ -115,6 +120,7 @@ impl Component for GuardTesterNested {
                 e::button()
                     .id(BUTTON)
                     .on::<events::Click>(|ctx: &mut S<Self>, _| match &mut *ctx.value {
+                        Some(Some(2)) => *ctx.value = None,
                         Some(Some(value)) => *value += 1,
                         Some(None) => *ctx.value = Some(Some(0)),
                         None => *ctx.value = Some(None),
@@ -161,4 +167,8 @@ fn guard_nested() {
 
     button.click();
     assert_eq!(text.text_content(), Some("2".to_owned()));
+
+    button.click();
+    let text = crate::get(TEXT);
+    assert_eq!(text.text_content(), Some("NO VALUE".to_owned()));
 }
