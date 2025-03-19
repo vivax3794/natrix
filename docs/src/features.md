@@ -1,7 +1,9 @@
 # Features
 
 ## `nightly`
-Enables features, which currently are:
+> The framework contains internal nightly optimizations which are automatically used even without this feature flag. If you find a bug that only manifests on nightly (with the same feature flags) please report it.
+
+Enables public features, which currently are:
 ### `must_not_suspend`
 Annotates specific types with [`#[must_not_suspend]`](https://github.com/rust-lang/rust/issues/83310) which allow the compiler to warn you if you pass it across a await point. For this lint to take affect your code also needs to enable the feature (if you used the project template and selected nightly this is done already).
 ```rust

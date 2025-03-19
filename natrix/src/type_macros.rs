@@ -12,7 +12,7 @@ macro_rules! strings {
     };
 }
 
-/// Call the given macro with every int type
+/// Call the given macro with every numeric type
 macro_rules! numerics {
     ($macro:ident) => {
         $macro!(u8, itoa);
