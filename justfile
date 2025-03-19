@@ -15,7 +15,7 @@ publish: fmt check_full
 mutation:
     RUSTFLAGS="--cfg=mutants -C codegen-units=1" cargo mutants --workspace --test-workspace true --jobs 4 -- --lib --all-features
 
-test_full: && test_web_full
+test_full: test_firefox && test_web_full
     cargo +stable hack nextest run --feature-powerset --skip nightly --no-tests warn
     cargo +nightly hack nextest run --feature-powerset --no-tests warn
 
@@ -23,15 +23,14 @@ test_small: && test_web_small
     cargo +nightly nextest run --all-features
 
 [working-directory: "./natrix"]
+test_firefox:
+    rustup run nightly wasm-pack test --headless --firefox --all-features
+
+[working-directory: "./natrix"]
 test_web_full:
     #!/usr/bin/bash
     set -e
-    # Firefox is ungodly slow so we only do one run with all features
-    # Which should realisticly catch any bugs
-    # (We run the full feature matrix on chrome and native tests because they are much faster to do so, so might as well)
-    rustup run nightly wasm-pack test --headless --firefox --all-features
 
-    set -e
     while IFS= read -r line || [ -n "$line" ]; do
         modified_line=$(echo "$line" | sed 's/cargo/rustup run stable/g')
         echo "Executing: $modified_line 🎀"
