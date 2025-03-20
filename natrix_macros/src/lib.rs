@@ -36,11 +36,11 @@ fn component_derive_implementation(item: ItemStruct) -> TokenStream {
     let data_name = format_ident!("_{name}Data");
     let signal_state_name = format_ident!("_{name}SignalState");
 
-    let generics = item.generics;
-    let mut bounds = generics.clone();
-    for type_ in bounds.type_params_mut() {
+    let mut generics = item.generics;
+    for type_ in generics.type_params_mut() {
         type_.bounds.push(parse_quote!('static));
     }
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
     quote! {
         #[doc(hidden)]
@@ -69,7 +69,7 @@ fn component_derive_implementation(item: ItemStruct) -> TokenStream {
         }
 
         #[automatically_derived]
-        impl #bounds ::natrix::macro_ref::ComponentData for #data_name #generics {
+        impl #impl_generics ::natrix::macro_ref::ComponentData for #data_name #type_generics #where_clause {
             type FieldRef<'s> = [&'s mut dyn ::natrix::macro_ref::SignalMethods; #field_count];
             type SignalState = #signal_state_name;
 
@@ -105,8 +105,8 @@ fn component_derive_implementation(item: ItemStruct) -> TokenStream {
         }
 
         #[automatically_derived]
-        impl #bounds ::natrix::macro_ref::ComponentBase for #name #generics {
-            type Data = #data_name #generics;
+        impl #impl_generics ::natrix::macro_ref::ComponentBase for #name #type_generics #where_clause {
+            type Data = #data_name #type_generics;
              fn into_data(self) -> Self::Data {
                 #(if is_named) {
                     #data_name {

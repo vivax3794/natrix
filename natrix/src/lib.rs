@@ -1,7 +1,27 @@
 #![doc = include_str!("../../README.md")]
-#![deny(unsafe_code, clippy::todo)]
-#![warn(missing_docs, clippy::missing_docs_in_private_items, clippy::pedantic)]
-#![allow(private_interfaces, private_bounds, clippy::type_complexity)]
+#![deny(
+    unsafe_code,
+    clippy::todo,
+    clippy::dbg_macro,
+    clippy::unreachable,
+    clippy::unwrap_used,
+    unfulfilled_lint_expectations,
+    clippy::allow_attributes,
+    clippy::allow_attributes_without_reason
+)]
+#![warn(
+    missing_docs,
+    clippy::missing_docs_in_private_items,
+    clippy::pedantic,
+    clippy::expect_used,
+    clippy::unreachable
+)]
+#![allow(clippy::type_complexity, reason = "Fn trait objects get complex.")]
+#![allow(
+    private_interfaces,
+    private_bounds,
+    reason = "Our api design does this on purpose"
+)]
 #![cfg_attr(feature = "nightly", feature(must_not_suspend))]
 #![cfg_attr(nightly, feature(min_specialization))]
 
@@ -32,7 +52,16 @@ thread_local! {
 pub(crate) fn get_document() -> web_sys::Document {
     DOCUMENT.with(|doc_cell| {
         doc_cell
-            .get_or_init(|| web_sys::window().unwrap().document().unwrap())
+            .get_or_init(|| {
+                #[expect(
+                    clippy::expect_used,
+                    reason = "A web framework cant do much without access to the document"
+                )]
+                web_sys::window()
+                    .expect("Window object not found")
+                    .document()
+                    .expect("Document object not found")
+            })
             .clone()
     })
 }
@@ -45,6 +74,57 @@ pub mod prelude {
     pub use super::element::Element;
     pub use super::state::{R, S};
     pub use super::{events, guard_option, guard_result, html_elements as e};
+}
+
+#[cfg(feature = "test_utils")]
+#[expect(clippy::unwrap_used, reason = "tests only")]
+/// utilities for writting unit tests on wasm
+pub mod test_utils {
+    use wasm_bindgen::JsCast;
+    use web_sys::HtmlElement;
+
+    /// The parent of the testing env
+    const MOUNT_PARENT: &str = "__TESTING_PARENT";
+    /// The var where you should mount your component
+    /// This is auto created and cleaned up by `setup`
+    pub const MOUNT_POINT: &str = "__TESTING_MOUNT_POINT";
+
+    /// Setup `MOUNT_POINt` as a valid mount location
+    ///
+    /// # Panics
+    /// if the js is in a invalid state.
+    pub fn setup() {
+        let document = web_sys::window().unwrap().document().unwrap();
+
+        if let Some(element) = document.get_element_by_id(MOUNT_PARENT) {
+            element.remove();
+        }
+
+        let parent = document.create_element("div").unwrap();
+        parent.set_id(MOUNT_PARENT);
+
+        let mount = document.create_element("div").unwrap();
+        mount.set_id(MOUNT_POINT);
+
+        parent.append_child(&mount).unwrap();
+        document.body().unwrap().append_child(&parent).unwrap();
+    }
+
+    /// Get a html element based on id
+    ///
+    /// # Panics
+    /// If js is in a invalid state or the element isnt found
+    #[must_use]
+    pub fn get(id: &'static str) -> HtmlElement {
+        let document = web_sys::window().unwrap().document().unwrap();
+
+        document
+            .get_element_by_id(id)
+            .unwrap()
+            .dyn_ref::<HtmlElement>()
+            .unwrap()
+            .clone()
+    }
 }
 
 /// Public exports of internal data structures for `natrix_macros` to use in generated code.

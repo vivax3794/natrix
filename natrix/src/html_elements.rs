@@ -54,7 +54,8 @@ macro_rules! attribute_string {
                 _ctx: &mut State<C>,
                 _rendering_state: &mut RenderingState,
             ) {
-                node.set_attribute(name, &self).unwrap();
+                let res = node.set_attribute(name, &self);
+                debug_assert!(res.is_ok(), "Failed to set attribute {name}.");
             }
         }
     };
@@ -75,7 +76,9 @@ macro_rules! attribute_int {
             ) {
                 let mut buffer = $fmt::Buffer::new();
                 let result = buffer.format(*self);
-                node.set_attribute(name, result).unwrap();
+
+                let res = node.set_attribute(name, result);
+                debug_assert!(res.is_ok(), "Failed to set attribute {name}.");
             }
         }
     };
@@ -92,9 +95,11 @@ impl<C> ToAttribute<C> for bool {
         _rendering_state: &mut RenderingState,
     ) {
         if *self {
-            node.set_attribute(name, "").unwrap();
+            let res = node.set_attribute(name, "");
+            debug_assert!(res.is_ok(), "Failed to set attribute {name}");
         } else {
-            node.remove_attribute(name).unwrap();
+            let res = node.remove_attribute(name);
+            debug_assert!(res.is_ok(), "Failed to remove attribute {name}");
         }
     }
 }
@@ -107,9 +112,11 @@ impl<C, T: ToAttribute<C>> ToAttribute<C> for Option<T> {
         ctx: &mut State<C>,
         rendering_state: &mut RenderingState,
     ) {
-        match *self {
-            Some(inner) => Box::new(inner).apply_attribute(name, node, ctx, rendering_state),
-            None => node.remove_attribute(name).unwrap(),
+        if let Some(inner) = *self {
+            Box::new(inner).apply_attribute(name, node, ctx, rendering_state);
+        } else {
+            let res = node.remove_attribute(name);
+            debug_assert!(res.is_ok(), "Failed to set attribute {name}");
         }
     }
 }
@@ -168,14 +175,16 @@ impl<C> HtmlElement<C> {
     /// })
     /// ```
     /// For more information see [Reactivity](TODO) in the book.
-    #[allow(clippy::missing_panics_doc)]
     pub fn on<E: Event>(mut self, function: impl EventHandler<C, E::JsEvent>) -> Self {
         let function = function.func();
         self.events.push((
             E::EVENT_NAME,
             Box::new(move |ctx, event| {
-                let event = event.dyn_into::<E::JsEvent>().unwrap();
-                function(ctx, event);
+                if let Ok(event) = event.dyn_into::<E::JsEvent>() {
+                    function(ctx, event);
+                } else {
+                    debug_assert!(false, "Missmatched event types");
+                }
             }),
         ));
         self
@@ -227,6 +236,10 @@ impl<C> HtmlElement<C> {
 }
 
 impl<C: ComponentData> Element<C> for HtmlElement<C> {
+    #[expect(
+        clippy::expect_used,
+        reason = "Failing to create a html node is either a framework bug or a invalid js state"
+    )]
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
@@ -283,18 +296,24 @@ fn create_event_handler<C: ComponentData>(
     render_state: &mut RenderingState<'_>,
 ) {
     let callback: Box<dyn Fn(web_sys::Event) + 'static> = Box::new(move |event| {
-        let ctx = ctx_weak.upgrade().unwrap();
+        let Some(ctx) = ctx_weak.upgrade() else {
+            debug_assert!(
+                false,
+                "Component dropped without event handlers being cleaned up"
+            );
+            return;
+        };
         let mut ctx = ctx.borrow_mut();
 
         ctx.clear();
-        function(&mut ctx, event.dyn_into().unwrap());
+        function(&mut ctx, event);
         ctx.update();
     });
     let closure = Closure::wrap(callback);
     let function = closure.as_ref().unchecked_ref();
-    element
-        .add_event_listener_with_callback(intern(event), function)
-        .expect("Failed to add listener");
+
+    let res = element.add_event_listener_with_callback(intern(event), function);
+    debug_assert!(res.is_ok(), "Failed to attach event handler");
 
     render_state.keep_alive.push(Box::new(closure));
 }

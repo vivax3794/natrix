@@ -113,6 +113,10 @@ where
 /// # Panics
 /// If target mount point is not found.
 #[inline]
+#[expect(
+    clippy::expect_used,
+    reason = "This is the entry point of the framework, and it fails fast."
+)]
 pub fn mount_component<C: Component>(component: C, target_id: &'static str) {
     let data = component.into_state();
     let element = C::render();

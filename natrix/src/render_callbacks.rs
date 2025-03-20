@@ -1,7 +1,5 @@
 //! Implements the reactive hooks for updating the dom in response to signal changessz.
 
-use wasm_bindgen::JsCast;
-
 use crate::element::Element;
 use crate::html_elements::ToAttribute;
 use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
@@ -62,11 +60,11 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
         callback: Box<dyn Fn(RenderCtx<C>) -> E>,
         ctx: &mut State<C>,
     ) -> (HookKey, web_sys::Node) {
-        let dummy_node = get_document()
-            .body()
-            .expect("BODY NOT FOUND")
-            .dyn_into()
-            .expect("BODY ISNT A NODE?");
+        #[expect(
+            clippy::expect_used,
+            reason = "If there is no body, then wtf is our job."
+        )]
+        let dummy_node: web_sys::Node = get_document().body().expect("<body> not found").into();
 
         let me = ctx.insert_hook(Box::new(DummyHook));
 
@@ -87,10 +85,13 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
         let new_node = self.render(ctx, you);
 
-        let parent = self.target_node.parent_node().expect("No parent found");
-        parent
-            .replace_child(&new_node, &self.target_node)
-            .expect("Failed to replace node");
+        let Some(parent) = self.target_node.parent_node() else {
+            debug_assert!(false, "Parent node of target node not found.");
+            return;
+        };
+
+        let res = parent.replace_child(&new_node, &self.target_node);
+        debug_assert!(res.is_ok(), "Failed to replace target node.");
         self.target_node = new_node;
     }
 }
@@ -117,6 +118,8 @@ impl<C: ComponentData, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
 #[cfg(nightly)]
 impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, String> {
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
+        use wasm_bindgen::JsCast;
+
         ctx.clear();
         let element = (self.callback)(RenderCtx {
             ctx,
@@ -128,10 +131,11 @@ impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, String> {
         });
         ctx.reg_dep(you);
 
-        self.target_node
-            .dyn_ref::<web_sys::Text>()
-            .unwrap()
-            .set_text_content(Some(&element));
+        if let Some(target_node) = self.target_node.dyn_ref::<web_sys::Text>() {
+            target_node.set_text_content(Some(&element));
+        } else {
+            debug_assert!(false, "`String` Node wasnt a text node");
+        }
 
         UpdateResult::Nothing
     }
@@ -143,6 +147,8 @@ macro_rules! node_specialize_int {
         #[cfg(nightly)]
         impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, $type> {
             fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
+                use wasm_bindgen::JsCast;
+
                 ctx.clear();
                 let element = (self.callback)(RenderCtx {
                     ctx,
@@ -157,10 +163,11 @@ macro_rules! node_specialize_int {
                 let mut buffer = $fmt::Buffer::new();
                 let result = buffer.format(element);
 
-                self.target_node
-                    .dyn_ref::<web_sys::Text>()
-                    .unwrap()
-                    .set_text_content(Some(result));
+                if let Some(target_node) = self.target_node.dyn_ref::<web_sys::Text>() {
+                    target_node.set_text_content(Some(result));
+                } else {
+                    debug_assert!(false, "Numeric Node wasnt a text node");
+                }
 
                 UpdateResult::Nothing
             }

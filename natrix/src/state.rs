@@ -87,6 +87,7 @@ impl<T> State<T> {
 
     /// Get a weak reference to this state
     #[inline]
+    #[expect(clippy::expect_used, reason = "This is always set in the `new` method")]
     pub(crate) fn weak(&self) -> Weak<RefCell<Self>> {
         self.this.as_ref().expect("Weak not set").clone()
     }
@@ -142,7 +143,6 @@ impl<T: ComponentData> State<T> {
 
     /// Loop over signals and update any depdant hooks for changed signals
     pub(crate) fn update(&mut self) {
-        #[allow(clippy::mutable_key_type)]
         let mut hooks = Vec::new();
         for signal in self.data.signals_mut() {
             if signal.changed() {

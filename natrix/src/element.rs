@@ -71,6 +71,7 @@ impl<C> Element<C> for Comment {
         _ctx: &mut State<C>,
         _render_state: &mut RenderingState,
     ) -> web_sys::Node {
+        #[expect(clippy::expect_used, reason = "I have no clue how this can fail.")]
         web_sys::Comment::new()
             .expect("Failed to make comment")
             .into()

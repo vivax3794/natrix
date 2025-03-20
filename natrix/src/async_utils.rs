@@ -5,11 +5,17 @@ pub use futures;
 pub use futures::{join, select, try_join};
 
 /// Sleeps for the given duration using js `setTimeout`.
-///
-/// # Panics
-/// If duration in miliseconds cant fit in a u32
 pub async fn sleep(time: Duration) {
-    let milis = u32::try_from(time.as_millis())
-        .expect("Sleep duration overflows u32::MAX (in miliseconds)");
+    let milis = if let Ok(milis) = u32::try_from(time.as_millis()) {
+        milis
+    } else {
+        debug_assert!(
+            false,
+            "Sleep duration {}ms overflows `u32` (will use `u32::MAX` in release mode.)",
+            time.as_millis()
+        );
+        u32::MAX
+    };
+
     gloo::timers::future::TimeoutFuture::new(milis).await;
 }

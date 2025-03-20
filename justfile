@@ -16,8 +16,9 @@ mutation:
     RUSTFLAGS="--cfg=mutants -C codegen-units=1" cargo mutants --workspace --test-workspace true --jobs 4 -- --lib --all-features
 
 test_full: test_firefox && test_web_full
-    cargo +stable hack nextest run --feature-powerset --skip nightly --no-tests warn
-    cargo +nightly hack nextest run --feature-powerset --no-tests warn
+    cargo +stable hack nextest run --feature-powerset --skip nightly --no-tests pass
+    cargo +nightly hack nextest run --feature-powerset  --no-tests pass
+    cargo +nightly nextest run --release --all-features
 
 test_small: && test_web_small
     cargo +nightly nextest run --all-features
@@ -35,13 +36,15 @@ test_web_full:
         modified_line=$(echo "$line" | sed 's/cargo/rustup run stable/g')
         echo "Executing: $modified_line 🎀"
         eval "$modified_line"
-    done < <(cargo hack wasm-pack test --headless --chrome --feature-powerset --skip nightly --print-command-list --no-manifest-path)
+    done < <(cargo hack wasm-pack test --headless --chrome --feature-powerset --skip nightly --features test_utils --print-command-list --no-manifest-path)
 
     while IFS= read -r line || [ -n "$line" ]; do
         modified_line=$(echo "$line" | sed 's/cargo/rustup run nightly/g')
         echo "Executing: $modified_line 🎀"
         eval "$modified_line"
-    done < <(cargo hack wasm-pack test --headless --chrome --feature-powerset --print-command-list --no-manifest-path)
+    done < <(cargo hack wasm-pack test --headless --chrome --feature-powerset --features test_utils --print-command-list --no-manifest-path)
+
+    rustup run nightly wasm-pack test --headless --chrome --all-features --release
     
 
 [working-directory: "./natrix"]
@@ -51,9 +54,17 @@ test_web_small:
 lint_full:
     cargo +stable hack clippy --feature-powerset --skip nightly --tests -- -Dwarnings
     cargo +nightly hack clippy --feature-powerset --tests -- -Dwarnings
+    cargo +nightly clippy --all-features --release
 
 lint_small:
     cargo +nightly clippy --all-features 
+
+bench: bench_web
+
+[working-directory: './bench_project']
+bench_web:
+    rustup run stable wasm_bench
+    rustup run nightly wasm_bench
 
 fmt:
     cargo fmt
@@ -76,3 +87,4 @@ clean:
     cargo clean
     rm -rv docs/book || true
     rm -rv mutants.out* || true
+    rm -v bench_project/.tmp* || true

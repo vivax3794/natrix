@@ -1,0 +1,8 @@
+[package]
+name = "test_project"
+version = "0.1.1"
+edition = "2024"
+
+[dependencies]
+natrix = {path = "../natrix", features=["test_utils"]}
+wasm_bench_runtime = {path="../../wasm-bench/wasm_bench_runtime"}

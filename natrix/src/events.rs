@@ -3,7 +3,7 @@
 use wasm_bindgen::JsCast;
 
 /// Trait for converting a struct to needed event info.
-pub trait Event {
+pub(crate) trait Event {
     /// The js event the handler gets
     type JsEvent: JsCast;
     /// The actual name
