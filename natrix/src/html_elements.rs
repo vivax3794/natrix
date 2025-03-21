@@ -22,6 +22,7 @@ use crate::element::Element;
 use crate::events::Event;
 use crate::signal::RenderingState;
 use crate::state::{ComponentData, State};
+use crate::utils::debug_expect;
 use crate::{get_document, type_macros};
 
 /// A trait for using a arbitrary type as a attribute value.
@@ -54,8 +55,10 @@ macro_rules! attribute_string {
                 _ctx: &mut State<C>,
                 _rendering_state: &mut RenderingState,
             ) {
-                let res = node.set_attribute(name, &self);
-                debug_assert!(res.is_ok(), "Failed to set attribute {name}.");
+                debug_expect!(
+                    node.set_attribute(name, &self),
+                    "Failed to set attribute {name}"
+                );
             }
         }
     };
@@ -77,8 +80,10 @@ macro_rules! attribute_int {
                 let mut buffer = $fmt::Buffer::new();
                 let result = buffer.format(*self);
 
-                let res = node.set_attribute(name, result);
-                debug_assert!(res.is_ok(), "Failed to set attribute {name}.");
+                debug_expect!(
+                    node.set_attribute(name, result),
+                    "Failed to set attribute {name}"
+                );
             }
         }
     };
@@ -95,11 +100,15 @@ impl<C> ToAttribute<C> for bool {
         _rendering_state: &mut RenderingState,
     ) {
         if *self {
-            let res = node.set_attribute(name, "");
-            debug_assert!(res.is_ok(), "Failed to set attribute {name}");
+            debug_expect!(
+                node.set_attribute(name, ""),
+                "Failed to set attribute {name}"
+            );
         } else {
-            let res = node.remove_attribute(name);
-            debug_assert!(res.is_ok(), "Failed to remove attribute {name}");
+            debug_expect!(
+                node.remove_attribute(name),
+                "Failed to remove attribute {name}"
+            );
         }
     }
 }
@@ -115,8 +124,10 @@ impl<C, T: ToAttribute<C>> ToAttribute<C> for Option<T> {
         if let Some(inner) = *self {
             Box::new(inner).apply_attribute(name, node, ctx, rendering_state);
         } else {
-            let res = node.remove_attribute(name);
-            debug_assert!(res.is_ok(), "Failed to set attribute {name}");
+            debug_expect!(
+                node.remove_attribute(name),
+                "Failed to remove attribute {name}"
+            );
         }
     }
 }
@@ -236,10 +247,6 @@ impl<C> HtmlElement<C> {
 }
 
 impl<C: ComponentData> Element<C> for HtmlElement<C> {
-    #[expect(
-        clippy::expect_used,
-        reason = "Failing to create a html node is either a framework bug or a invalid js state"
-    )]
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
@@ -254,15 +261,17 @@ impl<C: ComponentData> Element<C> for HtmlElement<C> {
         } = *self;
 
         let document = get_document();
+        #[expect(
+            clippy::panic,
+            reason = "No good recovery for not being able to create a element"
+        )]
         let element = document
             .create_element(intern(name))
-            .expect("Failed to get document");
+            .unwrap_or_else(|_| panic!("Failed to create element {name}"));
 
         for child in children {
             let child = child.render_box(ctx, render_state);
-            element
-                .append_child(&child)
-                .expect("Failed to append child");
+            debug_expect!(element.append_child(&child), "Failed to append child");
         }
 
         let ctx_weak = ctx.weak();
@@ -270,13 +279,18 @@ impl<C: ComponentData> Element<C> for HtmlElement<C> {
             create_event_handler(&element, event, function, ctx_weak.clone(), render_state);
         }
 
+        #[expect(
+            clippy::arithmetic_side_effects,
+            reason = "This should only fail if we are out of memory, which basically all collections silently panic for"
+        )]
         let style = styles
             .into_iter()
             .map(|(key, value)| key.to_owned() + ":" + &value + ";")
             .collect::<String>();
-        element
-            .set_attribute(intern("style"), &style)
-            .expect("Failed to set style");
+        debug_expect!(
+            element.set_attribute(intern("style"), &style),
+            "Failed to set style"
+        );
 
         for (key, value) in attributes {
             value.apply_attribute(intern(key), &element, ctx, render_state);
@@ -312,8 +326,10 @@ fn create_event_handler<C: ComponentData>(
     let closure = Closure::wrap(callback);
     let function = closure.as_ref().unchecked_ref();
 
-    let res = element.add_event_listener_with_callback(intern(event), function);
-    debug_assert!(res.is_ok(), "Failed to attach event handler");
+    debug_expect!(
+        element.add_event_listener_with_callback(intern(event), function),
+        "Failed to attach event handler"
+    );
 
     render_state.keep_alive.push(Box::new(closure));
 }

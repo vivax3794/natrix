@@ -4,6 +4,7 @@ use crate::element::Element;
 use crate::html_elements::ToAttribute;
 use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
 use crate::state::{ComponentData, HookKey, KeepAlive, RenderCtx, State};
+use crate::utils::debug_expect;
 use crate::{get_document, type_macros};
 
 /// A noop hook used to fill the `Rc<RefCell<...>>` while the inital render pass runs so that that
@@ -90,8 +91,10 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
             return;
         };
 
-        let res = parent.replace_child(&new_node, &self.target_node);
-        debug_assert!(res.is_ok(), "Failed to replace target node.");
+        debug_expect!(
+            parent.replace_child(&new_node, &self.target_node),
+            "Failed to replace parent"
+        );
         self.target_node = new_node;
     }
 }

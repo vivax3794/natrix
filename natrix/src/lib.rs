@@ -1,20 +1,24 @@
 #![doc = include_str!("../../README.md")]
-#![deny(
+#![forbid(
     unsafe_code,
     clippy::todo,
-    clippy::dbg_macro,
     clippy::unreachable,
     clippy::unwrap_used,
-    unfulfilled_lint_expectations,
+    clippy::unreachable,
+    clippy::indexing_slicing
+)]
+#![deny(
+    clippy::dbg_macro,
+    clippy::expect_used,
     clippy::allow_attributes,
-    clippy::allow_attributes_without_reason
+    clippy::allow_attributes_without_reason,
+    clippy::arithmetic_side_effects
 )]
 #![warn(
     missing_docs,
     clippy::missing_docs_in_private_items,
     clippy::pedantic,
-    clippy::expect_used,
-    clippy::unreachable
+    unfulfilled_lint_expectations
 )]
 #![allow(clippy::type_complexity, reason = "Fn trait objects get complex.")]
 #![allow(
@@ -77,11 +81,13 @@ pub mod prelude {
 }
 
 #[cfg(feature = "test_utils")]
-#[expect(clippy::unwrap_used, reason = "tests only")]
+#[expect(clippy::expect_used, reason = "tests only")]
 /// utilities for writting unit tests on wasm
 pub mod test_utils {
     use wasm_bindgen::JsCast;
     use web_sys::HtmlElement;
+
+    use crate::get_document;
 
     /// The parent of the testing env
     const MOUNT_PARENT: &str = "__TESTING_PARENT";
@@ -94,20 +100,31 @@ pub mod test_utils {
     /// # Panics
     /// if the js is in a invalid state.
     pub fn setup() {
-        let document = web_sys::window().unwrap().document().unwrap();
+        let document = web_sys::window()
+            .expect("Failed to get window")
+            .document()
+            .expect("Failed to get document");
 
         if let Some(element) = document.get_element_by_id(MOUNT_PARENT) {
             element.remove();
         }
 
-        let parent = document.create_element("div").unwrap();
+        let parent = document
+            .create_element("div")
+            .expect("Failed to create div");
         parent.set_id(MOUNT_PARENT);
 
-        let mount = document.create_element("div").unwrap();
+        let mount = document
+            .create_element("div")
+            .expect("Failed to create div");
         mount.set_id(MOUNT_POINT);
 
-        parent.append_child(&mount).unwrap();
-        document.body().unwrap().append_child(&parent).unwrap();
+        parent.append_child(&mount).expect("Failed to append child");
+        document
+            .body()
+            .expect("Could not find <body>")
+            .append_child(&parent)
+            .expect("Failed to append child");
     }
 
     /// Get a html element based on id
@@ -116,13 +133,13 @@ pub mod test_utils {
     /// If js is in a invalid state or the element isnt found
     #[must_use]
     pub fn get(id: &'static str) -> HtmlElement {
-        let document = web_sys::window().unwrap().document().unwrap();
+        let document = get_document();
 
         document
             .get_element_by_id(id)
-            .unwrap()
+            .unwrap_or_else(|| panic!("Id {id} not found"))
             .dyn_ref::<HtmlElement>()
-            .unwrap()
+            .expect("Target Node wasnt a html element")
             .clone()
     }
 }

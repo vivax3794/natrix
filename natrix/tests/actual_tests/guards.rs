@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use natrix::prelude::*;
+use proptest::proptest;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
@@ -171,4 +172,53 @@ fn guard_nested() {
     button.click();
     let text = crate::get(TEXT);
     assert_eq!(text.text_content(), Some("NO VALUE".to_owned()));
+}
+
+#[derive(Component)]
+struct GuardSwitchProp {
+    value: Option<Option<bool>>,
+    next: Option<Option<bool>>,
+}
+
+impl Component for GuardSwitchProp {
+    fn render() -> impl Element<Self::Data> {
+        e::div()
+            .child(
+                e::button()
+                    .id(BUTTON)
+                    .on::<events::Click>(|ctx: &mut S<Self>, _| {
+                        *ctx.value = *ctx.next;
+                    }),
+            )
+            .child(|mut ctx: R<Self>| {
+                if let Some(value_guard) = guard_option!(ctx.value) {
+                    e::div().text(move |mut ctx: R<Self>| {
+                        if let Some(inner_guard) = guard_option!(ctx.get(&value_guard)) {
+                            e::div().id(TEXT).text(move |ctx: R<Self>| {
+                                if ctx.get(&inner_guard) {
+                                    "hello"
+                                } else {
+                                    "world"
+                                }
+                            })
+                        } else {
+                            e::div().text("NO VALUE INNER").id(TEXT)
+                        }
+                    })
+                } else {
+                    e::div().text("NO VALUE").id(TEXT)
+                }
+            })
+    }
+}
+
+proptest! {
+    #[wasm_bindgen_test]
+    fn guard_switch(start: Option<Option<bool>>, next: Option<Option<bool>>) {
+        crate::setup();
+        mount_component(GuardSwitchProp {value: start, next}, crate::MOUNT_POINT);
+
+        let button = crate::get(BUTTON);
+        button.click();
+    }
 }
