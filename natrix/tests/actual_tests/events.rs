@@ -37,3 +37,26 @@ fn can_use_event() {
     button.click();
     assert_eq!(button.text_content(), Some("3".to_owned()));
 }
+
+#[derive(Component)]
+struct OnMount {
+    value: u8,
+}
+
+impl Component for OnMount {
+    fn render() -> impl Element<Self::Data> {
+        e::div().id(BUTTON_ID).text(|ctx: R<Self>| *ctx.value)
+    }
+    fn on_mount(ctx: &mut S<Self>) {
+        *ctx.value = 10;
+    }
+}
+
+#[wasm_bindgen_test]
+fn on_mount() {
+    crate::setup();
+    mount_component(OnMount { value: 0 }, crate::MOUNT_POINT);
+
+    let text = crate::get(BUTTON_ID);
+    assert_eq!(text.text_content(), Some("10".to_string()));
+}

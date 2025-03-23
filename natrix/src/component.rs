@@ -6,7 +6,7 @@ use std::rc::Rc;
 use crate::element::Element;
 use crate::get_document;
 use crate::signal::RenderingState;
-use crate::state::{ComponentData, HookKey, State};
+use crate::state::{ComponentData, HookKey, S, State};
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
 /// associating a component with its reactive state as well as converting to a struct to its
@@ -68,6 +68,9 @@ pub trait Component: ComponentBase {
     ///
     /// See the [Reactivity](TODO) chapther in the book for more info
     fn render() -> impl Element<Self::Data>;
+
+    /// Called when the component is mounted.
+    fn on_mount(_ctx: &mut S<Self>) {}
 }
 
 /// Wrapper around a component to let it be used as a subcomponet, `.child(C(MyComponent))`
@@ -88,6 +91,7 @@ where
         let element = I::render();
 
         let mut borrow_data = data.borrow_mut();
+        I::on_mount(&mut borrow_data);
 
         let mut hooks = Vec::new();
 
@@ -122,6 +126,7 @@ pub fn mount_component<C: Component>(component: C, target_id: &'static str) {
     let element = C::render();
 
     let mut borrow_data = data.borrow_mut();
+    C::on_mount(&mut borrow_data);
 
     let mut keep_alive = Vec::new();
     let mut hooks = Vec::new();
