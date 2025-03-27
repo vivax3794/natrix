@@ -70,6 +70,7 @@ pub trait Component: ComponentBase {
     fn render() -> impl Element<Self::Data>;
 
     /// Called when the component is mounted.
+    /// Can be used to setup Effects or start async tasks.
     fn on_mount(_ctx: &mut S<Self>) {}
 }
 

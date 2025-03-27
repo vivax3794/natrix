@@ -1,11 +1,17 @@
-alias t := test_small
 alias c := check_small
-alias l := lint_small
 alias f := check_full
 alias p := publish
 
-check_small: test_small lint_small
-check_full: test_full lint_full
+check_small:
+    cargo +nightly nextest run --all-features
+    cd natrix && rustup run nightly wasm-pack test --headless --chrome --all-features
+    cargo +nightly clippy --all-features 
+
+check_full: test_full lint_full test_bounds
+
+test_bounds:
+    cd natrix_macros && cargo-bounds test -c "just check_small"
+    cd natrix && cargo-bounds test -c "just check_small"
 
 # Publish the crate to crates.io
 publish: fmt check_full
@@ -19,9 +25,6 @@ test_full: test_firefox && test_web_full
     cargo +stable hack nextest run --feature-powerset --skip nightly --no-tests pass
     cargo +nightly hack nextest run --feature-powerset  --no-tests pass
     cargo +nightly nextest run --release --all-features
-
-test_small: && test_web_small
-    cargo +nightly nextest run --all-features
 
 [working-directory: "./natrix"]
 test_firefox:
@@ -47,22 +50,13 @@ test_web_full:
     rustup run nightly wasm-pack test --headless --chrome --all-features --release
     
 
-[working-directory: "./natrix"]
-test_web_small:
-    rustup run nightly wasm-pack test --headless --chrome --all-features
-
 lint_full:
     cargo +stable hack clippy --feature-powerset --skip nightly --tests -- -Dwarnings
     cargo +nightly hack clippy --feature-powerset --tests -- -Dwarnings
     cargo +nightly clippy --all-features --release
 
-lint_small:
-    cargo +nightly clippy --all-features 
-
-bench: bench_web
-
 [working-directory: './bench_project']
-bench_web:
+bench:
     rustup run stable wasm_bench
     rustup run nightly wasm_bench
 
@@ -77,10 +71,6 @@ book:
 # Generate and open public docs
 docs:
     cargo doc --open -p natrix --lib --all-features
-
-# Generate and open docs for internal items
-docs_internal:
-    cargo doc --open -p natrix --lib --all-features --document-private-items
 
 # Remove all build artifacts
 clean:

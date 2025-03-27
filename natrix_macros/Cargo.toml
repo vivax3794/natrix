@@ -11,7 +11,7 @@ repository = "https://github.com/vivax3794/natrix"
 proc-macro = true
 
 [dependencies]
-proc-macro2 = {version="1.0.93", default-features = false}
-quote = {version="1.0.38", default-features = false}
-syn = { version = "2.0.100", default-features = false, features=["derive", "proc-macro", "parsing", "printing", "full", "clone-impls"]}
-template-quote = "0.4.2"
+proc-macro2 = {version="1.0.75", default-features = false}
+quote = {version="1.0.35", default-features = false}
+syn = { version = "2.0.52", default-features = false, features=["derive", "proc-macro", "parsing", "printing", "full", "clone-impls"]}
+template-quote = ">=0.3.0, <0.5"
