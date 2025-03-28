@@ -19,7 +19,7 @@ impl<C: ComponentData> ReactiveHook<C> for DummyHook {
 /// Reactive hook for swapping out a entire dom node.
 pub(crate) struct ReactiveNode<C, E> {
     /// The callback to produce nodes
-    callback: Box<dyn Fn(RenderCtx<C>) -> E>,
+    callback: Box<dyn Fn(&mut RenderCtx<C>) -> E>,
     /// The current renderd node to replace
     target_node: web_sys::Node,
     /// Vector of various objects to be kept alive for the duration of the renderd content
@@ -36,7 +36,7 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
     fn render(&mut self, ctx: &mut State<C>, you: HookKey) -> web_sys::Node {
         ctx.clear();
 
-        let element = (self.callback)(RenderCtx {
+        let element = (self.callback)(&mut RenderCtx {
             ctx,
             render_state: RenderingState {
                 keep_alive: &mut self.keep_alive,
@@ -58,7 +58,7 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
     /// Create a new `ReactiveNode` registering the inital depdencies and returning both the `Rc`
     /// reference to it and the inital node (Which should be inserted in the dom)
     pub(crate) fn create_inital(
-        callback: Box<dyn Fn(RenderCtx<C>) -> E>,
+        callback: Box<dyn Fn(&mut RenderCtx<C>) -> E>,
         ctx: &mut State<C>,
     ) -> (HookKey, web_sys::Node) {
         #[expect(
@@ -124,7 +124,7 @@ impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, String> {
         use wasm_bindgen::JsCast;
 
         ctx.clear();
-        let element = (self.callback)(RenderCtx {
+        let element = (self.callback)(&mut RenderCtx {
             ctx,
             render_state: RenderingState {
                 keep_alive: &mut self.keep_alive,
@@ -153,7 +153,7 @@ macro_rules! node_specialize_int {
                 use wasm_bindgen::JsCast;
 
                 ctx.clear();
-                let element = (self.callback)(RenderCtx {
+                let element = (self.callback)(&mut RenderCtx {
                     ctx,
                     render_state: RenderingState {
                         keep_alive: &mut self.keep_alive,
@@ -191,7 +191,7 @@ pub(crate) trait ReactiveValue<C> {
 pub(crate) struct SimpleReactive<C, K> {
     /// The callback to call, takes state and returns the needed data for the reactive
     /// transformation
-    callback: Box<dyn Fn(RenderCtx<C>) -> K>,
+    callback: Box<dyn Fn(&mut RenderCtx<C>) -> K>,
     /// The node to apply transformations to
     node: web_sys::Element,
     /// Vector of various objects to be kept alive for the duration of the renderd content
@@ -203,7 +203,7 @@ pub(crate) struct SimpleReactive<C, K> {
 impl<C: ComponentData, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K> {
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         ctx.clear();
-        let value = (self.callback)(RenderCtx {
+        let value = (self.callback)(&mut RenderCtx {
             ctx,
             render_state: RenderingState {
                 keep_alive: &mut self.keep_alive,
@@ -235,7 +235,7 @@ impl<C: ComponentData, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
     /// Creates a new simple reactive hook, applying the inital transformation.
     /// Returns a Rc of the hook
     pub(crate) fn init_new(
-        callback: Box<dyn Fn(RenderCtx<C>) -> K>,
+        callback: Box<dyn Fn(&mut RenderCtx<C>) -> K>,
         node: web_sys::Element,
         ctx: &mut State<C>,
     ) -> HookKey {

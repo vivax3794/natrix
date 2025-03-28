@@ -8,7 +8,7 @@ use crate::state::{ComponentData, RenderCtx, State};
 
 impl<F, C, R> Element<C> for F
 where
-    F: Fn(RenderCtx<C>) -> R + 'static,
+    F: Fn(&mut RenderCtx<C>) -> R + 'static,
     R: Element<C> + 'static,
     C: ComponentData,
 {
@@ -25,7 +25,7 @@ where
 
 impl<F, C, R> ToAttribute<C> for F
 where
-    F: Fn(RenderCtx<C>) -> R + 'static,
+    F: Fn(&mut RenderCtx<C>) -> R + 'static,
     R: ToAttribute<C>,
     C: ComponentData,
 {

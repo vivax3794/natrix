@@ -26,7 +26,7 @@ impl Component for GuardTester {
                         None => *ctx.value = Some(0),
                     }),
             )
-            .child(|mut ctx: R<Self>| {
+            .child(|ctx: R<Self>| {
                 if let Some(value_guard) = guard_option!(ctx.value) {
                     e::div().text(move |ctx: R<Self>| ctx.get(&value_guard))
                 } else {
@@ -78,7 +78,7 @@ impl Component for GuardTesterResult {
                         Err(_) => *ctx.value = Ok(0),
                     }),
             )
-            .child(|mut ctx: R<Self>| {
+            .child(|ctx: R<Self>| {
                 match guard_result!(ctx.value) {
                     Ok(value_guard) => e::div().text(move |ctx: R<Self>| ctx.get(&value_guard)),
                     Err(error_guard) => e::div().text(move |ctx: R<Self>| ctx.get(&error_guard)),
@@ -127,9 +127,9 @@ impl Component for GuardTesterNested {
                         None => *ctx.value = Some(None),
                     }),
             )
-            .child(|mut ctx: R<Self>| {
+            .child(|ctx: R<Self>| {
                 if let Some(value_guard) = guard_option!(ctx.value) {
-                    e::div().text(move |mut ctx: R<Self>| {
+                    e::div().text(move |ctx: R<Self>| {
                         if let Some(inner_guard) = guard_option!(ctx.get(&value_guard)) {
                             e::div()
                                 .id(TEXT)
@@ -190,9 +190,9 @@ impl Component for GuardSwitchProp {
                         *ctx.value = *ctx.next;
                     }),
             )
-            .child(|mut ctx: R<Self>| {
+            .child(|ctx: R<Self>| {
                 if let Some(value_guard) = guard_option!(ctx.value) {
-                    e::div().text(move |mut ctx: R<Self>| {
+                    e::div().text(move |ctx: R<Self>| {
                         if let Some(inner_guard) = guard_option!(ctx.get(&value_guard)) {
                             e::div().id(TEXT).text(move |ctx: R<Self>| {
                                 if ctx.get(&inner_guard) {

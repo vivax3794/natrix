@@ -67,7 +67,7 @@ pub type S<C> = State<<C as ComponentBase>::Data>;
 
 /// A type alias for `RenderCtx<C::Data>`, should be prefered in closure argument hints.
 /// such as `|ctx: R<Self>| ...`
-pub type R<'c, 's, C> = RenderCtx<'c, 's, <C as ComponentBase>::Data>;
+pub type R<'a, 'c, C> = &'a mut RenderCtx<'c, <C as ComponentBase>::Data>;
 
 impl<T> State<T> {
     /// Create a new instance of the state, returning a `Rc` to it
@@ -196,14 +196,14 @@ fn drop_hook_children<T: ComponentData>(ctx: &mut State<T>, hook: &mut Box<dyn R
 /// Wrapper around a mutable state that only allows read-only access
 ///
 /// This holds a mutable state to faciliate a few rendering features such as `.watch`
-pub struct RenderCtx<'c, 's, C> {
+pub struct RenderCtx<'c, C> {
     /// The inner context
     pub(crate) ctx: &'c mut State<C>,
     /// The render state for this state
-    pub(crate) render_state: RenderingState<'s>,
+    pub(crate) render_state: RenderingState<'c>,
 }
 
-impl<C> Deref for RenderCtx<'_, '_, C> {
+impl<C> Deref for RenderCtx<'_, C> {
     type Target = C;
 
     fn deref(&self) -> &Self::Target {
@@ -211,7 +211,7 @@ impl<C> Deref for RenderCtx<'_, '_, C> {
     }
 }
 
-impl<C: ComponentData> RenderCtx<'_, '_, C> {
+impl<C: ComponentData> RenderCtx<'_, C> {
     /// Calculate the value using the function and cache it using `clone`.
     /// Then whenever any signals read in the function are modified re-run the function and check
     /// if the new result is different.

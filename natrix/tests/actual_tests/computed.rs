@@ -17,7 +17,7 @@ impl Component for Counter {
     fn render() -> impl Element<Self::Data> {
         e::button()
             .id(BUTTON_ID)
-            .child(|mut ctx: R<Self>| {
+            .child(|ctx: R<Self>| {
                 if ctx.watch(|ctx| *ctx.value > 2) {
                     e::div().text(|ctx: R<Self>| *ctx.value).id(TEXT)
                 } else {
