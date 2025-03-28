@@ -149,3 +149,24 @@ macro_rules! int_element {
 }
 
 type_macros::numerics!(int_element);
+
+#[cfg(feature = "either")]
+/// Impl of `Element` on `Either`
+mod either_element {
+    use either::Either;
+
+    use super::{Element, RenderingState, State};
+
+    impl<A: Element<C>, B: Element<C>, C> Element<C> for Either<A, B> {
+        fn render_box(
+            self: Box<Self>,
+            ctx: &mut State<C>,
+            render_state: &mut RenderingState,
+        ) -> web_sys::Node {
+            match *self {
+                Either::Left(a) => a.render(ctx, render_state),
+                Either::Right(b) => b.render(ctx, render_state),
+            }
+        }
+    }
+}

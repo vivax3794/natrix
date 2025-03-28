@@ -10,8 +10,8 @@ check_small:
 check_full: test_full lint_full test_bounds
 
 test_bounds:
-    cd natrix_macros && cargo-bounds test -c "just check_small"
-    cd natrix && cargo-bounds test -c "just check_small"
+    cd natrix_macros && cargo-bounds test
+    cd natrix && cargo-bounds test
 
 # Publish the crate to crates.io
 publish: fmt check_full
@@ -21,14 +21,10 @@ publish: fmt check_full
 mutation:
     RUSTFLAGS="--cfg=mutants -C codegen-units=1" cargo mutants --workspace --test-workspace true --jobs 4 -- --lib --all-features
 
-test_full: test_firefox && test_web_full
-    cargo +stable hack nextest run --feature-powerset --skip nightly --no-tests pass
-    cargo +nightly hack nextest run --feature-powerset  --no-tests pass
+test_full: && test_web_full
+    cargo +stable hack nextest run --each-feature --skip nightly --no-tests pass
+    cargo +nightly hack nextest run --each-feature --no-tests pass
     cargo +nightly nextest run --release --all-features
-
-[working-directory: "./natrix"]
-test_firefox:
-    rustup run nightly wasm-pack test --headless --firefox --all-features
 
 [working-directory: "./natrix"]
 test_web_full:
@@ -39,13 +35,13 @@ test_web_full:
         modified_line=$(echo "$line" | sed 's/cargo/rustup run stable/g')
         echo "Executing: $modified_line 🎀"
         eval "$modified_line"
-    done < <(cargo hack wasm-pack test --headless --chrome --feature-powerset --skip nightly --features test_utils --print-command-list --no-manifest-path)
+    done < <(cargo hack wasm-pack test --headless --chrome --skip nightly --each-feature --features test_utils --print-command-list --no-manifest-path)
 
     while IFS= read -r line || [ -n "$line" ]; do
         modified_line=$(echo "$line" | sed 's/cargo/rustup run nightly/g')
         echo "Executing: $modified_line 🎀"
         eval "$modified_line"
-    done < <(cargo hack wasm-pack test --headless --chrome --feature-powerset --features test_utils --print-command-list --no-manifest-path)
+    done < <(cargo hack wasm-pack test --headless --chrome --each-feature --features test_utils --print-command-list --no-manifest-path)
 
     rustup run nightly wasm-pack test --headless --chrome --all-features --release
     
