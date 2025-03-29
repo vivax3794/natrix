@@ -1,7 +1,8 @@
 [package]
-name = "test_project"
+name = "bench_project"
 version = "0.1.1"
 edition = "2024"
+publish = false
 
 [dependencies]
 natrix = {path = "../natrix", features=["test_utils"]}

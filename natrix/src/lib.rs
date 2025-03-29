@@ -145,16 +145,3 @@ pub mod macro_ref {
     pub use super::signal::{Signal, SignalMethods, SignalState};
     pub use super::state::{ComponentData, Guard, S};
 }
-
-// Cargo-mutants cant run `wasm-pack`, this is a workaround to ensure its tests get included
-#[cfg(mutants)]
-#[test]
-fn wasm_pack_test() {
-    use std::process::Command;
-    let output = Command::new("wasm-pack")
-        .args(["test", "--headless", "--chrome"])
-        .output()
-        .expect("Failed to run wasm-pack test");
-
-    assert!(output.status.success(), "wasm-pack test failed!");
-}

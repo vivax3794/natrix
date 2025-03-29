@@ -15,35 +15,45 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use std::thread::sleep;
+    use std::sync::OnceLock;
     use std::time::Duration;
 
-    use thirtyfour_sync::{By, DesiredCapabilities, WebDriver, WebDriverCommands};
+    use thirtyfour::{By, ChromiumLikeCapabilities, DesiredCapabilities, WebDriver};
+    use tokio::time::sleep;
 
-    fn create_client() -> WebDriver {
+    async fn create_client() -> WebDriver {
         let mut caps = DesiredCapabilities::chrome();
         caps.set_headless().unwrap();
         let driver = WebDriver::new("http://localhost:9999", caps)
+            .await
             .expect("Failed to connect to chrome driver");
 
         driver
             .get("http://localhost:4444")
+            .await
             .expect("Failed to goto site");
-        sleep(Duration::from_secs(1));
+        sleep(Duration::from_secs(1)).await;
 
         driver
     }
 
-    thread_local! {
-        static CLIENT: WebDriver = create_client();
+    static CLIENT: OnceLock<WebDriver> = OnceLock::new();
+
+    async fn get_client() -> &'static WebDriver {
+        if let Some(client) = CLIENT.get() {
+            client
+        } else {
+            let client = create_client().await;
+            CLIENT.set(client).unwrap();
+            CLIENT.get().unwrap()
+        }
     }
 
-    #[test]
-    fn loading_framework_works() {
-        CLIENT.with(|client| {
-            let element = client.find_element(By::Id("HELLO")).unwrap();
-            let text = element.text().unwrap();
-            assert_eq!(text, "HELLO WORLD");
-        })
+    #[tokio::test]
+    async fn loading_framework_works() {
+        let client = get_client().await;
+        let element = client.find(By::Id("HELLO")).await.unwrap();
+        let text = element.text().await.unwrap();
+        assert_eq!(text, "HELLO WORLD");
     }
 }
