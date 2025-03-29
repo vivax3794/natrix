@@ -29,8 +29,6 @@
 #![cfg_attr(feature = "nightly", feature(must_not_suspend))]
 #![cfg_attr(nightly, feature(min_specialization))]
 
-use std::cell::OnceCell;
-
 #[cfg(feature = "async")]
 pub mod async_utils;
 pub mod callbacks;
@@ -46,7 +44,16 @@ mod utils;
 
 thread_local! {
     /// A lazy initlized reference to the js document.
-    static DOCUMENT: OnceCell<web_sys::Document> = const { OnceCell::new() };
+    static DOCUMENT: web_sys::Document = {
+        #[expect(
+            clippy::expect_used,
+            reason = "A web framework cant do much without access to the document"
+        )]
+        web_sys::window()
+            .expect("Window object not found")
+            .document()
+            .expect("Document object not found")
+    };
 }
 
 /// Get the globaly aquired document
@@ -54,20 +61,7 @@ thread_local! {
 /// This is cached so we dont need the slowdown of the js interop and `Result` handling for every
 /// use of document.
 pub(crate) fn get_document() -> web_sys::Document {
-    DOCUMENT.with(|doc_cell| {
-        doc_cell
-            .get_or_init(|| {
-                #[expect(
-                    clippy::expect_used,
-                    reason = "A web framework cant do much without access to the document"
-                )]
-                web_sys::window()
-                    .expect("Window object not found")
-                    .document()
-                    .expect("Document object not found")
-            })
-            .clone()
-    })
+    DOCUMENT.with(Clone::clone)
 }
 
 /// Public export of everything.

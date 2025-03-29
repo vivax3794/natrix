@@ -4,10 +4,36 @@ alias p := publish
 
 check_small:
     cargo +nightly nextest run --all-features
-    cd natrix && rustup run nightly wasm-pack test --headless --chrome --all-features
+    cd natrix && RUSTFLAGS="-Awarnings" rustup run nightly wasm-pack test --headless --chrome --all-features
     cargo +nightly clippy --all-features 
 
 check_full: test_full lint_full test_bounds
+
+[working-directory: "./integration_tests"]
+integration_tests:
+    #!/usr/bin/bash
+    set -e
+
+    cleanup() {
+        echo "Cleaning up..."
+        if [ -n "$trunk_pid" ]; then
+            kill "$trunk_pid" 2>/dev/null
+        fi
+        if [ -n "$chrome_pid" ]; then
+            kill "$chrome_pid" 2>/dev/null
+        fi
+    }
+    trap cleanup EXIT
+
+    RUSTFLAGS="-Awarnings" trunk build
+    RUSTFLAGS="-Awarnings" trunk serve --port 4444 &
+    trunk_pid=$!
+
+    chromedriver --port=9999 &
+    chrome_pid=$!
+
+    sleep 1
+    cargo nextest run -j 1
 
 test_bounds:
     cd natrix_macros && cargo-bounds test
@@ -21,7 +47,7 @@ publish: fmt check_full
 mutation:
     RUSTFLAGS="--cfg=mutants -C codegen-units=1" cargo mutants --workspace --test-workspace true --jobs 4 -- --lib --all-features
 
-test_full: && test_web_full
+test_full: && test_web_full integration_tests
     cargo +stable hack nextest run --each-feature --skip nightly --no-tests pass
     cargo +nightly hack nextest run --each-feature --no-tests pass
     cargo +nightly nextest run --release --all-features
@@ -34,16 +60,16 @@ test_web_full:
     while IFS= read -r line || [ -n "$line" ]; do
         modified_line=$(echo "$line" | sed 's/cargo/rustup run stable/g')
         echo "Executing: $modified_line 🎀"
-        eval "$modified_line"
+        RUSTFLAGS="-Awarnings" eval "$modified_line"
     done < <(cargo hack wasm-pack test --headless --chrome --skip nightly --each-feature --features test_utils --print-command-list --no-manifest-path)
 
     while IFS= read -r line || [ -n "$line" ]; do
         modified_line=$(echo "$line" | sed 's/cargo/rustup run nightly/g')
         echo "Executing: $modified_line 🎀"
-        eval "$modified_line"
+        RUSTFLAGS="-Awarnings" eval "$modified_line"
     done < <(cargo hack wasm-pack test --headless --chrome --each-feature --features test_utils --print-command-list --no-manifest-path)
 
-    rustup run nightly wasm-pack test --headless --chrome --all-features --release
+    RUSTFLAGS="-Awarnings" rustup run nightly wasm-pack test --headless --chrome --all-features --release
     
 
 lint_full:
@@ -74,3 +100,4 @@ clean:
     rm -rv docs/book || true
     rm -rv mutants.out* || true
     rm -v bench_project/.tmp* || true
+    rm -rv integration_tests/dist || true
