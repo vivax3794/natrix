@@ -1,6 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["natrix", "natrix_macros", "bench_project", "integration_tests"]
+members = [
+    "natrix_shared",
+    "natrix_macros",
+    "natrix",
+    "natrix-cli",
+    "integration_tests",
+    "bench_project",
+]
 
 [profile.release]
 opt-level = "z"

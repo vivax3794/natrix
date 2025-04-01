@@ -23,8 +23,7 @@ impl Component for Counter {
 
 #[wasm_bindgen_test]
 fn can_use_event() {
-    crate::setup();
-    mount_component(Counter { value: 0 }, crate::MOUNT_POINT);
+    crate::mount_test(Counter { value: 0 });
 
     let button = crate::get(BUTTON_ID);
 
@@ -54,8 +53,7 @@ impl Component for OnMount {
 
 #[wasm_bindgen_test]
 fn on_mount() {
-    crate::setup();
-    mount_component(OnMount { value: 0 }, crate::MOUNT_POINT);
+    crate::mount_test(OnMount { value: 0 });
 
     let text = crate::get(BUTTON_ID);
     assert_eq!(text.text_content(), Some("10".to_string()));

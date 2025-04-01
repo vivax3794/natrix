@@ -39,8 +39,7 @@ impl Component for GuardTester {
 
 #[wasm_bindgen_test]
 fn guard_works() {
-    crate::setup();
-    mount_component(GuardTester { value: None }, crate::MOUNT_POINT);
+    crate::mount_test(GuardTester { value: None });
 
     let button = crate::get(BUTTON);
 
@@ -90,8 +89,7 @@ impl Component for GuardTesterResult {
 
 #[wasm_bindgen_test]
 fn guard_result() {
-    crate::setup();
-    mount_component(GuardTesterResult { value: Err(100) }, crate::MOUNT_POINT);
+    crate::mount_test(GuardTesterResult { value: Err(100) });
 
     let button = crate::get(BUTTON);
 
@@ -147,8 +145,7 @@ impl Component for GuardTesterNested {
 
 #[wasm_bindgen_test]
 fn guard_nested() {
-    crate::setup();
-    mount_component(GuardTesterNested { value: None }, crate::MOUNT_POINT);
+    crate::mount_test(GuardTesterNested { value: None });
 
     let button = crate::get(BUTTON);
 
@@ -215,8 +212,8 @@ impl Component for GuardSwitchProp {
 proptest! {
     #[wasm_bindgen_test]
     fn guard_switch(start: Option<Option<bool>>, next: Option<Option<bool>>) {
-        crate::setup();
-        mount_component(GuardSwitchProp {value: start, next}, crate::MOUNT_POINT);
+
+        crate::mount_test(GuardSwitchProp {value: start, next});
 
         let button = crate::get(BUTTON);
         button.click();

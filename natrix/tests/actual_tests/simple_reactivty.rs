@@ -23,8 +23,7 @@ impl Component for Counter {
 
 #[wasm_bindgen_test]
 fn renders_inital() {
-    crate::setup();
-    mount_component(Counter { value: 0 }, crate::MOUNT_POINT);
+    crate::mount_test(Counter { value: 0 });
 
     let button = crate::get(BUTTON_ID);
     assert_eq!(button.text_content(), Some("0".to_owned()));
@@ -32,8 +31,7 @@ fn renders_inital() {
 
 #[wasm_bindgen_test]
 fn uses_inital_data() {
-    crate::setup();
-    mount_component(Counter { value: 123 }, crate::MOUNT_POINT);
+    crate::mount_test(Counter { value: 123 });
 
     let button = crate::get(BUTTON_ID);
     assert_eq!(button.text_content(), Some("123".to_owned()));
@@ -41,8 +39,7 @@ fn uses_inital_data() {
 
 #[wasm_bindgen_test]
 fn updates_text() {
-    crate::setup();
-    mount_component(Counter { value: 0 }, crate::MOUNT_POINT);
+    crate::mount_test(Counter { value: 0 });
 
     let button = crate::get(BUTTON_ID);
 

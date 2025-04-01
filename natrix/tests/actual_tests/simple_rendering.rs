@@ -19,8 +19,7 @@ impl Component for HelloWorld {
 
 #[wasm_bindgen_test]
 fn renders_fine() {
-    crate::setup();
-    mount_component(HelloWorld, crate::MOUNT_POINT);
+    crate::mount_test(HelloWorld);
 
     let element = crate::get(HELLO_ID);
     assert_eq!(element.text_content(), Some("Hello World!".to_owned()));
@@ -37,8 +36,7 @@ impl<T: Element<Self::Data> + Clone> Component for Render<T> {
 
 #[wasm_bindgen_test]
 fn render_option_some() {
-    crate::setup();
-    mount_component(Render(Some("hey")), crate::MOUNT_POINT);
+    crate::mount_test(Render(Some("hey")));
 
     let element = crate::get(HELLO_ID);
     assert_eq!(element.text_content(), Some("hey".to_owned()));
@@ -46,8 +44,7 @@ fn render_option_some() {
 
 #[wasm_bindgen_test]
 fn render_option_none() {
-    crate::setup();
-    mount_component(Render(None::<String>), crate::MOUNT_POINT);
+    crate::mount_test(Render(None::<String>));
 
     let element = crate::get(HELLO_ID);
     assert_eq!(element.text_content(), Some("".to_owned()));
@@ -55,8 +52,7 @@ fn render_option_none() {
 
 #[wasm_bindgen_test]
 fn render_result_ok() {
-    crate::setup();
-    mount_component(Render(Ok::<&str, &str>("hey")), crate::MOUNT_POINT);
+    crate::mount_test(Render(Ok::<&str, &str>("hey")));
 
     let element = crate::get(HELLO_ID);
     assert_eq!(element.text_content(), Some("hey".to_owned()));
@@ -64,8 +60,7 @@ fn render_result_ok() {
 
 #[wasm_bindgen_test]
 fn render_result_err() {
-    crate::setup();
-    mount_component(Render(Err::<&str, &str>("hey")), crate::MOUNT_POINT);
+    crate::mount_test(Render(Err::<&str, &str>("hey")));
 
     let element = crate::get(HELLO_ID);
     assert_eq!(element.text_content(), Some("hey".to_owned()));
@@ -79,11 +74,7 @@ mod either_test {
 
     #[wasm_bindgen_test]
     fn render_either_left() {
-        crate::setup();
-        mount_component(
-            Render(Either::Left::<&str, &str>("hey")),
-            crate::MOUNT_POINT,
-        );
+        crate::mount_test(Render(Either::Left::<&str, &str>("hey")));
 
         let element = crate::get(HELLO_ID);
         assert_eq!(element.text_content(), Some("hey".to_owned()));
@@ -91,11 +82,7 @@ mod either_test {
 
     #[wasm_bindgen_test]
     fn render_either_right() {
-        crate::setup();
-        mount_component(
-            Render(Either::Right::<&str, &str>("hey")),
-            crate::MOUNT_POINT,
-        );
+        crate::mount_test(Render(Either::Right::<&str, &str>("hey")));
 
         let element = crate::get(HELLO_ID);
         assert_eq!(element.text_content(), Some("hey".to_owned()));
@@ -105,17 +92,17 @@ mod either_test {
 proptest! {
     #[wasm_bindgen_test]
     fn render_int(x: u32) {
-        crate::setup();
-        mount_component(Render(x), crate::MOUNT_POINT);
+
+        crate::mount_test(Render(x));
     }
     #[wasm_bindgen_test]
     fn render_float(x: f32) {
-        crate::setup();
-        mount_component(Render(x), crate::MOUNT_POINT);
+
+        crate::mount_test(Render(x));
     }
     #[wasm_bindgen_test]
     fn render_string(x: String) {
-        crate::setup();
-        mount_component(Render(x), crate::MOUNT_POINT);
+
+        crate::mount_test(Render(x));
     }
 }

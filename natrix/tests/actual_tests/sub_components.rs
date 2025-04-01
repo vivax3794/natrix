@@ -35,8 +35,7 @@ impl Component for RootOne {
 
 #[wasm_bindgen_test]
 fn simple_button_child() {
-    crate::setup();
-    mount_component(RootOne, crate::MOUNT_POINT);
+    crate::mount_test(RootOne);
 
     let button = crate::get(BUTTON_ID);
 

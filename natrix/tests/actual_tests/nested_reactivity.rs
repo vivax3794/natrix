@@ -41,8 +41,7 @@ impl Component for DoulbeCounter {
 
 #[wasm_bindgen_test]
 fn update_affects_inner_node() {
-    crate::setup();
-    mount_component(DoulbeCounter::default(), crate::MOUNT_POINT);
+    crate::mount_test(DoulbeCounter::default());
 
     let button_1 = crate::get(BUTTON_1);
     let button_2 = crate::get(BUTTON_2);

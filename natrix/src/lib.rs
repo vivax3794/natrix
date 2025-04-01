@@ -66,9 +66,9 @@ pub(crate) fn get_document() -> web_sys::Document {
 
 /// Public export of everything.
 pub mod prelude {
-    pub use natrix_macros::Component;
+    pub use natrix_macros::{Component, global_css};
 
-    pub use super::component::{C, Component, mount_component};
+    pub use super::component::{C, Component, mount};
     pub use super::element::Element;
     pub use super::state::{R, S};
     pub use super::{events, guard_option, guard_result, html_elements as e};
@@ -81,13 +81,21 @@ pub mod test_utils {
     use wasm_bindgen::JsCast;
     use web_sys::HtmlElement;
 
+    use crate::component::mount_at;
     use crate::get_document;
+    use crate::prelude::Component;
 
     /// The parent of the testing env
     const MOUNT_PARENT: &str = "__TESTING_PARENT";
     /// The var where you should mount your component
     /// This is auto created and cleaned up by `setup`
     pub const MOUNT_POINT: &str = "__TESTING_MOUNT_POINT";
+
+    /// Mount a component at the test location (creating/resetting it if needed)
+    pub fn mount_test<C: Component>(component: C) {
+        setup();
+        mount_at(component, MOUNT_POINT);
+    }
 
     /// Setup `MOUNT_POINt` as a valid mount location
     ///

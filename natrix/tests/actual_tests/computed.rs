@@ -30,8 +30,7 @@ impl Component for Counter {
 
 #[wasm_bindgen_test]
 fn works() {
-    crate::setup();
-    mount_component(Counter { value: 0 }, crate::MOUNT_POINT);
+    crate::mount_test(Counter { value: 0 });
 
     let button = crate::get(BUTTON_ID);
 

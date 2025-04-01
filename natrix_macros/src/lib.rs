@@ -22,6 +22,8 @@
 )]
 
 extern crate proc_macro;
+use std::fs;
+
 use proc_macro2::TokenStream;
 use quote::format_ident;
 use syn::{ItemStruct, parse_quote};
@@ -183,4 +185,29 @@ struct Field {
     type_: TokenStream,
     /// How one would access the field (identifiers for named structs, a number for tuple)
     access: TokenStream,
+}
+
+#[proc_macro]
+/// Register global css to be included in the final bundle.
+///
+/// For most usecases prefer scoped css machinery.
+pub fn global_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // let css = syn::parse_macro_input!(css_input as syn::LitStr);
+    // let span = css.span();
+    // let css = css.value();
+    //
+    // let Ok(output_directory) = std::env::var(natrix_shared::MACRO_OUTPUT_ENV) else {
+    //     return quote!().into();
+    // };
+    //
+    // if let Err(err) = fs::write(output_directory, css) {
+    //     let err = err.to_string();
+    //     quote!(compiler_error!(#err)).into()
+    // } else {
+    //     quote!().into()
+    // }
+
+    // TODO: BUNDLE CSS
+
+    quote!().into()
 }

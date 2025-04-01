@@ -31,8 +31,7 @@ impl Component for AsyncComponent {
 
 #[wasm_bindgen_test]
 async fn async_works() {
-    crate::setup();
-    mount_component(AsyncComponent { data: 0 }, crate::MOUNT_POINT);
+    crate::mount_test(AsyncComponent { data: 0 });
 
     let button = crate::get(BUTTON_ID);
 
@@ -43,8 +42,7 @@ async fn async_works() {
 
 #[wasm_bindgen_test]
 async fn async_multiple() {
-    crate::setup();
-    mount_component(AsyncComponent { data: 0 }, crate::MOUNT_POINT);
+    crate::mount_test(AsyncComponent { data: 0 });
 
     let button = crate::get(BUTTON_ID);
 

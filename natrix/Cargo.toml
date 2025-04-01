@@ -11,6 +11,7 @@ readme = "../README.me"
 
 [dependencies]
 natrix_macros = {path = "../natrix_macros", version="0.1.0"}
+natrix_shared = {path = "../natrix_shared"}
 
 # Default
 wasm-bindgen = {version= "0.2.100", features=["enable-interning"]}

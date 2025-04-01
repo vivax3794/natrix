@@ -18,8 +18,7 @@ impl<T: Element<Self::Data> + Copy> Component for Generic<T> {
 
 #[wasm_bindgen_test]
 fn generic_int() {
-    crate::setup();
-    mount_component(Generic::<u8>::default(), crate::MOUNT_POINT);
+    crate::mount_test(Generic::<u8>::default());
 
     let element = crate::get(ROOT_ID);
     assert_eq!(element.text_content(), Some("0".to_owned()));
@@ -27,8 +26,7 @@ fn generic_int() {
 
 #[wasm_bindgen_test]
 fn generic_str() {
-    crate::setup();
-    mount_component(Generic("Hello World"), crate::MOUNT_POINT);
+    crate::mount_test(Generic("Hello World"));
 
     let element = crate::get(ROOT_ID);
     assert_eq!(element.text_content(), Some("Hello World".to_owned()));

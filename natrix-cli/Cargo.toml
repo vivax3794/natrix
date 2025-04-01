@@ -1,0 +1,20 @@
+[package]
+name = "natrix-cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+natrix_shared = {path = "../natrix_shared"}
+
+anyhow = "1.0.97"
+clap = { version = "4.5.34", features = ["derive"] }
+indicatif = "0.17.11"
+owo-colors = { version = "4.2.0", default-features = false }
+wasm-opt = {version="0.116.1"}
+notify = "8.0.0"
+tiny_http = "0.12.0"
+oxc = {version="0.61.2", no-default-features=false, features=["minifier", "codegen"]}
+
+[[bin]]
+name = "natrix"
+path = "src/main.rs"

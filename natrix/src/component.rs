@@ -111,7 +111,6 @@ where
 
 /// Mounts the component at the target id
 /// Replacing the element with the component
-/// This should be the entry point to your application
 ///
 /// **WARNING:** This method implicitly leaks the memory of the root component
 ///
@@ -122,7 +121,7 @@ where
     clippy::expect_used,
     reason = "This is the entry point of the framework, and it fails fast."
 )]
-pub fn mount_component<C: Component>(component: C, target_id: &'static str) {
+pub fn mount_at<C: Component>(component: C, target_id: &'static str) {
     let data = component.into_state();
     let element = C::render();
 
@@ -152,4 +151,12 @@ pub fn mount_component<C: Component>(component: C, target_id: &'static str) {
     // This is the entry point, this component should be alive FOREVER
     std::mem::forget(data);
     std::mem::forget(keep_alive);
+}
+
+/// Mount the specified component at natrixses default location.
+/// This is what should be used when building with the natrix cli.
+///
+/// **WARNING:** This method implicitly leaks the memory of the root component
+pub fn mount<C: Component>(component: C) {
+    mount_at(component, natrix_shared::MOUNT_POINT);
 }

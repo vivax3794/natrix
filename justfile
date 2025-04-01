@@ -21,8 +21,8 @@ integration_tests:
 
     cleanup() {
         echo "Cleaning up..."
-        if [ -n "$trunk_pid" ]; then
-            kill "$trunk_pid" 2>/dev/null
+        if [ -n "$natrix_pid" ]; then
+            kill "$natrix_pid" 2>/dev/null
         fi
         if [ -n "$chrome_pid" ]; then
             kill "$chrome_pid" 2>/dev/null
@@ -30,9 +30,9 @@ integration_tests:
     }
     trap cleanup EXIT
 
-    RUSTFLAGS="-Awarnings" trunk build
-    RUSTFLAGS="-Awarnings" trunk serve --port 4444 --ignore .. &
-    trunk_pid=$!
+    cargo run -p natrix-cli -- build
+    cargo run -p natrix-cli -- dev -p release &
+    natrix_pid=$!
 
     chromedriver --port=9999 &
     chrome_pid=$!
@@ -40,10 +40,15 @@ integration_tests:
     sleep 1
     cargo nextest run -j 1
 
+install_cli:
+    cargo install --path natrix-cli
+
 # Publish the crate to crates.io
 publish: fmt check
+    cargo publish -p natrix_shared
     cargo publish -p natrix_macros
     cargo publish -p natrix
+    cargo publish -p natrix-cli
 
 [working-directory: './bench_project']
 bench:

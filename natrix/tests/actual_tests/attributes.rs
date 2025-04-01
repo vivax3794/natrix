@@ -18,40 +18,35 @@ impl<T: ToAttribute<Self::Data> + Copy> Component for Generic<T> {
 
 #[wasm_bindgen_test]
 fn simple_true() {
-    crate::setup();
-    mount_component(Generic(true), crate::MOUNT_POINT);
+    crate::mount_test(Generic(true));
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("".to_owned()));
 }
 #[wasm_bindgen_test]
 fn simple_false() {
-    crate::setup();
-    mount_component(Generic(false), crate::MOUNT_POINT);
+    crate::mount_test(Generic(false));
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), None);
 }
 #[wasm_bindgen_test]
 fn simple_string() {
-    crate::setup();
-    mount_component(Generic("hello"), crate::MOUNT_POINT);
+    crate::mount_test(Generic("hello"));
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("hello".to_owned()));
 }
 #[wasm_bindgen_test]
 fn simple_some() {
-    crate::setup();
-    mount_component(Generic(Some("hello")), crate::MOUNT_POINT);
+    crate::mount_test(Generic(Some("hello")));
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("hello".to_owned()));
 }
 #[wasm_bindgen_test]
 fn simple_none() {
-    crate::setup();
-    mount_component(Generic(None::<u8>), crate::MOUNT_POINT);
+    crate::mount_test(Generic(None::<u8>));
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), None);
@@ -59,22 +54,14 @@ fn simple_none() {
 
 #[wasm_bindgen_test]
 fn simple_ok() {
-    crate::setup();
-    mount_component(
-        Generic(Ok::<&'static str, &'static str>("hello")),
-        crate::MOUNT_POINT,
-    );
+    crate::mount_test(Generic(Ok::<&'static str, &'static str>("hello")));
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("hello".to_owned()));
 }
 #[wasm_bindgen_test]
 fn simple_err() {
-    crate::setup();
-    mount_component(
-        Generic(Err::<&'static str, &'static str>("world")),
-        crate::MOUNT_POINT,
-    );
+    crate::mount_test(Generic(Err::<&'static str, &'static str>("world")));
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("world".to_owned()));
@@ -98,8 +85,7 @@ impl Component for Counter {
 
 #[wasm_bindgen_test]
 fn reactive_attribute() {
-    crate::setup();
-    mount_component(Counter::default(), crate::MOUNT_POINT);
+    crate::mount_test(Counter::default());
 
     let button = crate::get(ROOT);
 
@@ -136,8 +122,7 @@ impl Component for Toggle {
 
 #[wasm_bindgen_test]
 fn reactive_bool() {
-    crate::setup();
-    mount_component(Toggle::default(), crate::MOUNT_POINT);
+    crate::mount_test(Toggle::default());
 
     let button = crate::get(ROOT);
 
