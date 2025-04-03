@@ -15,7 +15,7 @@ natrix_shared = {path = "../natrix_shared"}
 
 # Default
 wasm-bindgen = {version= "0.2.100", features=["enable-interning"]}
-itoa = "1.0.0"
+itoa = "1.0.14"
 ryu = "1.0.0"
 slotmap = "1.0.6"
 

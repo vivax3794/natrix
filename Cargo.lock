@@ -1337,7 +1337,6 @@ dependencies = [
  "oxc_mangler",
  "oxc_minifier",
  "oxc_parser",
- "oxc_regular_expression",
  "oxc_span",
  "oxc_syntax",
 ]
