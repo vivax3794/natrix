@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 natrix = {path = "../natrix"}
+integration_tests_dependency = {path = "../integration_tests_dependency"}
 
 [dev-dependencies]
 thirtyfour = { version = "0.35.0", default-features = false , features=["reqwest"]}

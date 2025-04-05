@@ -6,10 +6,12 @@ members = [
     "natrix",
     "natrix-cli",
     "integration_tests",
-    "bench_project",
+    "bench_project", "integration_tests_dependency",
 ]
 
 [profile.release]
 opt-level = "z"
 codegen-units = 1
 lto = "fat"
+panic = "abort"
+strip = "symbols"

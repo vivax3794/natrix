@@ -86,7 +86,6 @@ impl<T> State<T> {
     }
 
     /// Get a weak reference to this state
-    #[inline]
     #[expect(clippy::expect_used, reason = "This is always set in the `new` method")]
     pub(crate) fn weak(&self) -> Weak<RefCell<Self>> {
         self.this.as_ref().expect("Weak not set").clone()

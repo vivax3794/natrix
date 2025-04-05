@@ -20,7 +20,7 @@
 )]
 
 use std::borrow::Cow;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
@@ -32,6 +32,13 @@ use indicatif::{ProgressBar, ProgressStyle};
 use notify::Watcher;
 use owo_colors::OwoColorize;
 use tiny_http::{Header, Response, Server};
+
+/// The directory to store macro outputs
+const MACRO_OUTPUT_DIR: &str = "__macro";
+/// The name of the js file
+const BINDGEN_OUTPUT_NAME: &str = "code";
+/// Name of the collected css
+const CSS_OUTPUT_NAME: &str = "styles.css";
 
 /// Retrive the project name to use
 fn get_project_name() -> Result<String> {
@@ -173,7 +180,6 @@ fn do_dev(config: BuildConfigArgs) -> Result<()> {
 )]
 fn spawn_server(folder: PathBuf, reload_signal: Receiver<()>) {
     let server = Server::http("0.0.0.0:8000").expect("Failed to start server");
-    println!("🌐 {}", "Serving page on http://localhost:8000".green());
 
     let mut should_reload = false;
 
@@ -198,6 +204,18 @@ fn spawn_server(folder: PathBuf, reload_signal: Receiver<()>) {
         } else {
             folder.join(url.strip_prefix("/").unwrap_or(url))
         };
+        if url.contains("..") {
+            let response = Response::from_string("PATH TRAVERSAL DETECTED").with_status_code(404);
+            let _ = request.respond(response);
+            println!(
+                "{}",
+                "Path traversal detected in URL, terminating server for security."
+                    .bold()
+                    .red()
+                    .on_black()
+            );
+            return;
+        }
 
         let response = if path.exists() && path.is_file() {
             let content_type: &[u8] = match path.extension().and_then(|x| x.to_str()) {
@@ -207,13 +225,6 @@ fn spawn_server(folder: PathBuf, reload_signal: Receiver<()>) {
                 Some("wasm") => b"application/wasm",
                 None | Some(_) => b"text/plain",
             };
-            println!(
-                "Serving {} ({})",
-                &path_str(&path).green(),
-                String::from_utf8(content_type.to_vec())
-                    .unwrap_or_default()
-                    .bright_green()
-            );
             match fs::read(path) {
                 Ok(content) => Response::from_data(content).with_header(
                     Header::from_bytes(b"Content-Type", content_type).expect("Invalid header"),
@@ -225,7 +236,6 @@ fn spawn_server(folder: PathBuf, reload_signal: Receiver<()>) {
                 }
             }
         } else {
-            println!("NOT FOUND {}", path_str(&path).red());
             let not_found_message = "🚫 404 Not Found!";
             Response::from_string(not_found_message).with_status_code(404)
         };
@@ -251,6 +261,7 @@ fn build(config: &BuildConfig) -> Result<()> {
     if config.profile == BuildProfile::Release {
         optimize_wasm(&wasm_file)?;
     }
+    collect_macro_output(config)?;
     generate_html(config, &js_file)?;
 
     println!(
@@ -297,6 +308,9 @@ fn generate_html(config: &BuildConfig, js_file: &Path) -> Result<()> {
         r#"
         <!doctype html>
         <html>
+            <head>
+                <link ref="stylesheet" href="{CSS_OUTPUT_NAME}"/>
+            </head>
             <body>
                 <div id="{}"></div>
                 <script type="module">
@@ -322,44 +336,58 @@ fn wasm_bindgen(config: &BuildConfig, wasm_file: &PathBuf) -> Result<(PathBuf, P
         .arg(wasm_file)
         .args(["--out-dir", &path_str(&config.dist)])
         .args(["--target", "web"])
-        .args(["--out-name", "output"])
-        .arg("--no-typescript")
-        .arg("--remove-name-section")
-        .arg("--remove-producers-section");
+        .args(["--out-name", BINDGEN_OUTPUT_NAME])
+        .arg("--no-typescript");
+    if config.profile == BuildProfile::Dev {
+        command.arg("--debug").arg("--keep-debug");
+    } else {
+        command
+            .arg("--remove-name-section")
+            .arg("--remove-producers-section");
+    }
     run_with_spinner(command, create_spinner("✍️ wasm_bindgen")?)?;
 
-    let js_file = config.dist.join("output.js");
+    let js_file = config.dist.join(format!("{BINDGEN_OUTPUT_NAME}.js"));
     if config.profile == BuildProfile::Release {
-        let spinner = create_spinner("🗜️ Minimizing JS")?;
-        let js_code = fs::read_to_string(&js_file)?;
-
-        let allocator = oxc::allocator::Allocator::new();
-        let parser = oxc::parser::Parser::new(&allocator, &js_code, oxc::span::SourceType::cjs());
-        let mut program = parser.parse().program;
-
-        let minifier = oxc::minifier::Minifier::new(oxc::minifier::MinifierOptions {
-            mangle: Some(oxc::minifier::MangleOptions {
-                top_level: true,
-                ..Default::default()
-            }),
-            compress: Some(oxc::minifier::CompressOptions::default()),
-        });
-        let symbols = minifier.build(&allocator, &mut program).scoping;
-
-        let codegen = oxc::codegen::Codegen::new()
-            .with_options(oxc::codegen::CodegenOptions {
-                minify: true,
-                comments: false,
-                ..Default::default()
-            })
-            .with_scoping(symbols);
-        let js_code = codegen.build(&program).code;
-
-        std::fs::write(&js_file, js_code)?;
-        spinner.finish();
+        minimize_js(&js_file)?;
     }
 
-    Ok((config.dist.join("output_bg.wasm"), js_file))
+    Ok((
+        config.dist.join(format!("{BINDGEN_OUTPUT_NAME}_bg.wasm")),
+        js_file,
+    ))
+}
+
+/// Minimize the given js file
+fn minimize_js(js_file: &PathBuf) -> Result<(), anyhow::Error> {
+    let spinner = create_spinner("🗜️ Minimizing JS")?;
+
+    let js_code = fs::read_to_string(js_file)?;
+    let allocator = oxc::allocator::Allocator::new();
+    let parser = oxc::parser::Parser::new(&allocator, &js_code, oxc::span::SourceType::cjs());
+
+    let mut program = parser.parse().program;
+    let minifier = oxc::minifier::Minifier::new(oxc::minifier::MinifierOptions {
+        mangle: Some(oxc::minifier::MangleOptions {
+            top_level: true,
+            ..Default::default()
+        }),
+        compress: Some(oxc::minifier::CompressOptions::default()),
+    });
+    let symbols = minifier.build(&allocator, &mut program).scoping;
+
+    let codegen = oxc::codegen::Codegen::new()
+        .with_options(oxc::codegen::CodegenOptions {
+            minify: true,
+            comments: false,
+            ..Default::default()
+        })
+        .with_scoping(symbols);
+    let js_code = codegen.build(&program).code;
+    std::fs::write(js_file, js_code)?;
+
+    spinner.finish();
+    Ok(())
 }
 
 /// Build the project wasm
@@ -377,7 +405,20 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
             "unstable-options",
             "--artifact-dir",
             &path_str(&artifact),
-        ]);
+        ])
+        .env(
+            natrix_shared::MACRO_OUTPUT_ENV,
+            temp_dir()?.join(MACRO_OUTPUT_DIR),
+        );
+    if config.profile == BuildProfile::Release {
+        command
+            .args(["-Z", "build-std=core,std,panic_abort"])
+            .arg("-Zbuild-std-features=optimize_for_size,panic_immediate_abort")
+            .env(
+                "RUSTFLAGS",
+                "-C target-feature=+bulk-memory -Z fmt-debug=none -Zlocation-detail=none",
+            );
+    }
     run_with_spinner(command, create_spinner("⚙️ wasm")?).context("Running cargo")?;
 
     find_wasm(&artifact)
@@ -386,14 +427,33 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
 /// Optimize the given wasm file
 fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
     let spinner = create_spinner("🔎 Optimize wasm")?;
-    wasm_opt::OptimizationOptions::new_opt_level_3()
-        .shrink_level(wasm_opt::ShrinkLevel::Level2)
-        .set_converge()
-        .add_pass(wasm_opt::Pass::Monomorphize)
-        .add_pass(wasm_opt::Pass::GenerateGlobalEffects)
-        .add_pass(wasm_opt::Pass::Gufa)
-        .run(wasm_file, wasm_file)?;
+    let result = process::Command::new("wasm-opt")
+        .arg(wasm_file)
+        .arg("-o")
+        .arg(wasm_file)
+        .arg("--all-features")
+        .arg("-tnh")
+        .args([
+            "-O4",
+            "--flatten",
+            "--generate-global-effects",
+            "--rereloop",
+            "-Oz",
+            "-Oz",
+            "-O3",
+            "--monomorphize",
+            "-O3",
+            "--generate-global-effects",
+            "--gufa",
+            "--generate-global-effects",
+            "--converge",
+            "-Oz",
+        ])
+        .status()?;
     spinner.finish();
+    if !result.success() {
+        return Err(anyhow!("Failed to optimize"));
+    }
     Ok(())
 }
 
@@ -459,4 +519,33 @@ fn run_with_spinner(mut command: process::Command, spinner: ProgressBar) -> Resu
         println!("{full_output}");
         Err(anyhow!("Command exited with non zero status"))
     }
+}
+
+/// Collect the outputs of the macros
+fn collect_macro_output(config: &BuildConfig) -> Result<()> {
+    collect_css(config)?;
+    Ok(())
+}
+
+/// Collect css from the macro files
+fn collect_css(config: &BuildConfig) -> Result<()> {
+    let spinner = create_spinner("🎨 Bundling css")?;
+
+    let mut css_content = String::new();
+    for file in get_macro_output_files()? {
+        fs::File::open(file)?.read_to_string(&mut css_content)?;
+    }
+
+    fs::write(config.dist.join(CSS_OUTPUT_NAME), css_content)?;
+
+    spinner.finish();
+    Ok(())
+}
+
+/// Get all files in the sub folders of `MACRO_OUTPUT_DIR`
+fn get_macro_output_files() -> Result<impl Iterator<Item = PathBuf>> {
+    Ok(fs::read_dir(temp_dir()?.join(MACRO_OUTPUT_DIR))?
+        .flatten()
+        .flat_map(|folder| fs::read_dir(folder.path()).into_iter().flatten().flatten())
+        .map(|entry| entry.path()))
 }

@@ -116,7 +116,6 @@ where
 ///
 /// # Panics
 /// If target mount point is not found.
-#[inline]
 #[expect(
     clippy::expect_used,
     reason = "This is the entry point of the framework, and it fails fast."

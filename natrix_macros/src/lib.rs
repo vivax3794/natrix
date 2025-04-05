@@ -22,7 +22,9 @@
 )]
 
 extern crate proc_macro;
+
 use std::fs;
+use std::path::PathBuf;
 
 use proc_macro2::TokenStream;
 use quote::format_ident;
@@ -52,6 +54,7 @@ pub fn component_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
 /// types easier
 fn component_derive_implementation(item: ItemStruct) -> TokenStream {
     let name = item.ident.clone();
+    let vis = item.vis;
     let (fields, is_named) = get_fields(item.fields);
 
     let field_count = proc_macro2::Literal::usize_unsuffixed(fields.len());
@@ -67,23 +70,23 @@ fn component_derive_implementation(item: ItemStruct) -> TokenStream {
     quote! {
         #[doc(hidden)]
         #(if is_named) {
-            struct #data_name #generics {
+            #vis struct #data_name #generics {
                 #(for field in &fields) {
                     #{field.access.clone()}: ::natrix::macro_ref::Signal<#{field.type_.clone()}>,
                 }
             }
-            struct #signal_state_name {
+            #vis struct #signal_state_name {
                 #(for field in &fields) {
                     #{field.access.clone()}: ::natrix::macro_ref::SignalState,
                 }
             }
         } #(else) {
-            struct #data_name #generics (
+            #vis struct #data_name #generics (
                 #(for field in &fields) {
                     ::natrix::macro_ref::Signal<#{field.type_.clone()}>,
                 }
             );
-            struct #signal_state_name (
+            #vis struct #signal_state_name (
                 #(for _ in &fields) {
                     ::natrix::macro_ref::SignalState,
                 }
@@ -191,23 +194,37 @@ struct Field {
 /// Register global css to be included in the final bundle.
 ///
 /// For most usecases prefer scoped css machinery.
+#[expect(
+    clippy::missing_panics_doc,
+    reason = "Shoudlnt panic in normal build environment"
+)]
 pub fn global_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // let css = syn::parse_macro_input!(css_input as syn::LitStr);
-    // let span = css.span();
-    // let css = css.value();
-    //
-    // let Ok(output_directory) = std::env::var(natrix_shared::MACRO_OUTPUT_ENV) else {
-    //     return quote!().into();
-    // };
-    //
-    // if let Err(err) = fs::write(output_directory, css) {
-    //     let err = err.to_string();
-    //     quote!(compiler_error!(#err)).into()
-    // } else {
-    //     quote!().into()
-    // }
+    let css = syn::parse_macro_input!(css_input as syn::LitStr);
+    let css = css.value();
 
-    // TODO: BUNDLE CSS
+    #[expect(clippy::expect_used, reason = "This is always set during compilation")]
+    let caller_name = std::env::var("CARGO_PKG_NAME").expect("CARGO_PKG_NAME not set");
 
-    quote!().into()
+    let Ok(output_directory) = std::env::var(natrix_shared::MACRO_OUTPUT_ENV) else {
+        return quote!().into();
+    };
+    let output_directory = PathBuf::from(output_directory);
+    let output_directory = output_directory.join(caller_name);
+
+    #[expect(
+        clippy::expect_used,
+        reason = "This should be valid because the natrix build tool should have made sure of that"
+    )]
+    std::fs::create_dir_all(&output_directory)
+        .expect("Could not create target output directory for crate");
+
+    let name = uuid::Uuid::new_v4().to_string();
+    let output_file = output_directory.join(format!("{name}.css"));
+
+    if let Err(err) = fs::write(output_file, css) {
+        let err = err.to_string();
+        quote!(compiler_error!(#err)).into()
+    } else {
+        quote!().into()
+    }
 }

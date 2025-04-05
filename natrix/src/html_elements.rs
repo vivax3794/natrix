@@ -341,7 +341,6 @@ macro_rules! elements {
         $(
             // Note to self: Do not put every possible html tag inline in your docs
             #[doc = concat!("`<", stringify!($name), ">`")]
-            #[inline(always)]
             pub fn $name<C>() -> HtmlElement<C> {
                 HtmlElement::new(stringify!($name))
             }

@@ -30,15 +30,23 @@ integration_tests:
     }
     trap cleanup EXIT
 
-    cargo run -p natrix-cli -- build
-    cargo run -p natrix-cli -- dev -p release &
-    natrix_pid=$!
-
     chromedriver --port=9999 &
     chrome_pid=$!
-
     sleep 1
-    cargo nextest run -j 1
+
+    cargo run -p natrix-cli -- dev &
+    natrix_pid=$!
+    sleep 1
+
+    cargo nextest run
+
+    kill $natrix_pid
+    cargo run -p natrix-cli -- dev -p release &
+    natrix_pid=$!
+    sleep 1
+
+    cargo nextest run 
+    
 
 install_cli:
     cargo install --path natrix-cli
