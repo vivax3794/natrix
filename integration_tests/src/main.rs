@@ -6,7 +6,7 @@ const HELLO_ID: &str = "HELLO";
 global_css!(
     "
 h1 {
-    background-color: blue;
+    background-color: rgba(1,2,3,1);
 }
 "
 );
@@ -64,6 +64,14 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn primary_global_css() {
+        let client = create_client().await;
+        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+        let text = element.css_value("background-color").await.unwrap();
+        assert_eq!(text, "rgba(1, 2, 3, 1)");
+    }
+
+    #[tokio::test]
     async fn simple_dep() {
         let client = create_client().await;
         let element = client
@@ -72,5 +80,13 @@ mod tests {
             .unwrap();
         let text = element.text().await.unwrap();
         assert_eq!(text, integration_tests_dependency::DEP_TEXT);
+    }
+
+    #[tokio::test]
+    async fn dep_global_css() {
+        let client = create_client().await;
+        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+        let text = element.css_value("color").await.unwrap();
+        assert_eq!(text, "rgba(9, 8, 7, 1)");
     }
 }

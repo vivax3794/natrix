@@ -23,8 +23,9 @@
 
 extern crate proc_macro;
 
-use std::fs;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::{fs, io};
 
 use proc_macro2::TokenStream;
 use quote::format_ident;
@@ -190,7 +191,11 @@ struct Field {
     access: TokenStream,
 }
 
-#[proc_macro]
+/// If this is the first time a macro is used in this crate we should clear out the target folder
+static FIRST_USE_IN_CRATE: AtomicBool = AtomicBool::new(true);
+
+static FILE_COUNTER: AtomicU32 = AtomicU32::new(0);
+
 /// Register global css to be included in the final bundle.
 ///
 /// For most usecases prefer scoped css machinery.
@@ -198,7 +203,10 @@ struct Field {
     clippy::missing_panics_doc,
     reason = "Shoudlnt panic in normal build environment"
 )]
+#[proc_macro]
 pub fn global_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let first_use = FIRST_USE_IN_CRATE.fetch_or(true, Ordering::AcqRel);
+
     let css = syn::parse_macro_input!(css_input as syn::LitStr);
     let css = css.value();
 
@@ -215,10 +223,20 @@ pub fn global_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
         clippy::expect_used,
         reason = "This should be valid because the natrix build tool should have made sure of that"
     )]
-    std::fs::create_dir_all(&output_directory)
-        .expect("Could not create target output directory for crate");
+    {
+        if first_use {
+            if let Err(err) = std::fs::remove_dir_all(&output_directory) {
+                assert!(
+                    err.kind() == io::ErrorKind::NotFound,
+                    "Deleting folder failed {err}"
+                );
+            }
+        }
+        std::fs::create_dir_all(&output_directory)
+            .expect("Could not create target output directory for crate");
+    }
 
-    let name = uuid::Uuid::new_v4().to_string();
+    let name = FILE_COUNTER.fetch_add(1, Ordering::AcqRel);
     let output_file = output_directory.join(format!("{name}.css"));
 
     if let Err(err) = fs::write(output_file, css) {

@@ -3,7 +3,7 @@ use natrix::prelude::*;
 global_css!(
     "
 h1 {
-    color: blue;
+    color: rgba(9,8,7,1);
 }
 "
 );
