@@ -11,7 +11,6 @@
 //!     .child(e::h1().text("Wow!"))
 //! ```
 
-use std::borrow::Cow;
 use std::rc::Weak;
 
 use wasm_bindgen::prelude::Closure;
@@ -155,10 +154,6 @@ pub struct HtmlElement<C> {
     children: Vec<Box<dyn Element<C>>>,
     /// Events to be registered on the element
     events: Vec<(&'static str, Box<dyn Fn(&mut State<C>, web_sys::Event)>)>,
-    // We use `Vec` over `HashMap` here to avoid overhead because we are never doing lookups and
-    // the js side is already doing deduplication.
-    /// Inline css styles to apply
-    styles: Vec<(&'static str, Cow<'static, str>)>,
     /// Potentially dynamic attributes to apply
     attributes: Vec<(&'static str, Box<dyn ToAttribute<C>>)>,
 }
@@ -172,7 +167,6 @@ impl<C> HtmlElement<C> {
             tag,
             events: Vec::new(),
             children: Vec::new(),
-            styles: Vec::new(),
             attributes: Vec::new(),
         }
     }
@@ -224,14 +218,6 @@ impl<C> HtmlElement<C> {
         self.child(text)
     }
 
-    /// Adds a inline style to the element
-    // (This isnt reactive because in the future we will suggest using proper static css as well as
-    // provide reactive css vars)
-    pub fn style(mut self, key: &'static str, value: impl Into<Cow<'static, str>>) -> Self {
-        self.styles.push((key, value.into()));
-        self
-    }
-
     /// Add a attribute to the node.
     ///
     /// See [Html Nodes](TODO) in the book for the schematics of the various valid attribute types.
@@ -256,7 +242,6 @@ impl<C: ComponentData> Element<C> for HtmlElement<C> {
             tag: name,
             events,
             children,
-            styles,
             attributes,
         } = *self;
 
@@ -278,19 +263,6 @@ impl<C: ComponentData> Element<C> for HtmlElement<C> {
         for (event, function) in events {
             create_event_handler(&element, event, function, ctx_weak.clone(), render_state);
         }
-
-        #[expect(
-            clippy::arithmetic_side_effects,
-            reason = "This should only fail if we are out of memory, which basically all collections silently panic for"
-        )]
-        let style = styles
-            .into_iter()
-            .map(|(key, value)| key.to_owned() + ":" + &value + ";")
-            .collect::<String>();
-        debug_expect!(
-            element.set_attribute(intern("style"), &style),
-            "Failed to set style"
-        );
 
         for (key, value) in attributes {
             value.apply_attribute(intern(key), &element, ctx, render_state);
