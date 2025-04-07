@@ -38,14 +38,14 @@ integration_tests:
     natrix_pid=$!
     sleep 1
 
-    cargo nextest run
+    cargo nextest run -j 1
 
     kill $natrix_pid
     cargo run -p natrix-cli -- dev -p release &
     natrix_pid=$!
     sleep 1
 
-    cargo nextest run 
+    cargo nextest run -j 1
     
 
 install_cli:
