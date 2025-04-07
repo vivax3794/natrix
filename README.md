@@ -13,8 +13,7 @@ struct Counter(usize);
 impl Component for Counter {
     fn render() -> impl Element<Self::Data> {
         e::button()
-            .text(|ctx: &S<Self>| *ctx.0)
-            .style("font-size", "4rem")
+            .text(|ctx: R<Self>| *ctx.0)
             .on::<events::Click>(|ctx: &mut S<Self>, _| {
                 *ctx.0 += 1;
             })
