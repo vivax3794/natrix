@@ -194,6 +194,7 @@ struct Field {
 /// If this is the first time a macro is used in this crate we should clear out the target folder
 static FIRST_USE_IN_CRATE: AtomicBool = AtomicBool::new(true);
 
+/// Counter to generate unqiue file names
 static FILE_COUNTER: AtomicU32 = AtomicU32::new(0);
 
 /// Register global css to be included in the final bundle.
