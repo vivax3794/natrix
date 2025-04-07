@@ -156,6 +156,8 @@ pub struct HtmlElement<C> {
     events: Vec<(&'static str, Box<dyn Fn(&mut State<C>, web_sys::Event)>)>,
     /// Potentially dynamic attributes to apply
     attributes: Vec<(&'static str, Box<dyn ToAttribute<C>>)>,
+    /// Css classes to apply
+    classes: Vec<&'static str>,
 }
 
 impl<C> HtmlElement<C> {
@@ -168,6 +170,7 @@ impl<C> HtmlElement<C> {
             events: Vec::new(),
             children: Vec::new(),
             attributes: Vec::new(),
+            classes: Vec::new(),
         }
     }
 
@@ -230,6 +233,12 @@ impl<C> HtmlElement<C> {
     pub fn id(self, id: &'static str) -> Self {
         self.attr("id", id)
     }
+
+    /// Add a class to the element.
+    pub fn class(mut self, class: &'static str) -> Self {
+        self.classes.push(class);
+        self
+    }
 }
 
 impl<C: ComponentData> Element<C> for HtmlElement<C> {
@@ -243,6 +252,7 @@ impl<C: ComponentData> Element<C> for HtmlElement<C> {
             events,
             children,
             attributes,
+            classes,
         } = *self;
 
         let document = get_document();
@@ -266,6 +276,12 @@ impl<C: ComponentData> Element<C> for HtmlElement<C> {
 
         for (key, value) in attributes {
             value.apply_attribute(intern(key), &element, ctx, render_state);
+        }
+        for class in classes {
+            debug_expect!(
+                element.class_list().add_1(class),
+                "Failed to add class {class}"
+            );
         }
 
         element.into()

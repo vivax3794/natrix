@@ -13,8 +13,9 @@ owo-colors = { version = "4.2.0", default-features = false }
 notify = "8.0.0"
 tiny_http = "0.12.0"
 oxc = {version="0.61.2", default-features=false, features=["minifier", "codegen"]}
-lightningcss = { version = "1.0.0-alpha.65", default-features = false, features = ["grid"] }
+lightningcss = { version = "1.0.0-alpha.65", default-features = false, features = ["grid", "visitor"] }
 wasm-opt = { version = "0.116.1", optional = true }
+wasmparser = "0.228"
 
 [[bin]]
 name = "natrix"

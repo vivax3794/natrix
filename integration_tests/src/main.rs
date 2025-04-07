@@ -8,8 +8,23 @@ global_css!(
 h1 {
     background-color: rgba(1,2,3,1);
 }
+.hello_world {
+    width: 100px;
+}
+.not_used {
+    height: 200px;
+}
 "
 );
+
+#[derive(Component)]
+struct NotUsed;
+
+impl Component for NotUsed {
+    fn render() -> impl Element<Self::Data> {
+        e::div().class("not_used")
+    }
+}
 
 #[derive(Component)]
 struct HelloWorld {
@@ -19,7 +34,7 @@ struct HelloWorld {
 impl Component for HelloWorld {
     fn render() -> impl Element<Self::Data> {
         e::div()
-            .child(e::h1().text(HELLO_TEXT).id(HELLO_ID))
+            .child(e::h1().text(HELLO_TEXT).id(HELLO_ID).class("hello_world"))
             .child(C(integration_tests_dependency::DepComp))
     }
 }
@@ -69,6 +84,14 @@ mod tests {
         let element = client.find(By::Id(HELLO_ID)).await.unwrap();
         let text = element.css_value("background-color").await.unwrap();
         assert_eq!(text, "rgba(1, 2, 3, 1)");
+    }
+
+    #[tokio::test]
+    async fn global_css_class() {
+        let client = create_client().await;
+        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+        let text = element.css_value("width").await.unwrap();
+        assert_eq!(text, "100px");
     }
 
     #[tokio::test]

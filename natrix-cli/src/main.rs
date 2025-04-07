@@ -30,6 +30,7 @@ use std::{fs, process, thread};
 use anyhow::{Context, Result, anyhow};
 use clap::{Parser, ValueEnum};
 use indicatif::{ProgressBar, ProgressStyle};
+use lightningcss::visitor::Visit;
 use notify::Watcher;
 use owo_colors::OwoColorize;
 use tiny_http::{Header, Response, Server};
@@ -265,7 +266,7 @@ fn build(config: &BuildConfig) -> Result<()> {
     if config.profile == BuildProfile::Release {
         optimize_wasm(&wasm_file)?;
     }
-    collect_macro_output(config)?;
+    collect_macro_output(config, &wasm_file)?;
     generate_html(config, &js_file)?;
 
     println!(
@@ -542,13 +543,13 @@ fn run_with_spinner(mut command: process::Command, spinner: ProgressBar) -> Resu
 }
 
 /// Collect the outputs of the macros
-fn collect_macro_output(config: &BuildConfig) -> Result<()> {
-    collect_css(config)?;
+fn collect_macro_output(config: &BuildConfig, wasm_file: &Path) -> Result<()> {
+    collect_css(config, wasm_file)?;
     Ok(())
 }
 
 /// Collect css from the macro files
-fn collect_css(config: &BuildConfig) -> Result<()> {
+fn collect_css(config: &BuildConfig, wasm_file: &Path) -> Result<()> {
     let spinner = create_spinner("🎨 Bundling css")?;
 
     let mut css_content = String::new();
@@ -557,7 +558,7 @@ fn collect_css(config: &BuildConfig) -> Result<()> {
     }
 
     if config.profile == BuildProfile::Release {
-        css_content = optimize_css(&css_content)?;
+        css_content = optimize_css(&css_content, wasm_file)?;
     }
 
     fs::write(config.dist.join(CSS_OUTPUT_NAME), css_content)?;
@@ -567,7 +568,7 @@ fn collect_css(config: &BuildConfig) -> Result<()> {
 }
 
 /// Optimize the given css string
-fn optimize_css(css_content: &str) -> Result<String> {
+fn optimize_css(css_content: &str, wasm_file: &Path) -> Result<String> {
     let mut styles = lightningcss::stylesheet::StyleSheet::parse(
         css_content,
         lightningcss::stylesheet::ParserOptions {
@@ -581,10 +582,16 @@ fn optimize_css(css_content: &str) -> Result<String> {
     )
     .map_err(|err| anyhow!("Failed to parse css {err}"))?;
 
+    let wasm_strings = get_wasm_strings(wasm_file)?;
+    let mut unused_symbols = get_symbols(&mut styles);
+    // `wasm_strings` is a vec of data sections, so we need to check if the symbol is in any of
+    // them as wasm optimizes multiple string literals to the same section
+    unused_symbols.retain(|symbol| wasm_strings.iter().all(|x| !x.contains(symbol)));
+
     let targets = lightningcss::targets::Targets::default();
     styles.minify(lightningcss::stylesheet::MinifyOptions {
         targets,
-        unused_symbols: HashSet::new(),
+        unused_symbols,
     })?;
 
     let css_content = styles.to_css(lightningcss::printer::PrinterOptions {
@@ -600,10 +607,102 @@ fn optimize_css(css_content: &str) -> Result<String> {
     Ok(css_content)
 }
 
+/// Visitor to extract symbosl from a stylesheet
+struct SymbolVisitor {
+    /// The collected symbols
+    symbols: HashSet<String>,
+}
+
+impl<'i> lightningcss::visitor::Visitor<'i> for SymbolVisitor {
+    type Error = ();
+    fn visit_types(&self) -> lightningcss::visitor::VisitTypes {
+        lightningcss::visit_types!(SELECTORS)
+    }
+
+    fn visit_selector(
+        &mut self,
+        selector: &mut lightningcss::selector::Selector<'i>,
+    ) -> std::result::Result<(), Self::Error> {
+        use lightningcss::selector::Component;
+        for part in selector.iter_mut_raw_match_order() {
+            match part {
+                Component::Class(class) => {
+                    self.symbols.insert(class.to_string());
+                }
+                Component::ID(id) => {
+                    self.symbols.insert(id.to_string());
+                }
+                Component::Negation(lst) | Component::Is(lst) | Component::Where(lst) => {
+                    for selector in lst.iter_mut() {
+                        self.visit_selector(selector)?;
+                    }
+                }
+                _ => (),
+            }
+        }
+        Ok(())
+    }
+
+    fn visit_selector_list(
+        &mut self,
+        selectors: &mut lightningcss::selector::SelectorList<'i>,
+    ) -> std::result::Result<(), Self::Error> {
+        for selector in &mut selectors.0 {
+            self.visit_selector(selector)?;
+        }
+        Ok(())
+    }
+}
+
+/// Get the symbols in a style sheet
+fn get_symbols(stylesheet: &mut lightningcss::stylesheet::StyleSheet) -> HashSet<String> {
+    let mut visitor = SymbolVisitor {
+        symbols: HashSet::new(),
+    };
+    let _ = stylesheet.visit(&mut visitor);
+    visitor.symbols
+}
+
 /// Get all files in the sub folders of `MACRO_OUTPUT_DIR`
 fn get_macro_output_files(config: &BuildConfig) -> Result<impl Iterator<Item = PathBuf>> {
     Ok(fs::read_dir(config.temp_dir.join(MACRO_OUTPUT_DIR))?
         .flatten()
         .flat_map(|folder| fs::read_dir(folder.path()).into_iter().flatten().flatten())
         .map(|entry| entry.path()))
+}
+
+/// Get the strings from a wasm file
+fn get_wasm_strings(wasm_file: &Path) -> Result<Vec<String>> {
+    let wasm_bytes = fs::read(wasm_file)?;
+    let mut strings = Vec::new();
+
+    let parser = wasmparser::Parser::new(0);
+    for payload in parser.parse_all(&wasm_bytes) {
+        if let wasmparser::Payload::DataSection(data_section_reader) = payload? {
+            for data in data_section_reader {
+                let data = data?;
+                if let Some(bytes) = data.data.get(0..) {
+                    if let Ok(string) = std::str::from_utf8(bytes) {
+                        strings.push(string.to_string());
+                    } else {
+                        // Clean out problematic bytes
+                        let cleaned = bytes
+                            .iter()
+                            .filter(|&&x| x.is_ascii())
+                            .copied()
+                            .collect::<Vec<u8>>();
+                        if let Ok(string) = std::str::from_utf8(&cleaned) {
+                            strings.push(string.to_string());
+                        } else {
+                            return Err(anyhow!(
+                                "Failed to extract string from wasm, this might lead to wrongful DCE optimization"
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(strings)
 }
