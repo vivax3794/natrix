@@ -1318,7 +1318,7 @@ dependencies = [
 
 [[package]]
 name = "natrix"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "either",
  "futures",
@@ -1340,7 +1340,7 @@ dependencies = [
 
 [[package]]
 name = "natrix-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1357,7 +1357,7 @@ dependencies = [
 
 [[package]]
 name = "natrix_macros"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "convert_case 0.8.0",
  "lightningcss",
@@ -1370,7 +1370,7 @@ dependencies = [
 
 [[package]]
 name = "natrix_shared"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "nonmax"

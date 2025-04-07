@@ -1,6 +1,8 @@
 alias c := check
 alias p := publish
 
+default: test check
+
 test: && integration_tests project_gen_test
     cargo +nightly nextest run --all-features --workspace --exclude "integration_tests"
 
@@ -52,14 +54,18 @@ integration_tests: install_cli
 [working-directory: "/tmp"]
 project_gen_test: install_cli
     rm -rf ./test_project || true
-    natrix new test_project
-    cd test_project && cargo check --all-features
+    NATRIX_PATH="{{justfile_directory()}}/natrix" natrix new test_project
+    cd test_project && cargo +stable clippy
+
+    rm -rf ./test_project || true
+    NATRIX_PATH="{{justfile_directory()}}/natrix" natrix new test_project --nightly
+    cd test_project && cargo +nightly clippy
 
 install_cli:
-    cargo install --path natrix-cli
+    cargo install --path natrix-cli --profile dev
 
 # Publish the crate to crates.io
-publish: fmt check
+publish: fmt test check
     cargo publish -p natrix_shared
     cargo publish -p natrix_macros
     cargo publish -p natrix

@@ -10,14 +10,14 @@ global_css!("
     .hello_world {
         width: 100px;
     }
-    .not_used {
-        height: 200px;
-    }
 ");
 
 scoped_css!("
     .hello {
         height: 300px;
+    }
+    .I_amNotUsed {
+        height: 400px;
     }
 ");
 
@@ -26,7 +26,7 @@ struct NotUsed;
 
 impl Component for NotUsed {
     fn render() -> impl Element<Self::Data> {
-        e::div().class("not_used")
+        e::div().class(I_AM_NOT_USED)
     }
 }
 

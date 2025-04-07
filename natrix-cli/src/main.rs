@@ -43,7 +43,7 @@ const BINDGEN_OUTPUT_NAME: &str = "code";
 const CSS_OUTPUT_NAME: &str = "styles.css";
 
 /// Find the closet target folder
-fn find_target(mode: BuildProfile) -> Result<PathBuf> {
+fn find_target_inner(mode: BuildProfile) -> Result<PathBuf> {
     let mut current = PathBuf::from(".").canonicalize()?;
     loop {
         let target = current.join("target");
@@ -53,14 +53,35 @@ fn find_target(mode: BuildProfile) -> Result<PathBuf> {
         if let Some(parent) = current.parent() {
             current = parent.to_owned();
         } else {
-            return Err(anyhow!("Target not found"));
+            return Err(anyhow!("No target folder found"));
         }
+    }
+}
+
+/// Find the target folder
+fn find_target(mode: BuildProfile) -> Result<PathBuf> {
+    if let Ok(path) = find_target_inner(mode) {
+        Ok(path)
+    } else {
+        let mut command = process::Command::new("cargo");
+        command.arg("check").args(["--color", "always"]);
+        run_with_spinner(command, create_spinner("Generating inital target folder")?)?;
+
+        find_target_inner(mode)
     }
 }
 
 /// Natrix CLI
 #[derive(Parser)]
 enum Cli {
+    /// Create a new project
+    New {
+        /// The name of the project
+        name: String,
+        /// Use nightly rust
+        #[arg(short, long)]
+        nightly: bool,
+    },
     /// Spawn a dev server
     Dev(BuildConfigArgs),
     /// Build the project
@@ -141,9 +162,130 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli {
+        Cli::New { name, nightly } => generate_project(&name, nightly),
         Cli::Dev(config) => do_dev(config),
         Cli::Build(config) => build(&config.fill_build_defaults()?).context("Building application"),
     }
+}
+
+/// Generate a new project
+fn generate_project(name: &str, nightly: bool) -> std::result::Result<(), anyhow::Error> {
+    let root = PathBuf::from(name);
+    fs::create_dir_all(&root)?;
+
+    // we assume the library version is the same as the cli version
+    // This means that even if the cli isnt modified it should publish new versions along with the
+    // library
+    let natrix_version = env!("CARGO_PKG_VERSION");
+
+    let mut natrix_table = format!(r#"version = "{natrix_version}""#);
+    if nightly {
+        natrix_table = format!(r#"{natrix_table}, features = ["nightly"]"#);
+    }
+    if let Ok(path) = std::env::var("NATRIX_PATH") {
+        natrix_table = format!(r#"{natrix_table}, path = "{path}""#);
+    }
+
+    let natrix_decl = format!("natrix = {{ {natrix_table} }}");
+    let natrix_decl = natrix_decl.trim();
+
+    let cargo_toml = format!(
+        r#"
+[package]
+name = "{name}"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+{natrix_decl}
+
+[profile.release]
+opt-level = "z"
+codegen-units = 1
+lto = "fat"
+panic = "abort"
+strip = "symbols"
+        "#
+    );
+    fs::write(root.join("Cargo.toml"), cargo_toml)?;
+
+    let gitignore = "
+target
+dist
+    "
+    .trim();
+    fs::write(root.join(".gitignore"), gitignore)?;
+
+    let extra_nightly = if nightly {
+        "
+// This is a nightly only feature to warn you when you are passing certain types across a
+// `await` boundary, `natrix` marks multiple types with this attribute to prevent you from
+// causing runtime panics.
+#![feature(must_not_suspend)]
+#![warn(must_not_suspend)]
+        "
+        .trim()
+    } else {
+        ""
+    };
+    let main_rs = format!(
+        r#"
+{extra_nightly}
+// Panicing in a wasm module will cause the state to be invalid
+// And it might cause UB on the next event handler execution.
+#![deny(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+// These are more strict anti panic lints that you might want to enable
+// #![warn(clippy::arithmetic_side_effects, clippy::indexing_slicing, clippy::unreachable)]
+
+use natrix::prelude::*;
+
+scoped_css!("
+    .hello_world {{
+        font-size: 6rem;
+        color: red;
+    }}
+");
+
+#[derive(Component)]
+struct HelloWorld;
+
+impl Component for HelloWorld {{
+    fn render() -> impl Element<Self::Data> {{
+        e::h1().text("Hello {name}").class(HELLO_WORLD)
+    }}
+}}
+
+fn main() {{
+    mount(HelloWorld);
+}}
+"#
+    );
+    let src = root.join("src");
+    fs::create_dir_all(&src)?;
+    fs::write(src.join("main.rs"), main_rs)?;
+
+    let rust_fmt = r#"
+skip_macro_invocations = ["global_css", "scoped_css"]
+    "#
+    .trim();
+    fs::write(root.join("rustfmt.toml"), rust_fmt)?;
+
+    std::process::Command::new("git")
+        .args(["init", "--initial-branch=main"])
+        .current_dir(&root)
+        .status()?;
+
+    println!(
+        "✨ {} {}",
+        "Project created".bright_green(),
+        path_str(&root).cyan()
+    );
+    println!(
+        "{}",
+        "Run `natrix dev` to start the dev server".bright_blue()
+    );
+
+    Ok(())
 }
 
 /// Do the dev server
@@ -185,6 +327,10 @@ fn do_dev(config: BuildConfigArgs) -> Result<()> {
 )]
 fn spawn_server(folder: PathBuf, reload_signal: Receiver<()>) {
     let server = Server::http("0.0.0.0:8000").expect("Failed to start server");
+    println!(
+        "{}",
+        "🚀 Dev server running at http://localhost:8000".bright_green()
+    );
 
     let mut should_reload = false;
 
@@ -289,47 +435,46 @@ fn generate_html(config: &BuildConfig, js_file: &Path) -> Result<()> {
 
     let js_reload = match config.profile {
         BuildProfile::Release => "",
-        BuildProfile::Dev => {
-            r#"
-            function check_reload() {
-                fetch("./RELOAD")
-                    .then(
-                        (resp) => {
-                            if (resp.ok) {
-                                location.reload();
-                            }
-                            else  {
-                                setTimeout(check_reload, 500);
-                            }
-                        }
-                    )
+        BuildProfile::Dev => r#"
+function check_reload() {
+    fetch("./RELOAD")
+        .then(
+            (resp) => {
+                if (resp.ok) {
+                    location.reload();
+                }
+                else  {
+                    setTimeout(check_reload, 500);
+                }
             }
-            check_reload();
+        )
+}
+check_reload();
         "#
-        }
+        .trim(),
     };
 
     let content = format!(
         r#"
-        <!doctype html>
-        <html>
-            <head>
-                <link rel="stylesheet" href="{CSS_OUTPUT_NAME}"/>
-            </head>
-            <body>
-                <div id="{}"></div>
-                <script type="module">
-                    import init from "./{js_file}";
-                    init();
-                    {js_reload}
-                </script>
-            </body>
-        </html>
+<!doctype html>
+<html>
+    <head>
+        <link rel="stylesheet" href="{CSS_OUTPUT_NAME}"/>
+    </head>
+    <body>
+        <div id="{}"></div>
+        <script type="module">
+            import init from "./{js_file}";
+            init();
+            {js_reload}
+        </script>
+    </body>
+</html>
     "#,
         natrix_shared::MOUNT_POINT
     );
 
-    std::fs::write(html_file, content)?;
+    std::fs::write(html_file, content.trim())?;
 
     Ok(())
 }

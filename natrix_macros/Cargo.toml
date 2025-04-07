@@ -1,6 +1,6 @@
 [package]
 name = "natrix_macros"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 description = "Macros for natrix"
@@ -13,7 +13,7 @@ proc-macro = true
 [dependencies]
 convert_case = "0.8.0"
 lightningcss = { version = "1.0.0-alpha.65", default-features = false, features = ["grid"] }
-natrix_shared = {path = "../natrix_shared"}
+natrix_shared = {path = "../natrix_shared", version="0.2.0"}
 
 proc-macro2 = {version="1.0.83", default-features = false}
 quote = {version="1.0.35", default-features = false}
