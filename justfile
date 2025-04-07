@@ -1,21 +1,23 @@
 alias c := check
 alias p := publish
 
-test: && integration_tests
+test: && integration_tests project_gen_test
     cargo +nightly nextest run --all-features --workspace --exclude "integration_tests"
 
     cd natrix && rustup run stable wasm-pack test --headless --chrome
     cd natrix && rustup run nightly wasm-pack test --headless --chrome --all-features
 
-check: test
+check:
+    cargo fmt --check
     cargo +stable hack clippy --feature-powerset --skip nightly --tests -- -Dwarnings
     cargo +nightly hack clippy --feature-powerset --tests -- -Dwarnings
 
+bounds:
     cd natrix_macros && cargo-bounds test
     cd natrix && cargo-bounds test
 
 [working-directory: "./integration_tests"]
-integration_tests:
+integration_tests: install_cli
     #!/usr/bin/bash
     set -e
 
@@ -34,19 +36,24 @@ integration_tests:
     chrome_pid=$!
     sleep 1
 
-    cargo run -p natrix-cli -- dev &
+    natrix dev &
     natrix_pid=$!
     sleep 1
 
     cargo nextest run -j 1
 
     kill $natrix_pid
-    cargo run -p natrix-cli -- dev -p release &
+    natrix dev -p release &
     natrix_pid=$!
     sleep 1
 
     cargo nextest run -j 1
-    
+
+[working-directory: "/tmp"]
+project_gen_test: install_cli
+    rm -rf ./test_project || true
+    natrix new test_project
+    cd test_project && cargo check --all-features
 
 install_cli:
     cargo install --path natrix-cli

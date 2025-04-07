@@ -71,7 +71,7 @@ mod tests {
 
         loop {
             let res = driver.get("http://localhost:8000").await;
-            sleep(Duration::from_secs(1)).await;
+            sleep(Duration::from_millis(100)).await;
             if res.is_ok() {
                 break;
             }

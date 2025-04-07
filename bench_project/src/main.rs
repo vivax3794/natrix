@@ -1,6 +1,6 @@
 use natrix::prelude::*;
-use wasm_bench_runtime::Bencher;
 use natrix::test_utils::mount_test;
+use wasm_bench_runtime::Bencher;
 
 #[derive(Component)]
 struct LargeDom<const N: u32>;
@@ -64,16 +64,12 @@ fn main() {
             .await;
         bencher
             .bench("mount_events_10k", 0, |_| {
-                mount_test(
-                    ManyButtons::<10_000> { counter: 0 },
-                );
+                mount_test(ManyButtons::<10_000> { counter: 0 });
             })
             .await;
 
         natrix::test_utils::setup();
-        mount_test(
-            ManyButtons::<10_000> { counter: 0 }
-        );
+        mount_test(ManyButtons::<10_000> { counter: 0 });
         let button = natrix::test_utils::get("BUTTON");
         bencher
             .bench("text_updates_10k", 0, |_| {
