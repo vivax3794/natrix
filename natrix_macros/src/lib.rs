@@ -27,6 +27,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::{fs, io};
 
+use convert_case::{Case, Casing};
 use proc_macro2::TokenStream;
 use quote::format_ident;
 use syn::{ItemStruct, parse_quote};
@@ -200,22 +201,23 @@ static FILE_COUNTER: AtomicU32 = AtomicU32::new(0);
 /// Register global css to be included in the final bundle.
 ///
 /// For most usecases prefer scoped css machinery.
-#[expect(
-    clippy::missing_panics_doc,
-    reason = "Shoudlnt panic in normal build environment"
-)]
 #[proc_macro]
 pub fn global_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let first_use = FIRST_USE_IN_CRATE.fetch_or(true, Ordering::AcqRel);
-
     let css = syn::parse_macro_input!(css_input as syn::LitStr);
     let css = css.value();
+
+    emit_css(css).into()
+}
+
+/// Emit the css to the target directory
+fn emit_css(css: String) -> TokenStream {
+    let first_use = FIRST_USE_IN_CRATE.fetch_and(false, Ordering::AcqRel);
 
     #[expect(clippy::expect_used, reason = "This is always set during compilation")]
     let caller_name = std::env::var("CARGO_PKG_NAME").expect("CARGO_PKG_NAME not set");
 
     let Ok(output_directory) = std::env::var(natrix_shared::MACRO_OUTPUT_ENV) else {
-        return quote!().into();
+        return quote!();
     };
     let output_directory = PathBuf::from(output_directory);
     let output_directory = output_directory.join(caller_name);
@@ -242,8 +244,139 @@ pub fn global_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
 
     if let Err(err) = fs::write(output_file, css) {
         let err = err.to_string();
-        quote!(compiler_error!(#err)).into()
+        quote!(compile_error!(#err))
     } else {
-        quote!().into()
+        quote!()
     }
+}
+
+/// Create scoped css for a component.
+///
+/// This generates a set of constants for every class and id in the css.
+///
+/// ```rust
+/// scoped_css!("
+///    .hello {
+///        color: red;
+///     }
+///    button .test {
+///        color: blue;
+///    }
+/// ");
+/// ```
+/// Will expand to (actual string values will be random):
+/// ```rust
+/// pub(crate) const HELLO: &str = "hello-123456";
+/// pub(crate) const TEST: &str = "test-123456";
+/// ```
+/// (`pub(crate)` is always used as the visibility)
+///
+/// While emitting something like this to the css bundle:
+/// ```css
+/// .hello-123456 {
+///   color: red;   
+/// }
+/// button .test-123456 {
+///  color: blue;
+/// }
+/// ```
+///
+/// Its is generally recommended to use this macro in a module to make it clear where constants are
+/// comming from
+/// ```rust
+/// mod css {
+///     scoped_css!("
+///     .hello {
+///         color: red;
+///     }
+///     ");
+/// }
+///
+/// // ...
+/// e::div().class(css::HELLO);
+/// ```
+///
+/// # Consistency
+/// The generated string literals are not guaranteed to be the same between builds.
+/// Their exact format is not covered by the public API and may change in the future.
+#[proc_macro]
+#[expect(
+    clippy::missing_panics_doc,
+    reason = "This can only panic if its not called from cargo"
+)]
+pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let css = syn::parse_macro_input!(css_input as syn::LitStr);
+    let css = css.value();
+
+    #[expect(clippy::expect_used, reason = "This is always set during compilation")]
+    let caller_name = std::env::var("CARGO_PKG_NAME").expect("CARGO_PKG_NAME not set");
+
+    #[expect(clippy::expect_used, reason = "Pattern should be valid")]
+    let styles = lightningcss::stylesheet::StyleSheet::parse(
+        &css,
+        lightningcss::stylesheet::ParserOptions {
+            filename: caller_name,
+            css_modules: Some(lightningcss::css_modules::Config {
+                dashed_idents: true,
+                container: true,
+                custom_idents: true,
+                animation: true,
+                grid: true,
+                pure: true,
+                pattern: lightningcss::css_modules::Pattern::parse("[hash][content-hash]-[local]")
+                    .expect("Failed to parse pattern"),
+            }),
+            source_index: 0,
+            error_recovery: false,
+            warnings: None,
+            flags: lightningcss::stylesheet::ParserFlags::empty(),
+        },
+    );
+    let styles = match styles {
+        Ok(styles) => styles,
+        Err(err) => {
+            let err = err.to_string();
+            return quote!(compile_error!(#err)).into();
+        }
+    };
+
+    #[expect(
+        clippy::expect_used,
+        reason = "If the css can be parsed it should be valid to serialize it"
+    )]
+    let css_result = styles
+        .to_css(lightningcss::stylesheet::PrinterOptions {
+            minify: false,
+            project_root: None,
+            analyze_dependencies: None,
+            pseudo_classes: None,
+            targets: lightningcss::targets::Targets::default(),
+        })
+        .expect("Failed to convert css to string");
+
+    #[expect(
+        clippy::expect_used,
+        reason = "We set the css_modules value to true, so this field should be present"
+    )]
+    let expand = css_result.exports.expect("Exports not found");
+    let mut consts = Vec::with_capacity(expand.len());
+    for (name, export) in expand {
+        let new_name = export.name;
+        let const_name = name.to_case(Case::Constant);
+        let const_name = format_ident!("{const_name}");
+
+        consts.push(quote! {
+            #[doc = #name]
+            pub(crate) const #const_name: &str = #new_name;
+        });
+    }
+
+    let emit_css_result = emit_css(css_result.code);
+    quote! {
+        #(for const_ in consts) {
+            #const_
+        }
+        #emit_css_result
+    }
+    .into()
 }

@@ -1,12 +1,16 @@
 use natrix::prelude::*;
 
-global_css!(
-    "
-h1 {
-    color: rgba(9,8,7,1);
-}
-"
-);
+global_css!("
+    h1 {
+        color: rgba(9,8,7,1);
+    }
+");
+
+scoped_css!("
+    .hello {
+        height: 600px;
+    }
+");
 
 pub const DEP_TEXT: &str = "NICE!";
 pub const DEP_ID: &str = "DEP_TEXT";
@@ -16,6 +20,6 @@ pub struct DepComp;
 
 impl Component for DepComp {
     fn render() -> impl Element<Self::Data> {
-        e::h1().text(DEP_TEXT).id(DEP_ID)
+        e::h1().text(DEP_TEXT).id(DEP_ID).class(HELLO)
     }
 }

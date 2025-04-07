@@ -4,3 +4,4 @@ hard_tabs = false
 imports_layout = "HorizontalVertical"
 imports_granularity = "Module"
 group_imports = "StdExternalCrate"
+skip_macro_invocations = ["global_css", "scoped_css"]

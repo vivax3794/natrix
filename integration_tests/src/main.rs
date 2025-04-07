@@ -3,19 +3,23 @@ use natrix::prelude::*;
 const HELLO_TEXT: &str = "HELLO WORLD, TEST TEST";
 const HELLO_ID: &str = "HELLO";
 
-global_css!(
-    "
-h1 {
-    background-color: rgba(1,2,3,1);
-}
-.hello_world {
-    width: 100px;
-}
-.not_used {
-    height: 200px;
-}
-"
-);
+global_css!("
+    h1 {
+        background-color: rgba(1,2,3,1);
+    }
+    .hello_world {
+        width: 100px;
+    }
+    .not_used {
+        height: 200px;
+    }
+");
+
+scoped_css!("
+    .hello {
+        height: 300px;
+    }
+");
 
 #[derive(Component)]
 struct NotUsed;
@@ -34,7 +38,13 @@ struct HelloWorld {
 impl Component for HelloWorld {
     fn render() -> impl Element<Self::Data> {
         e::div()
-            .child(e::h1().text(HELLO_TEXT).id(HELLO_ID).class("hello_world"))
+            .child(
+                e::h1()
+                    .text(HELLO_TEXT)
+                    .id(HELLO_ID)
+                    .class("hello_world")
+                    .class(HELLO),
+            )
             .child(C(integration_tests_dependency::DepComp))
     }
 }
@@ -95,6 +105,14 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn scoped_css() {
+        let client = create_client().await;
+        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+        let text = element.css_value("height").await.unwrap();
+        assert_eq!(text, "300px");
+    }
+
+    #[tokio::test]
     async fn simple_dep() {
         let client = create_client().await;
         let element = client
@@ -111,5 +129,16 @@ mod tests {
         let element = client.find(By::Id(HELLO_ID)).await.unwrap();
         let text = element.css_value("color").await.unwrap();
         assert_eq!(text, "rgba(9, 8, 7, 1)");
+    }
+
+    #[tokio::test]
+    async fn dep_scoped_css() {
+        let client = create_client().await;
+        let element = client
+            .find(By::Id(integration_tests_dependency::DEP_ID))
+            .await
+            .unwrap();
+        let text = element.css_value("height").await.unwrap();
+        assert_eq!(text, "600px");
     }
 }

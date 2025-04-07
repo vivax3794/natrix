@@ -66,7 +66,7 @@ pub(crate) fn get_document() -> web_sys::Document {
 
 /// Public export of everything.
 pub mod prelude {
-    pub use natrix_macros::{Component, global_css};
+    pub use natrix_macros::{Component, global_css, scoped_css};
 
     pub use super::component::{C, Component, mount};
     pub use super::element::Element;
