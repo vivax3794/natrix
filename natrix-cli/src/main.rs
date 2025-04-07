@@ -35,40 +35,31 @@ use owo_colors::OwoColorize;
 use tiny_http::{Header, Response, Server};
 
 /// The directory to store macro outputs
-const MACRO_OUTPUT_DIR: &str = "__macro";
+const MACRO_OUTPUT_DIR: &str = "macro";
 /// The name of the js file
 const BINDGEN_OUTPUT_NAME: &str = "code";
 /// Name of the collected css
 const CSS_OUTPUT_NAME: &str = "styles.css";
 
-/// Retrive the project name to use
-fn get_project_name() -> Result<String> {
-    let current_dir = std::env::current_dir()?;
-    if let Some(name) = current_dir.file_name() {
-        Ok(name.to_string_lossy().into_owned())
-    } else {
-        Ok(String::from("Root"))
+/// Find the closet target folder
+fn find_target(mode: BuildProfile) -> Result<PathBuf> {
+    let mut current = PathBuf::from(".").canonicalize()?;
+    loop {
+        let target = current.join("target");
+        if target.exists() {
+            return Ok(target.join(format!("natrix-{}", mode.redable())));
+        }
+        if let Some(parent) = current.parent() {
+            current = parent.to_owned();
+        } else {
+            return Err(anyhow!("Target not found"));
+        }
     }
-}
-
-/// Get the temporary directory for this
-fn temp_dir() -> Result<PathBuf> {
-    let project = get_project_name()?;
-    let temp = std::env::home_dir().unwrap_or_else(std::env::temp_dir);
-    let project_temp = temp.join(".natrix").join(project);
-
-    std::fs::create_dir_all(&project_temp)?;
-
-    Ok(project_temp)
 }
 
 /// Natrix CLI
 #[derive(Parser)]
 enum Cli {
-    /// Clean out the natrix cache
-    ///
-    /// WARNING: This will cause invalid builds on any projects that arent `cargo clean` as well
-    Prune,
     /// Spawn a dev server
     Dev(BuildConfigArgs),
     /// Build the project
@@ -81,7 +72,7 @@ struct BuildConfigArgs {
     /// Build profile to use
     #[arg(short, long, value_enum)]
     profile: Option<BuildProfile>,
-    /// Location to putput build files
+    /// Location to output build files
     #[arg(short, long)]
     dist: Option<PathBuf>,
 }
@@ -92,28 +83,36 @@ struct BuildConfig {
     profile: BuildProfile,
     /// Location to putput build files
     dist: PathBuf,
+    /// Location for the temp dir
+    temp_dir: PathBuf,
 }
 
 impl BuildConfigArgs {
     /// Replace optional arguments (that have defaults) with the defaults for the `dev` subcommand
-    fn fill_build_defaults(self) -> BuildConfig {
-        BuildConfig {
-            profile: self.profile.unwrap_or(BuildProfile::Release),
+    fn fill_build_defaults(self) -> Result<BuildConfig> {
+        let profile = self.profile.unwrap_or(BuildProfile::Release);
+        Ok(BuildConfig {
+            profile,
             dist: self.dist.unwrap_or_else(|| PathBuf::from("./dist")),
-        }
+            temp_dir: find_target(profile)?,
+        })
     }
 
     /// Replace optional arguments (that have defaults) with the defaults for the `build` subcommand
     fn fill_dev_defaults(self) -> Result<BuildConfig> {
+        let profile = self.profile.unwrap_or(BuildProfile::Dev);
+        let target = find_target(profile)?;
+
         let dist = if let Some(dist) = self.dist {
             dist
         } else {
-            temp_dir()?.join("__dist")
+            target.join("dist")
         };
 
         Ok(BuildConfig {
-            profile: self.profile.unwrap_or(BuildProfile::Dev),
+            profile,
             dist,
+            temp_dir: target,
         })
     }
 }
@@ -141,9 +140,8 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli {
-        Cli::Prune => Ok(fs::remove_dir_all(temp_dir()?)?),
         Cli::Dev(config) => do_dev(config),
-        Cli::Build(config) => build(&config.fill_build_defaults()).context("Building application"),
+        Cli::Build(config) => build(&config.fill_build_defaults()?).context("Building application"),
     }
 }
 
@@ -398,7 +396,7 @@ fn minimize_js(js_file: &PathBuf) -> Result<(), anyhow::Error> {
 
 /// Build the project wasm
 fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
-    let artifact = temp_dir()?.join("__cargo");
+    let artifact = config.temp_dir.join("cargo");
 
     let mut command = process::Command::new("cargo");
     command
@@ -414,7 +412,7 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
         ])
         .env(
             natrix_shared::MACRO_OUTPUT_ENV,
-            temp_dir()?.join(MACRO_OUTPUT_DIR),
+            config.temp_dir.join(MACRO_OUTPUT_DIR),
         );
     if config.profile == BuildProfile::Release {
         command
@@ -430,10 +428,20 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
     find_wasm(&artifact)
 }
 
+/// Alias to Command for consistent code between `process` and `wasm-opt`
+#[cfg(not(feature = "bundle-wasm-opt"))]
+type Command = std::process::Command;
+
+/// Alias to Command for consistent code between `process` and `wasm-opt`
+#[cfg(feature = "bundle-wasm-opt")]
+type Command = wasm_opt::integration::Command;
+
 /// Optimize the given wasm file
 fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
     let spinner = create_spinner("🔎 Optimize wasm")?;
-    let result = process::Command::new("wasm-opt")
+
+    let mut command = Command::new("wasm-opt");
+    command
         .arg(wasm_file)
         .arg("-o")
         .arg(wasm_file)
@@ -454,10 +462,16 @@ fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
             "--generate-global-effects",
             "--converge",
             "-Oz",
-        ])
-        .status()?;
+        ]);
+
+    #[cfg(feature = "bundle-wasm-opt")]
+    let result = wasm_opt::integration::run_from_command_args(command).is_ok();
+
+    #[cfg(not(feature = "bundle-wasm-opt"))]
+    let result = command.status()?.success();
+
     spinner.finish();
-    if !result.success() {
+    if !result {
         return Err(anyhow!("Failed to optimize"));
     }
     Ok(())
@@ -538,7 +552,7 @@ fn collect_css(config: &BuildConfig) -> Result<()> {
     let spinner = create_spinner("🎨 Bundling css")?;
 
     let mut css_content = String::new();
-    for file in get_macro_output_files().context("Reading macro output")? {
+    for file in get_macro_output_files(config).context("Reading macro output")? {
         fs::File::open(file)?.read_to_string(&mut css_content)?;
     }
 
@@ -587,8 +601,8 @@ fn optimize_css(css_content: &str) -> Result<String> {
 }
 
 /// Get all files in the sub folders of `MACRO_OUTPUT_DIR`
-fn get_macro_output_files() -> Result<impl Iterator<Item = PathBuf>> {
-    Ok(fs::read_dir(temp_dir()?.join(MACRO_OUTPUT_DIR))?
+fn get_macro_output_files(config: &BuildConfig) -> Result<impl Iterator<Item = PathBuf>> {
+    Ok(fs::read_dir(config.temp_dir.join(MACRO_OUTPUT_DIR))?
         .flatten()
         .flat_map(|folder| fs::read_dir(folder.path()).into_iter().flatten().flatten())
         .map(|entry| entry.path()))
