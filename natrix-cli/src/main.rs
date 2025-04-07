@@ -20,6 +20,7 @@
 )]
 
 use std::borrow::Cow;
+use std::collections::HashSet;
 use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
@@ -53,8 +54,8 @@ fn get_project_name() -> Result<String> {
 /// Get the temporary directory for this
 fn temp_dir() -> Result<PathBuf> {
     let project = get_project_name()?;
-    let temp = std::env::temp_dir();
-    let project_temp = temp.join("natrix").join(project);
+    let temp = std::env::home_dir().unwrap_or_else(std::env::temp_dir);
+    let project_temp = temp.join(".natrix").join(project);
 
     std::fs::create_dir_all(&project_temp)?;
 
@@ -64,6 +65,10 @@ fn temp_dir() -> Result<PathBuf> {
 /// Natrix CLI
 #[derive(Parser)]
 enum Cli {
+    /// Clean out the natrix cache
+    ///
+    /// WARNING: This will cause invalid builds on any projects that arent `cargo clean` as well
+    Prune,
     /// Spawn a dev server
     Dev(BuildConfigArgs),
     /// Build the project
@@ -136,6 +141,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli {
+        Cli::Prune => Ok(fs::remove_dir_all(temp_dir()?)?),
         Cli::Dev(config) => do_dev(config),
         Cli::Build(config) => build(&config.fill_build_defaults()).context("Building application"),
     }
@@ -309,7 +315,7 @@ fn generate_html(config: &BuildConfig, js_file: &Path) -> Result<()> {
         <!doctype html>
         <html>
             <head>
-                <link ref="stylesheet" href="{CSS_OUTPUT_NAME}"/>
+                <link rel="stylesheet" href="{CSS_OUTPUT_NAME}"/>
             </head>
             <body>
                 <div id="{}"></div>
@@ -532,14 +538,52 @@ fn collect_css(config: &BuildConfig) -> Result<()> {
     let spinner = create_spinner("🎨 Bundling css")?;
 
     let mut css_content = String::new();
-    for file in get_macro_output_files()? {
+    for file in get_macro_output_files().context("Reading macro output")? {
         fs::File::open(file)?.read_to_string(&mut css_content)?;
+    }
+
+    if config.profile == BuildProfile::Release {
+        css_content = optimize_css(&css_content)?;
     }
 
     fs::write(config.dist.join(CSS_OUTPUT_NAME), css_content)?;
 
     spinner.finish();
     Ok(())
+}
+
+/// Optimize the given css string
+fn optimize_css(css_content: &str) -> Result<String> {
+    let mut styles = lightningcss::stylesheet::StyleSheet::parse(
+        css_content,
+        lightningcss::stylesheet::ParserOptions {
+            filename: String::from("<BUNDLED CSS>.css"),
+            css_modules: None,
+            source_index: 0,
+            error_recovery: false,
+            warnings: None,
+            flags: lightningcss::stylesheet::ParserFlags::empty(),
+        },
+    )
+    .map_err(|err| anyhow!("Failed to parse css {err}"))?;
+
+    let targets = lightningcss::targets::Targets::default();
+    styles.minify(lightningcss::stylesheet::MinifyOptions {
+        targets,
+        unused_symbols: HashSet::new(),
+    })?;
+
+    let css_content = styles.to_css(lightningcss::printer::PrinterOptions {
+        analyze_dependencies: None,
+        minify: true,
+        project_root: None,
+        pseudo_classes: None,
+        targets,
+    })?;
+
+    let css_content = css_content.code;
+
+    Ok(css_content)
 }
 
 /// Get all files in the sub folders of `MACRO_OUTPUT_DIR`
