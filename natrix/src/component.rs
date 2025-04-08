@@ -155,6 +155,8 @@ pub fn mount_at<C: Component>(component: C, target_id: &'static str) {
 /// Mount the specified component at natrixses default location.
 /// This is what should be used when building with the natrix cli.
 ///
+/// If the `panic_hook` feature is enabled, this will set the panic hook as well.
+///
 /// **WARNING:** This method implicitly leaks the memory of the root component
 pub fn mount<C: Component>(component: C) {
     #[cfg(feature = "panic_hook")]

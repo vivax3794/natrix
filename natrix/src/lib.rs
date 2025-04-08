@@ -89,7 +89,7 @@ If you which to allow execution after a panic (not recommended) you can disable 
     }
 
     /// Set the panic hook to mark that a panic has happened
-    pub(crate) fn set_panic_hook() {
+    pub fn set_panic_hook() {
         std::panic::set_hook(Box::new(|info| {
             PANIC_HAPPEND.call_once(|| {
                 // This is a no-op, we just want to mark that a panic has happened
@@ -100,24 +100,22 @@ If you which to allow execution after a panic (not recommended) you can disable 
         }));
     }
 }
-#[cfg(not(feature = "panic_hook"))]
-mod panics {
-    /// Is the panic hook set?
-    pub(crate) fn has_paniced() -> bool {
-        false
-    }
-}
+
+#[cfg(feature = "panic_hook")]
+pub use panics::set_panic_hook;
 
 /// Returns if a panic has happened
 ///
 /// (or is a noop when the `panic_hook` feature is not enabled)
 macro_rules! return_if_panic {
     ($val:expr) => {
+        #[cfg(feature = "panic_hook")]
         if $crate::panics::has_paniced() {
             return $val;
         }
     };
     () => {
+        #[cfg(feature = "panic_hook")]
         if $crate::panics::has_paniced() {
             return;
         }

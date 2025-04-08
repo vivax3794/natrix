@@ -4,7 +4,6 @@
     clippy::todo,
     clippy::unreachable,
     clippy::unwrap_used,
-    clippy::unreachable,
     clippy::indexing_slicing,
     clippy::dbg_macro,
     clippy::expect_used,
@@ -247,19 +246,22 @@ dist
 
 use natrix::prelude::*;
 
-scoped_css!("
-    .hello_world {{
-        font-size: 6rem;
-        color: red;
-    }}
-");
+mod css {{
+    use natrix::prelude::scoped_css;
+    scoped_css!("
+        .hello_world {{
+            font-size: 6rem;
+            color: red;
+        }}
+    ");
+}}
 
 #[derive(Component)]
 struct HelloWorld;
 
 impl Component for HelloWorld {{
     fn render() -> impl Element<Self::Data> {{
-        e::h1().text("Hello {name}").class(HELLO_WORLD)
+        e::h1().text("Hello {name}").class(css::HELLO_WORLD)
     }}
 }}
 
