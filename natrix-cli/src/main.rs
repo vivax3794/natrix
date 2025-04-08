@@ -817,7 +817,7 @@ struct SymbolVisitor {
 }
 
 impl<'i> lightningcss::visitor::Visitor<'i> for SymbolVisitor {
-    type Error = ();
+    type Error = std::convert::Infallible;
     fn visit_types(&self) -> lightningcss::visitor::VisitTypes {
         lightningcss::visit_types!(SELECTORS)
     }
