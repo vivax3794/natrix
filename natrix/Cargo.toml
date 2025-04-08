@@ -1,6 +1,6 @@
 [package]
 name = "natrix"
-version = "0.2.0"
+version = "1.0.0"
 edition = "2024"
 
 description = "Rust-First frontend framework."
@@ -12,8 +12,8 @@ categories = ["gui", "wasm", "web-programming"]
 readme = "../README.md"
 
 [dependencies]
-natrix_macros = {path = "../natrix_macros", version="0.2.0"}
-natrix_shared = {path = "../natrix_shared", version="0.2.0"}
+natrix_macros = {path = "../natrix_macros", version="1.0.0"}
+natrix_shared = {path = "../natrix_shared", version="1.0.0"}
 
 # Default
 wasm-bindgen = {version= "0.2.100", features=["enable-interning"]}

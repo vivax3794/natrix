@@ -1,12 +1,12 @@
 [package]
 name = "natrix-cli"
-version = "0.2.0"
+version = "1.0.0"
 edition = "2024"
 description = "Natrix CLI tool."
 license = "MIT"
 
 [dependencies]
-natrix_shared = {path = "../natrix_shared", version="0.2.0"}
+natrix_shared = {path = "../natrix_shared", version="1.0.0"}
 
 anyhow = "1.0.97"
 clap = { version = "4.5.34", features = ["derive"] }
