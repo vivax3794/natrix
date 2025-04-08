@@ -7,6 +7,7 @@ use crate::element::Element;
 use crate::get_document;
 use crate::signal::RenderingState;
 use crate::state::{ComponentData, HookKey, S, State};
+use crate::utils::SmallAny;
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
 /// associating a component with its reactive state as well as converting to a struct to its
@@ -109,6 +110,34 @@ where
     }
 }
 
+/// The result of rendering a component
+///
+/// This should be kept in memory for as long as the component is in the dom.
+#[must_use = "Dropping this before the component is unmounted will cause panics"]
+#[expect(
+    dead_code,
+    reason = "This is used to keep the component alive and we do not need to use it"
+)]
+pub struct RenderResult<C> {
+    /// The component data
+    data: Rc<RefCell<State<C>>>,
+    /// The various things that need to be kept alive
+    keep_alive: Vec<Box<dyn SmallAny>>,
+}
+
+/// Mount the specified component at natrixses default location.
+/// This is what should be used when building with the natrix cli.
+///
+/// If the `panic_hook` feature is enabled, this will set the panic hook as well.
+///
+/// **WARNING:** This method implicitly leaks the memory of the root component
+pub fn mount<C: Component>(component: C) {
+    #[cfg(feature = "panic_hook")]
+    crate::panics::set_panic_hook();
+
+    mount_at(component, natrix_shared::MOUNT_POINT);
+}
+
 /// Mounts the component at the target id
 /// Replacing the element with the component
 ///
@@ -116,11 +145,25 @@ where
 ///
 /// # Panics
 /// If target mount point is not found.
+pub fn mount_at<C: Component>(component: C, target_id: &'static str) {
+    let result = render_component(component, target_id);
+
+    std::mem::forget(result);
+}
+
+/// Mounts the component at the target id
+/// Replacing the element with the component
+///
+/// # Panics
+/// If target mount point is not found.
 #[expect(
     clippy::expect_used,
     reason = "This is the entry point of the framework, and it fails fast."
 )]
-pub fn mount_at<C: Component>(component: C, target_id: &'static str) {
+pub fn render_component<C: Component>(
+    component: C,
+    target_id: &str,
+) -> RenderResult<<C as ComponentBase>::Data> {
     let data = component.into_state();
     let element = C::render();
 
@@ -147,20 +190,5 @@ pub fn mount_at<C: Component>(component: C, target_id: &'static str) {
 
     drop(borrow_data);
 
-    // This is the entry point, this component should be alive FOREVER
-    std::mem::forget(data);
-    std::mem::forget(keep_alive);
-}
-
-/// Mount the specified component at natrixses default location.
-/// This is what should be used when building with the natrix cli.
-///
-/// If the `panic_hook` feature is enabled, this will set the panic hook as well.
-///
-/// **WARNING:** This method implicitly leaks the memory of the root component
-pub fn mount<C: Component>(component: C) {
-    #[cfg(feature = "panic_hook")]
-    crate::panics::set_panic_hook();
-
-    mount_at(component, natrix_shared::MOUNT_POINT);
+    RenderResult { data, keep_alive }
 }
