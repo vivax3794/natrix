@@ -546,7 +546,11 @@ fn minimize_js(js_file: &PathBuf) -> Result<(), anyhow::Error> {
             top_level: true,
             ..Default::default()
         }),
-        compress: Some(oxc::minifier::CompressOptions::default()),
+        compress: Some(oxc::minifier::CompressOptions {
+            drop_console: true,
+            drop_debugger: true,
+            ..Default::default()
+        }),
     });
     let symbols = minifier.build(&allocator, &mut program).scoping;
 
