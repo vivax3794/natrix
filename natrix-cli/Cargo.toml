@@ -2,6 +2,8 @@
 name = "natrix-cli"
 version = "0.2.0"
 edition = "2024"
+description = "Natrix CLI tool."
+license = "MIT"
 
 [dependencies]
 natrix_shared = {path = "../natrix_shared", version="0.2.0"}

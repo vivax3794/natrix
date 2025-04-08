@@ -21,4 +21,4 @@ syn = { version = "2.0.87", default-features = false, features=["derive", "proc-
 template-quote = "0.4.0"
 
 [build-dependencies]
-natrix_shared = {path = "../natrix_shared"}
+natrix_shared = {path = "../natrix_shared", version="0.2.0"}

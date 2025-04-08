@@ -62,10 +62,7 @@ install_cli:
 
 # Publish the crate to crates.io
 publish: fmt test check
-    cargo publish -p natrix_shared
-    cargo publish -p natrix_macros
-    cargo publish -p natrix
-    cargo publish -p natrix-cli
+    cargo publish -Z package-workspace -p natrix_shared -p natrix_macros -p natrix-cli -p natrix
 
 [working-directory: './bench_project']
 bench:

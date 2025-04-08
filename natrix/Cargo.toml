@@ -9,7 +9,7 @@ repository = "https://github.com/vivax3794/natrix"
 keywords = ["frontend", "framework", "web", "wasm"]
 categories = ["gui", "wasm", "web-programming"]
 
-readme = "../README.me"
+readme = "../README.md"
 
 [dependencies]
 natrix_macros = {path = "../natrix_macros", version="0.2.0"}
@@ -45,7 +45,7 @@ either = ["dep:either"]
 [dev-dependencies]
 proptest = { version = "1.6.0", default-features = false, features = ["std"] }
 wasm-bindgen-test = {version="0.3.50"}
-getrandom = { version = "*", features = ["js"] }
+getrandom = { version = "0.2.0", features = ["js"] }
 
 [build-dependencies]
 rustversion = "1.0.19"
