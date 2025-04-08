@@ -43,12 +43,12 @@ const BINDGEN_OUTPUT_NAME: &str = "code";
 const CSS_OUTPUT_NAME: &str = "styles.css";
 
 /// Find the closet target folder
-fn find_target_inner(mode: BuildProfile) -> Result<PathBuf> {
+fn find_target_inner() -> Result<PathBuf> {
     let mut current = PathBuf::from(".").canonicalize()?;
     loop {
         let target = current.join("target");
         if target.exists() {
-            return Ok(target.join(format!("natrix-{}", mode.redable())));
+            return Ok(target);
         }
         if let Some(parent) = current.parent() {
             current = parent.to_owned();
@@ -59,16 +59,22 @@ fn find_target_inner(mode: BuildProfile) -> Result<PathBuf> {
 }
 
 /// Find the target folder
-fn find_target(mode: BuildProfile) -> Result<PathBuf> {
-    if let Ok(path) = find_target_inner(mode) {
+fn find_target() -> Result<PathBuf> {
+    if let Ok(path) = find_target_inner() {
         Ok(path)
     } else {
         let mut command = process::Command::new("cargo");
         command.arg("check").args(["--color", "always"]);
         run_with_spinner(command, create_spinner("Generating inital target folder")?)?;
 
-        find_target_inner(mode)
+        find_target_inner()
     }
+}
+
+/// Find the natrix target folder
+fn find_target_natrix(mode: BuildProfile) -> Result<PathBuf> {
+    let target = find_target()?;
+    Ok(target.join(format!("natrix-{}", mode.redable())))
 }
 
 /// Natrix CLI
@@ -78,9 +84,9 @@ enum Cli {
     New {
         /// The name of the project
         name: String,
-        /// Use nightly rust
+        /// Use Stable rust
         #[arg(short, long)]
-        nightly: bool,
+        stable: bool,
     },
     /// Spawn a dev server
     Dev(BuildConfigArgs),
@@ -116,14 +122,14 @@ impl BuildConfigArgs {
         Ok(BuildConfig {
             profile,
             dist: self.dist.unwrap_or_else(|| PathBuf::from("./dist")),
-            temp_dir: find_target(profile)?,
+            temp_dir: find_target_natrix(profile)?,
         })
     }
 
     /// Replace optional arguments (that have defaults) with the defaults for the `build` subcommand
     fn fill_dev_defaults(self) -> Result<BuildConfig> {
         let profile = self.profile.unwrap_or(BuildProfile::Dev);
-        let target = find_target(profile)?;
+        let target = find_target_natrix(profile)?;
 
         let dist = if let Some(dist) = self.dist {
             dist
@@ -156,22 +162,40 @@ impl BuildProfile {
             Self::Dev => "dev",
         }
     }
+
+    /// Return the cargo profile name
+    fn cargo(self) -> &'static str {
+        match self {
+            Self::Release => "release",
+            Self::Dev => "dev",
+        }
+    }
+
+    /// Return the target output folder
+    fn target(self) -> &'static str {
+        match self {
+            Self::Release => "release",
+            Self::Dev => "debug",
+        }
+    }
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli {
-        Cli::New { name, nightly } => generate_project(&name, nightly),
+        Cli::New { name, stable } => generate_project(&name, stable),
         Cli::Dev(config) => do_dev(config),
         Cli::Build(config) => build(&config.fill_build_defaults()?).context("Building application"),
     }
 }
 
 /// Generate a new project
-fn generate_project(name: &str, nightly: bool) -> std::result::Result<(), anyhow::Error> {
+fn generate_project(name: &str, stable: bool) -> std::result::Result<(), anyhow::Error> {
     let root = PathBuf::from(name);
     fs::create_dir_all(&root)?;
+
+    let nightly = !stable;
 
     // we assume the library version is the same as the cli version
     // This means that even if the cli isnt modified it should publish new versions along with the
@@ -542,36 +566,70 @@ fn minimize_js(js_file: &PathBuf) -> Result<(), anyhow::Error> {
 
 /// Build the project wasm
 fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
-    let artifact = config.temp_dir.join("cargo");
+    let rustc_version_meta = rustc_version::version_meta()?;
+    let rustc_is_nightly = rustc_version_meta.channel == rustc_version::Channel::Nightly;
 
     let mut command = process::Command::new("cargo");
     command
         .arg("build")
         .args(["--color", "always"])
         .args(["--target", "wasm32-unknown-unknown"])
-        .args(["--profile", config.profile.redable()])
-        .args([
-            "-Z",
-            "unstable-options",
-            "--artifact-dir",
-            &path_str(&artifact),
-        ])
+        .args(["--profile", config.profile.cargo()])
         .env(
             natrix_shared::MACRO_OUTPUT_ENV,
             config.temp_dir.join(MACRO_OUTPUT_DIR),
         );
     if config.profile == BuildProfile::Release {
-        command
-            .args(["-Z", "build-std=core,std,panic_abort"])
-            .arg("-Zbuild-std-features=optimize_for_size,panic_immediate_abort")
-            .env(
-                "RUSTFLAGS",
-                "-C target-feature=+bulk-memory -Z fmt-debug=none -Zlocation-detail=none",
+        let mut rustc_flags = String::from("-C target-feature=+bulk-memory ");
+        if rustc_is_nightly {
+            command
+                .args(["-Z", "build-std=core,std,panic_abort"])
+                .arg("-Zbuild-std-features=optimize_for_size,panic_immediate_abort");
+            rustc_flags.push_str("-Zfmt-debug=none -Zlocation-detail=none");
+        } else {
+            println!(
+                "{}",
+                "⚠️ Using stable rust, nightly rust allows for better optimizations and smaller wasm files"
+                    .yellow()
+                    .bold()
             );
+        }
+        command.env("RUSTFLAGS", rustc_flags);
     }
     run_with_spinner(command, create_spinner("⚙️ wasm")?).context("Running cargo")?;
 
-    find_wasm(&artifact)
+    find_wasm(config).context("Finding wasm file")
+}
+
+/// Return the path to the first wasm file in the folder
+fn find_wasm(config: &BuildConfig) -> Result<PathBuf> {
+    let target = find_target()?;
+    let target = target
+        .join("wasm32-unknown-unknown")
+        .join(config.profile.target());
+
+    if let Some(wasm) = search_dir_for_wasm(&target)? {
+        return Ok(wasm);
+    }
+
+    if let Some(wasm) = search_dir_for_wasm(&target.join("deps"))? {
+        return Ok(wasm);
+    }
+
+    Err(anyhow!("Wasm file not found in {}", path_str(&target)))
+}
+
+/// Search the given directory for a wasm file
+fn search_dir_for_wasm(target: &Path) -> Result<Option<PathBuf>, anyhow::Error> {
+    for file in target.read_dir()?.flatten() {
+        let path = file.path();
+        if let Some(extension) = path.extension() {
+            if extension == "wasm" {
+                return Ok(Some(file.path()));
+            }
+        }
+    }
+    Ok(None)
 }
 
 /// Alias to Command for consistent code between `process` and `wasm-opt`
@@ -621,20 +679,6 @@ fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         return Err(anyhow!("Failed to optimize"));
     }
     Ok(())
-}
-
-/// Return the path to the first wasm file in the folder
-fn find_wasm(directory: &Path) -> Result<PathBuf> {
-    for file in directory.read_dir()?.flatten() {
-        let path = file.path();
-        if let Some(extension) = path.extension() {
-            if extension == "wasm" {
-                return Ok(file.path());
-            }
-        }
-    }
-
-    Err(anyhow!("Wasm file not found in output directory"))
 }
 
 /// Create a spinner with the given msg and finished emoji

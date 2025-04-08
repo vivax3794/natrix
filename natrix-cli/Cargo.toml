@@ -16,6 +16,7 @@ oxc = {version="0.61.2", default-features=false, features=["minifier", "codegen"
 lightningcss = { version = "1.0.0-alpha.65", default-features = false, features = ["grid", "visitor"] }
 wasm-opt = { version = "0.116.1", optional = true }
 wasmparser = "0.228"
+rustc_version = "0.4.1"
 
 [[bin]]
 name = "natrix"

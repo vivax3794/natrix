@@ -6,7 +6,7 @@ default: test check
 test: && integration_tests project_gen_test
     cargo +nightly nextest run --all-features --workspace --exclude "integration_tests"
 
-    cd natrix && rustup run stable wasm-pack test --headless --chrome
+    cd natrix && rustup run stable wasm-pack test --headless --chrome --features test_utils
     cd natrix && rustup run nightly wasm-pack test --headless --chrome --all-features
 
 check:
@@ -54,12 +54,12 @@ integration_tests: install_cli
 [working-directory: "/tmp"]
 project_gen_test: install_cli
     rm -rf ./test_project || true
-    NATRIX_PATH="{{justfile_directory()}}/natrix" natrix new test_project
-    cd test_project && cargo +stable clippy
+    NATRIX_PATH="{{justfile_directory()}}/natrix" natrix new test_project --stable
+    cd test_project && rustup run stable natrix build
 
     rm -rf ./test_project || true
-    NATRIX_PATH="{{justfile_directory()}}/natrix" natrix new test_project --nightly
-    cd test_project && cargo +nightly clippy
+    NATRIX_PATH="{{justfile_directory()}}/natrix" natrix new test_project
+    cd test_project && rustup run nightly natrix build
 
 install_cli:
     cargo install --path natrix-cli --profile dev
