@@ -14,10 +14,6 @@ check:
     cargo +stable hack clippy --feature-powerset --skip nightly --tests -- -Dwarnings
     cargo +nightly hack clippy --feature-powerset --tests -- -Dwarnings
 
-bounds:
-    cd natrix_macros && cargo-bounds test
-    cd natrix && cargo-bounds test
-
 [working-directory: "./integration_tests"]
 integration_tests: install_cli
     #!/usr/bin/bash

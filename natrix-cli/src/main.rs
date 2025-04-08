@@ -42,33 +42,21 @@ const BINDGEN_OUTPUT_NAME: &str = "code";
 /// Name of the collected css
 const CSS_OUTPUT_NAME: &str = "styles.css";
 
-/// Find the closet target folder
-fn find_target_inner() -> Result<PathBuf> {
-    let mut current = PathBuf::from(".").canonicalize()?;
-    loop {
-        let target = current.join("target");
-        if target.exists() {
-            return Ok(target);
-        }
-        if let Some(parent) = current.parent() {
-            current = parent.to_owned();
-        } else {
-            return Err(anyhow!("No target folder found"));
-        }
-    }
-}
-
 /// Find the target folder
 fn find_target() -> Result<PathBuf> {
-    if let Ok(path) = find_target_inner() {
-        Ok(path)
-    } else {
-        let mut command = process::Command::new("cargo");
-        command.arg("check").args(["--color", "always"]);
-        run_with_spinner(command, create_spinner("Generating inital target folder")?)?;
-
-        find_target_inner()
-    }
+    let cargo_toml = process::Command::new("cargo")
+        .arg("locate-project")
+        .arg("--workspace")
+        .arg("--message-format=plain")
+        .output()?
+        .stdout;
+    let cargo_toml = String::from_utf8_lossy(&cargo_toml);
+    let cargo_toml = PathBuf::from(cargo_toml.trim());
+    let target = cargo_toml
+        .parent()
+        .ok_or(anyhow!("Failed to find target folder"))?
+        .join("target");
+    Ok(target)
 }
 
 /// Find the natrix target folder
