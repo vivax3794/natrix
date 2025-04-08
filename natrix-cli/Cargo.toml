@@ -17,6 +17,7 @@ lightningcss = { version = "1.0.0-alpha.65", default-features = false, features 
 wasm-opt = { version = "0.116.1", optional = true }
 wasmparser = "0.228"
 rustc_version = "0.4.1"
+cargo_metadata = "0.19.2"
 
 [[bin]]
 name = "natrix"

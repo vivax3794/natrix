@@ -444,6 +444,8 @@ pub mod async_impl {
         /// See the [Features]() chapther for details on how to set it up (it requires a bit more
         /// setup than just turning on the feature flag).
         pub fn borrow_mut(&mut self) -> Option<AsyncRef<'_, T>> {
+            crate::return_if_panic!(None);
+
             let rc = self.inner.upgrade()?;
             let mut borrow = AsyncRefInner::new(rc, PhantomData, |rc| rc.borrow_mut());
             borrow.with_reference_mut(|ctx| ctx.clear());

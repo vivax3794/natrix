@@ -44,18 +44,9 @@ const CSS_OUTPUT_NAME: &str = "styles.css";
 
 /// Find the target folder
 fn find_target() -> Result<PathBuf> {
-    let cargo_toml = process::Command::new("cargo")
-        .arg("locate-project")
-        .arg("--workspace")
-        .arg("--message-format=plain")
-        .output()?
-        .stdout;
-    let cargo_toml = String::from_utf8_lossy(&cargo_toml);
-    let cargo_toml = PathBuf::from(cargo_toml.trim());
-    let target = cargo_toml
-        .parent()
-        .ok_or(anyhow!("Failed to find target folder"))?
-        .join("target");
+    let metatadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
+    let target = metatadata.target_directory;
+    let target = PathBuf::from(target);
     Ok(target)
 }
 
@@ -101,6 +92,8 @@ struct BuildConfig {
     dist: PathBuf,
     /// Location for the temp dir
     temp_dir: PathBuf,
+    /// Do live reload
+    live_reload: bool,
 }
 
 impl BuildConfigArgs {
@@ -111,6 +104,7 @@ impl BuildConfigArgs {
             profile,
             dist: self.dist.unwrap_or_else(|| PathBuf::from("./dist")),
             temp_dir: find_target_natrix(profile)?,
+            live_reload: false,
         })
     }
 
@@ -129,6 +123,7 @@ impl BuildConfigArgs {
             profile,
             dist,
             temp_dir: target,
+            live_reload: true,
         })
     }
 }
@@ -245,6 +240,7 @@ dist
 {extra_nightly}
 // Panicing in a wasm module will cause the state to be invalid
 // And it might cause UB on the next event handler execution.
+// (By default natrix uses a panic hook that blocks further event handler calls after a panic)
 #![deny(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
 // These are more strict anti panic lints that you might want to enable
 // #![warn(clippy::arithmetic_side_effects, clippy::indexing_slicing, clippy::unreachable)]
@@ -445,25 +441,26 @@ fn generate_html(config: &BuildConfig, js_file: &Path) -> Result<()> {
         .ok_or(anyhow!("Js File name not found"))?
         .to_string_lossy();
 
-    let js_reload = match config.profile {
-        BuildProfile::Release => "",
-        BuildProfile::Dev => r#"
-function check_reload() {
-    fetch("./RELOAD")
-        .then(
-            (resp) => {
-                if (resp.ok) {
-                    location.reload();
+    let js_reload = if config.live_reload {
+        r#"
+    function check_reload() {
+        fetch("./RELOAD")
+            .then(
+                (resp) => {
+                    if (resp.ok) {
+                        location.reload();
+                    }
+                    else  {
+                        setTimeout(check_reload, 500);
+                    }
                 }
-                else  {
-                    setTimeout(check_reload, 500);
-                }
-            }
-        )
-}
-check_reload();
-        "#
-        .trim(),
+            )
+    }
+    check_reload();
+            "#
+        .trim()
+    } else {
+        ""
     };
 
     let content = format!(
@@ -535,7 +532,7 @@ fn minimize_js(js_file: &PathBuf) -> Result<(), anyhow::Error> {
             ..Default::default()
         }),
         compress: Some(oxc::minifier::CompressOptions {
-            drop_console: true,
+            drop_console: !is_feature_enabled("panic_hook", true)?,
             drop_debugger: true,
             ..Default::default()
         }),
@@ -574,9 +571,14 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
     if config.profile == BuildProfile::Release {
         let mut rustc_flags = String::from("-C target-feature=+bulk-memory ");
         if rustc_is_nightly {
+            let mut std_features = String::from("optimize_for_size");
+            if !is_feature_enabled("panic_hook", true)? {
+                std_features.push_str(",panic_immediate_abort");
+            }
+
             command
                 .args(["-Z", "build-std=core,std,panic_abort"])
-                .arg("-Zbuild-std-features=optimize_for_size,panic_immediate_abort");
+                .arg(format!("-Zbuild-std-features={std_features}"));
             rustc_flags.push_str("-Zfmt-debug=none -Zlocation-detail=none");
         } else {
             println!(
@@ -591,6 +593,25 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
     run_with_spinner(command, create_spinner("⚙️ wasm")?).context("Running cargo")?;
 
     find_wasm(config).context("Finding wasm file")
+}
+
+/// Find if the specified feature is enabled for natrix
+fn is_feature_enabled(feature: &str, is_default: bool) -> Result<bool> {
+    let metadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
+    let packages = metadata.workspace_default_packages();
+    let package = packages.first().ok_or(anyhow!("No package found"))?;
+    let natrix = package.dependencies.iter().find(|x| x.name == "natrix");
+
+    Ok(if let Some(natrix) = natrix {
+        if natrix.features.iter().any(|feat| feat == feature) {
+            true
+        } else {
+            is_default && natrix.uses_default_features
+        }
+    } else {
+        println!("{}", "⚠️ Natrix not found in dependencies".yellow().bold());
+        false
+    })
 }
 
 /// Return the path to the first wasm file in the folder
@@ -642,7 +663,6 @@ fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         .arg("-o")
         .arg(wasm_file)
         .arg("--all-features")
-        .arg("-tnh")
         .args([
             "-O4",
             "--flatten",

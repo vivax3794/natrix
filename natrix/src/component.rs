@@ -157,5 +157,8 @@ pub fn mount_at<C: Component>(component: C, target_id: &'static str) {
 ///
 /// **WARNING:** This method implicitly leaks the memory of the root component
 pub fn mount<C: Component>(component: C) {
+    #[cfg(feature = "panic_hook")]
+    crate::panics::set_panic_hook();
+
     mount_at(component, natrix_shared::MOUNT_POINT);
 }

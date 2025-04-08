@@ -64,6 +64,67 @@ pub(crate) fn get_document() -> web_sys::Document {
     DOCUMENT.with(Clone::clone)
 }
 
+/// Panic handling
+#[cfg(feature = "panic_hook")]
+mod panics {
+    /// Mark that a panic has happened
+    static PANIC_HAPPEND: std::sync::Once = std::sync::Once::new();
+
+    /// Is the panic hook set?
+    pub(crate) fn has_paniced() -> bool {
+        let result = PANIC_HAPPEND.is_completed();
+        #[cfg(debug_assertions)]
+        if result {
+            web_sys::console::warn_1(
+                &"
+Access to framework state was attempted after a panic.
+Continuing to execute rust code after panic may cause undefined behavior.
+If you which to allow execution after a panic (not recommended) you can disable the `panic_hook` feature of `natrix`.
+"
+                .trim()
+                .into(),
+            );
+        }
+        result
+    }
+
+    /// Set the panic hook to mark that a panic has happened
+    pub(crate) fn set_panic_hook() {
+        std::panic::set_hook(Box::new(|info| {
+            PANIC_HAPPEND.call_once(|| {
+                // This is a no-op, we just want to mark that a panic has happened
+            });
+
+            let panic_message = info.to_string();
+            web_sys::console::error_1(&panic_message.into());
+        }));
+    }
+}
+#[cfg(not(feature = "panic_hook"))]
+mod panics {
+    /// Is the panic hook set?
+    pub(crate) fn has_paniced() -> bool {
+        false
+    }
+}
+
+/// Returns if a panic has happened
+///
+/// (or is a noop when the `panic_hook` feature is not enabled)
+macro_rules! return_if_panic {
+    ($val:expr) => {
+        if $crate::panics::has_paniced() {
+            return $val;
+        }
+    };
+    () => {
+        if $crate::panics::has_paniced() {
+            return;
+        }
+    };
+}
+pub(crate) use return_if_panic;
+
 /// Public export of everything.
 pub mod prelude {
     pub use natrix_macros::{Component, global_css, scoped_css};

@@ -298,6 +298,8 @@ fn create_event_handler<C: ComponentData>(
     render_state: &mut RenderingState<'_>,
 ) {
     let callback: Box<dyn Fn(web_sys::Event) + 'static> = Box::new(move |event| {
+        crate::return_if_panic!();
+
         let Some(ctx) = ctx_weak.upgrade() else {
             debug_assert!(
                 false,
