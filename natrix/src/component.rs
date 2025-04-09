@@ -16,7 +16,7 @@ use crate::utils::SmallAny;
     message = "`{Self}` Missing `#[derive(Component)]`.",
     note = "`#[derive(Component)]` Required for implementing `Component`"
 )]
-pub trait ComponentBase: Sized {
+pub trait ComponentBase: Sized + 'static {
     /// The reactive version of this struct.
     /// Should be used for most locations where a "Component" is expected.
     type Data: ComponentData;
@@ -25,7 +25,10 @@ pub trait ComponentBase: Sized {
     fn into_data(self) -> Self::Data;
 
     /// Convert this to its reactive variant and wrap it in the component state struct.
-    fn into_state(self) -> Rc<RefCell<State<Self::Data>>> {
+    fn into_state(self) -> Rc<RefCell<State<Self>>>
+    where
+        Self: Component,
+    {
         State::new(self.into_data())
     }
 }
@@ -56,6 +59,17 @@ pub trait ComponentBase: Sized {
     note = "`#[derive(Component)]` does not implement `Component`"
 )]
 pub trait Component: ComponentBase {
+    /// Messages this component can emit.
+    ///
+    /// Use `NoMessages` if you do not need to emit any messages.
+    #[cfg(feature = "nightly")]
+    type EmitMessage = std::convert::Infallible;
+    /// Messages this component can emit.
+    ///
+    /// Use `NoMessages` if you do not need to emit any messages.
+    #[cfg(not(feature = "nightly"))]
+    type EmitMessage;
+
     /// Return the root element of the component.
     ///
     /// You **can not** dirrectly reference state in this function, and should use narrowly scoped
@@ -68,7 +82,7 @@ pub trait Component: ComponentBase {
     /// ```
     ///
     /// See the [Reactivity](TODO) chapther in the book for more info
-    fn render() -> impl Element<Self::Data>;
+    fn render() -> impl Element<Self>;
 
     /// Called when the component is mounted.
     /// Can be used to setup Effects or start async tasks.
@@ -82,7 +96,8 @@ pub struct C<I>(pub I);
 
 impl<I, P> Element<P> for C<I>
 where
-    I: Component + 'static,
+    I: Component,
+    P: Component,
 {
     fn render_box(
         self: Box<Self>,
@@ -118,7 +133,7 @@ where
     dead_code,
     reason = "This is used to keep the component alive and we do not need to use it"
 )]
-pub struct RenderResult<C> {
+pub struct RenderResult<C: Component> {
     /// The component data
     data: Rc<RefCell<State<C>>>,
     /// The various things that need to be kept alive
@@ -160,10 +175,7 @@ pub fn mount_at<C: Component>(component: C, target_id: &'static str) {
     clippy::expect_used,
     reason = "This is the entry point of the framework, and it fails fast."
 )]
-pub fn render_component<C: Component>(
-    component: C,
-    target_id: &str,
-) -> RenderResult<<C as ComponentBase>::Data> {
+pub fn render_component<C: Component>(component: C, target_id: &str) -> RenderResult<C> {
     let data = component.into_state();
     let element = C::render();
 

@@ -10,9 +10,10 @@ const ROOT_ID: &str = "__HELLO";
 #[derive(Component, Default)]
 struct Generic<T>(T);
 
-impl<T: Element<Self::Data> + Copy> Component for Generic<T> {
-    fn render() -> impl Element<Self::Data> {
-        e::div().id(ROOT_ID).text(|ctx: R<Self>| *ctx.0)
+impl<T: ToString + 'static> Component for Generic<T> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
+        e::div().id(ROOT_ID).text(|ctx: R<Self>| ctx.0.to_string())
     }
 }
 

@@ -13,7 +13,8 @@ struct Counter {
 }
 
 impl Component for Counter {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)
             .child(|ctx: R<Self>| *ctx.value)
@@ -43,7 +44,8 @@ struct OnMount {
 }
 
 impl Component for OnMount {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::div().id(BUTTON_ID).text(|ctx: R<Self>| *ctx.value)
     }
     fn on_mount(ctx: &mut S<Self>) {

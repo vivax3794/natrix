@@ -14,7 +14,8 @@ struct Counter {
 }
 
 impl Component for Counter {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)
             .text(|ctx: R<Self>| *ctx.value)
@@ -28,7 +29,8 @@ impl Component for Counter {
 struct RootOne;
 
 impl Component for RootOne {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::div().child(C(Counter { value: 0 }))
     }
 }

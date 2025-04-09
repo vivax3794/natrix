@@ -14,7 +14,8 @@ struct Counter {
 }
 
 impl Component for Counter {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)
             .child(|ctx: R<Self>| {

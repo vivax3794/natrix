@@ -1,23 +1,24 @@
 //! Implements the reactive hooks for updating the dom in response to signal changessz.
 
+use crate::component::Component;
 use crate::element::Element;
 use crate::html_elements::ToAttribute;
 use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
-use crate::state::{ComponentData, HookKey, KeepAlive, RenderCtx, State};
+use crate::state::{HookKey, KeepAlive, RenderCtx, State};
 use crate::utils::debug_expect;
 use crate::{get_document, type_macros};
 
 /// A noop hook used to fill the `Rc<RefCell<...>>` while the inital render pass runs so that that
 /// a real hook can be swapped in once initalized
 pub(crate) struct DummyHook;
-impl<C: ComponentData> ReactiveHook<C> for DummyHook {
+impl<C: Component> ReactiveHook<C> for DummyHook {
     fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) -> UpdateResult {
         UpdateResult::Nothing
     }
 }
 
 /// Reactive hook for swapping out a entire dom node.
-pub(crate) struct ReactiveNode<C, E> {
+pub(crate) struct ReactiveNode<C: Component, E> {
     /// The callback to produce nodes
     callback: Box<dyn Fn(&mut RenderCtx<C>) -> E>,
     /// The current renderd node to replace
@@ -28,7 +29,7 @@ pub(crate) struct ReactiveNode<C, E> {
     hooks: Vec<HookKey>,
 }
 
-impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
+impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
     /// Render this hook and simply return the node
     ///
     /// IMPORTANT: This function works with the assumption what it returns will be put in its
@@ -99,7 +100,7 @@ impl<C: ComponentData, E: Element<C>> ReactiveNode<C, E> {
     }
 }
 
-impl<C: ComponentData, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
+impl<C: Component, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
     #[cfg(not(nightly))]
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         self.update(ctx, you);
@@ -119,7 +120,7 @@ impl<C: ComponentData, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
 }
 
 #[cfg(nightly)]
-impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, String> {
+impl<C: Component> ReactiveHook<C> for ReactiveNode<C, String> {
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         use wasm_bindgen::JsCast;
 
@@ -148,7 +149,7 @@ impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, String> {
 macro_rules! node_specialize_int {
     ($type:ty, $fmt:ident) => {
         #[cfg(nightly)]
-        impl<C: ComponentData> ReactiveHook<C> for ReactiveNode<C, $type> {
+        impl<C: Component> ReactiveHook<C> for ReactiveNode<C, $type> {
             fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
                 use wasm_bindgen::JsCast;
 
@@ -182,13 +183,13 @@ type_macros::numerics!(node_specialize_int);
 
 /// A trait to allow `SimpleReactive` to deduplicate common reactive logic for attributes, classes,
 /// styles, etc
-pub(crate) trait ReactiveValue<C> {
+pub(crate) trait ReactiveValue<C: Component> {
     /// Actually apply the change
     fn apply(self, ctx: &mut State<C>, render_state: &mut RenderingState, node: &web_sys::Element);
 }
 
 /// A common wrapper for simple reactive operations to deduplicate depdency tracking code
-pub(crate) struct SimpleReactive<C, K> {
+pub(crate) struct SimpleReactive<C: Component, K> {
     /// The callback to call, takes state and returns the needed data for the reactive
     /// transformation
     callback: Box<dyn Fn(&mut RenderCtx<C>) -> K>,
@@ -200,7 +201,7 @@ pub(crate) struct SimpleReactive<C, K> {
     hooks: Vec<HookKey>,
 }
 
-impl<C: ComponentData, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K> {
+impl<C: Component, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K> {
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         ctx.clear();
         let value = (self.callback)(&mut RenderCtx {
@@ -231,7 +232,7 @@ impl<C: ComponentData, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C
     }
 }
 
-impl<C: ComponentData, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
+impl<C: Component, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
     /// Creates a new simple reactive hook, applying the inital transformation.
     /// Returns a Rc of the hook
     pub(crate) fn init_new(
@@ -263,7 +264,7 @@ pub(crate) struct ReactiveAttribute<T> {
     pub(crate) data: T,
 }
 
-impl<C, T: ToAttribute<C>> ReactiveValue<C> for ReactiveAttribute<T> {
+impl<C: Component, T: ToAttribute<C>> ReactiveValue<C> for ReactiveAttribute<T> {
     fn apply(self, ctx: &mut State<C>, render_state: &mut RenderingState, node: &web_sys::Element) {
         Box::new(self.data).apply_attribute(self.name, node, ctx, render_state);
     }

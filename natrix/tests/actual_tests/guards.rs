@@ -15,7 +15,8 @@ struct GuardTester {
 }
 
 impl Component for GuardTester {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::div()
             .child(
                 e::button()
@@ -67,7 +68,8 @@ struct GuardTesterResult {
 }
 
 impl Component for GuardTesterResult {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::div()
             .child(
                 e::button()
@@ -113,7 +115,8 @@ struct GuardTesterNested {
 }
 
 impl Component for GuardTesterNested {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::div()
             .child(
                 e::button()
@@ -178,7 +181,8 @@ struct GuardSwitchProp {
 }
 
 impl Component for GuardSwitchProp {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::div()
             .child(
                 e::button()

@@ -17,10 +17,11 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, intern};
 
 use crate::callbacks::EventHandler;
+use crate::component::Component;
 use crate::element::Element;
 use crate::events::Event;
 use crate::signal::RenderingState;
-use crate::state::{ComponentData, State};
+use crate::state::State;
 use crate::utils::debug_expect;
 use crate::{get_document, type_macros};
 
@@ -29,7 +30,7 @@ use crate::{get_document, type_macros};
     message = "`{Self}` is not a valid attribute value.",
     note = "Try converting the value to a string"
 )]
-pub trait ToAttribute<C>: 'static {
+pub trait ToAttribute<C: Component>: 'static {
     /// Modify the given node to have the attribute set
     ///
     /// We use this apply system instead of returning the value as some types will also need to
@@ -46,7 +47,7 @@ pub trait ToAttribute<C>: 'static {
 /// generate a `ToAttribute` implementation for a string type
 macro_rules! attribute_string {
     ($type:ty) => {
-        impl<C> ToAttribute<C> for $type {
+        impl<C: Component> ToAttribute<C> for $type {
             fn apply_attribute(
                 self: Box<Self>,
                 name: &'static str,
@@ -68,7 +69,7 @@ type_macros::strings!(attribute_string);
 /// generate `ToAttribute` for a int using itoa
 macro_rules! attribute_int {
     ($T:ident, $fmt:ident) => {
-        impl<C> ToAttribute<C> for $T {
+        impl<C: Component> ToAttribute<C> for $T {
             fn apply_attribute(
                 self: Box<Self>,
                 name: &'static str,
@@ -90,7 +91,7 @@ macro_rules! attribute_int {
 
 type_macros::numerics!(attribute_int);
 
-impl<C> ToAttribute<C> for bool {
+impl<C: Component> ToAttribute<C> for bool {
     fn apply_attribute(
         self: Box<Self>,
         name: &'static str,
@@ -112,7 +113,7 @@ impl<C> ToAttribute<C> for bool {
     }
 }
 
-impl<C, T: ToAttribute<C>> ToAttribute<C> for Option<T> {
+impl<C: Component, T: ToAttribute<C>> ToAttribute<C> for Option<T> {
     fn apply_attribute(
         self: Box<Self>,
         name: &'static str,
@@ -130,7 +131,7 @@ impl<C, T: ToAttribute<C>> ToAttribute<C> for Option<T> {
         }
     }
 }
-impl<C, T: ToAttribute<C>, E: ToAttribute<C>> ToAttribute<C> for Result<T, E> {
+impl<C: Component, T: ToAttribute<C>, E: ToAttribute<C>> ToAttribute<C> for Result<T, E> {
     fn apply_attribute(
         self: Box<Self>,
         name: &'static str,
@@ -147,7 +148,7 @@ impl<C, T: ToAttribute<C>, E: ToAttribute<C>> ToAttribute<C> for Result<T, E> {
 
 /// A Generic html node with a given name.
 #[must_use = "Web elements are useless if not rendered"]
-pub struct HtmlElement<C> {
+pub struct HtmlElement<C: Component> {
     /// The name of the tag
     tag: &'static str,
     /// List of child elements
@@ -160,7 +161,7 @@ pub struct HtmlElement<C> {
     classes: Vec<&'static str>,
 }
 
-impl<C> HtmlElement<C> {
+impl<C: Component> HtmlElement<C> {
     /// Create a new html element with the specific tag
     ///
     /// All non-deprecated html elements have a helper function in this module
@@ -241,7 +242,7 @@ impl<C> HtmlElement<C> {
     }
 }
 
-impl<C: ComponentData> Element<C> for HtmlElement<C> {
+impl<C: Component> Element<C> for HtmlElement<C> {
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
@@ -290,7 +291,7 @@ impl<C: ComponentData> Element<C> for HtmlElement<C> {
 
 /// Wrap the given function in the needed reactivity machinery and set it as the event handler for
 /// the specified event
-fn create_event_handler<C: ComponentData>(
+fn create_event_handler<C: Component>(
     element: &web_sys::Element,
     event: &str,
     function: Box<dyn Fn(&mut State<C>, web_sys::Event)>,
@@ -331,7 +332,7 @@ macro_rules! elements {
         $(
             // Note to self: Do not put every possible html tag inline in your docs
             #[doc = concat!("`<", stringify!($name), ">`")]
-            pub fn $name<C>() -> HtmlElement<C> {
+            pub fn $name<C: Component>() -> HtmlElement<C> {
                 HtmlElement::new(stringify!($name))
             }
         )*

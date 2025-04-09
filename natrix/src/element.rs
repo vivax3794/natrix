@@ -1,7 +1,8 @@
 //! Implementation of the `Element` trait for various abstract types.
 
+use crate::component::Component;
 use crate::signal::RenderingState;
-use crate::state::{ComponentData, State};
+use crate::state::State;
 use crate::type_macros;
 
 /// An `Element` is anything that can produce a DOM node.
@@ -32,7 +33,7 @@ use crate::type_macros;
 /// ```
 ///
 /// This keeps your UI **cleaner, more composable, and easier to maintain**. 🚀✨
-pub trait Element<C>: 'static {
+pub trait Element<C: Component>: 'static {
     /// The actual implementation of the rendering.
     /// This is boxed to allow use as `dyn Element` for storing child nodes.
     #[doc(hidden)]
@@ -52,7 +53,7 @@ pub trait Element<C>: 'static {
     }
 }
 
-impl<C> Element<C> for web_sys::Node {
+impl<C: Component> Element<C> for web_sys::Node {
     fn render_box(
         self: Box<Self>,
         _ctx: &mut State<C>,
@@ -65,7 +66,7 @@ impl<C> Element<C> for web_sys::Node {
 /// A simple Dom comment, used as a placeholder and replacement target.
 pub struct Comment;
 
-impl<C> Element<C> for Comment {
+impl<C: Component> Element<C> for Comment {
     fn render_box(
         self: Box<Self>,
         _ctx: &mut State<C>,
@@ -78,7 +79,7 @@ impl<C> Element<C> for Comment {
     }
 }
 
-impl<T: Element<C>, C: ComponentData> Element<C> for Option<T> {
+impl<T: Element<C>, C: Component> Element<C> for Option<T> {
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
@@ -91,7 +92,7 @@ impl<T: Element<C>, C: ComponentData> Element<C> for Option<T> {
     }
 }
 
-impl<T: Element<C>, E: Element<C>, C: ComponentData> Element<C> for Result<T, E> {
+impl<T: Element<C>, E: Element<C>, C: Component> Element<C> for Result<T, E> {
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
@@ -107,7 +108,7 @@ impl<T: Element<C>, E: Element<C>, C: ComponentData> Element<C> for Result<T, E>
 /// Generate a Element implementation for a type that can be converted to `&str`
 macro_rules! string_element {
     ($t:ty) => {
-        impl<C> Element<C> for $t {
+        impl<C: Component> Element<C> for $t {
             fn render_box(
                 self: Box<Self>,
                 _ctx: &mut State<C>,
@@ -131,7 +132,7 @@ type_macros::strings!(string_element);
 /// conflict with the blanket closure implementation of `Element` (Thanks rust :/)
 macro_rules! int_element {
     ($T:ident, $fmt:ident) => {
-        impl<C> Element<C> for $T {
+        impl<C: Component> Element<C> for $T {
             fn render_box(
                 self: Box<Self>,
                 _ctx: &mut State<C>,
@@ -155,9 +156,9 @@ type_macros::numerics!(int_element);
 mod either_element {
     use either::Either;
 
-    use super::{Element, RenderingState, State};
+    use super::{Component, Element, RenderingState, State};
 
-    impl<A: Element<C>, B: Element<C>, C> Element<C> for Either<A, B> {
+    impl<A: Element<C>, B: Element<C>, C: Component> Element<C> for Either<A, B> {
         fn render_box(
             self: Box<Self>,
             ctx: &mut State<C>,

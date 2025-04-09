@@ -17,6 +17,9 @@ foo().await;
 let x = borrow; // ERROR
 ```
 
+### Default associated types
+On nightly `EmitMessage` and `RecvMessage` are `Never` by default, which means they dont have to be defined;
+
 ## `async` (Default)
 Enables the `ctx.use_async()` method, see the [Async](TODO) chapther for more information.
 

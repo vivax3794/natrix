@@ -1,17 +1,18 @@
 //! Implementations of various traits for closures.
 
+use crate::component::Component;
 use crate::element::Element;
 use crate::html_elements::ToAttribute;
 use crate::render_callbacks::{ReactiveAttribute, ReactiveNode, SimpleReactive};
 use crate::signal::RenderingState;
-use crate::state::{ComponentData, RenderCtx, State};
+use crate::state::{RenderCtx, State};
 
 #[diagnostic::do_not_recommend]
 impl<F, C, R> Element<C> for F
 where
     F: Fn(&mut RenderCtx<C>) -> R + 'static,
     R: Element<C> + 'static,
-    C: ComponentData,
+    C: Component,
 {
     fn render_box(
         self: Box<Self>,
@@ -29,7 +30,7 @@ impl<F, C, R> ToAttribute<C> for F
 where
     F: Fn(&mut RenderCtx<C>) -> R + 'static,
     R: ToAttribute<C>,
-    C: ComponentData,
+    C: Component,
 {
     fn apply_attribute(
         self: Box<Self>,

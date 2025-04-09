@@ -6,7 +6,8 @@ use wasm_bench_runtime::Bencher;
 struct LargeDom<const N: u32>;
 
 impl<const N: u32> Component for LargeDom<N> {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         let mut res = e::div();
         for _ in 0..N {
             res = res.child(e::h1().text("SUCH LARGE"));
@@ -19,7 +20,8 @@ impl<const N: u32> Component for LargeDom<N> {
 struct DeepDom<const N: u32>;
 
 impl<const N: u32> Component for DeepDom<N> {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         let mut res = e::div();
         for _ in 0..N {
             res = e::div().text("SUCH DEEP").child(res);
@@ -34,7 +36,8 @@ struct ManyButtons<const N: u32> {
 }
 
 impl<const N: u32> Component for ManyButtons<N> {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         let mut res = e::div();
         for _ in 0..N {
             res = res.child(

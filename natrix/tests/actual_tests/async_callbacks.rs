@@ -1,4 +1,4 @@
-#![cfg(feature = "async")]
+#![cfg(feature = "async_utils")]
 
 use std::time::Duration;
 
@@ -16,7 +16,7 @@ struct AsyncComponent {
 }
 
 impl Component for AsyncComponent {
-    fn render() -> impl Element<Self::Data> {
+    fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)
             .text(|ctx: R<Self>| *ctx.data)

@@ -3,7 +3,8 @@
 use std::cell::Cell;
 use std::ops::{Deref, DerefMut};
 
-use crate::state::{ComponentData, HookKey, KeepAlive, State};
+use crate::component::Component;
+use crate::state::{HookKey, KeepAlive, State};
 
 /// State passed to rendering callbacks
 pub(crate) struct RenderingState<'s> {
@@ -135,7 +136,7 @@ impl<T> DerefMut for Signal<T> {
 }
 
 /// All reactive hooks will implement this trait to allow them to be stored as `dyn` objects.
-pub(crate) trait ReactiveHook<C: ComponentData> {
+pub(crate) trait ReactiveHook<C: Component> {
     /// Recalculate the hook and apply its update.
     ///
     /// Hooks should recall `ctx.reg_dep` with the you paramater to re-register any potential

@@ -19,7 +19,8 @@ pub const DEP_ID: &str = "DEP_TEXT";
 pub struct DepComp;
 
 impl Component for DepComp {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::h1().text(DEP_TEXT).id(DEP_ID).class(HELLO)
     }
 }

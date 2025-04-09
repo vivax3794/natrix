@@ -1,4 +1,5 @@
 //! Async utils
+#![cfg(feature = "async_utils")]
 use std::time::Duration;
 
 pub use futures;

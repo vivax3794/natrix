@@ -1,6 +1,5 @@
 #![doc = include_str!(concat!("../", std::env!("CARGO_PKG_README")))]
 #![forbid(
-    unsafe_code,
     clippy::todo,
     clippy::unreachable,
     clippy::unwrap_used,
@@ -8,6 +7,7 @@
     clippy::indexing_slicing
 )]
 #![deny(
+    unsafe_code,
     clippy::dbg_macro,
     clippy::expect_used,
     clippy::allow_attributes,
@@ -27,6 +27,7 @@
     reason = "Our api design does this on purpose"
 )]
 #![cfg_attr(feature = "nightly", feature(must_not_suspend))]
+#![cfg_attr(feature = "nightly", feature(associated_type_defaults))]
 #![cfg_attr(nightly, feature(min_specialization))]
 
 #[cfg(feature = "async")]
@@ -126,6 +127,9 @@ pub(crate) use return_if_panic;
 
 /// Public export of everything.
 pub mod prelude {
+    /// Alias to `std::convert::Infallible` to indicate a component that never returns a message.
+    pub type NoMessages = std::convert::Infallible;
+
     pub use natrix_macros::{Component, global_css, scoped_css};
 
     pub use super::component::{C, Component, mount};

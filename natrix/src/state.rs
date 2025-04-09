@@ -6,7 +6,7 @@ use std::rc::{Rc, Weak};
 
 use slotmap::{SlotMap, new_key_type};
 
-use crate::component::ComponentBase;
+use crate::component::Component;
 use crate::render_callbacks::DummyHook;
 use crate::signal::{ReactiveHook, RenderingState, SignalMethods, UpdateResult};
 use crate::utils::{SmallAny, debug_expect};
@@ -35,9 +35,9 @@ pub(crate) type KeepAlive = Box<dyn SmallAny>;
 new_key_type! { pub(crate) struct HookKey; }
 
 /// The core component state, stores all framework data
-pub struct State<T> {
+pub struct State<T: Component> {
     /// The user (macro) defined reactive struct
-    pub(crate) data: T,
+    pub(crate) data: T::Data,
     /// A weak reference to ourself, so that event handlers can easially get a weak reference
     /// without having to pass it around in every api
     this: Option<Weak<RefCell<Self>>>,
@@ -47,31 +47,31 @@ pub struct State<T> {
     next_insertion_order_value: u64,
 }
 
-impl<T> Deref for State<T> {
-    type Target = T;
+impl<T: Component> Deref for State<T> {
+    type Target = T::Data;
 
     fn deref(&self) -> &Self::Target {
         &self.data
     }
 }
 
-impl<T> DerefMut for State<T> {
+impl<T: Component> DerefMut for State<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.data
     }
 }
 
 /// A type alias for `State<C::Data>`, should be prefered in closure argument hints.
-/// such as `|ctx: &S<Self>| ...`
-pub type S<C> = State<<C as ComponentBase>::Data>;
+/// such as `|ctx: &mut S<Self>| ...`
+pub type S<C> = State<C>;
 
 /// A type alias for `RenderCtx<C::Data>`, should be prefered in closure argument hints.
 /// such as `|ctx: R<Self>| ...`
-pub type R<'a, 'c, C> = &'a mut RenderCtx<'c, <C as ComponentBase>::Data>;
+pub type R<'a, 'c, C> = &'a mut RenderCtx<'c, C>;
 
-impl<T> State<T> {
+impl<T: Component> State<T> {
     /// Create a new instance of the state, returning a `Rc` to it
-    pub(crate) fn new(data: T) -> Rc<RefCell<Self>> {
+    pub(crate) fn new(data: T::Data) -> Rc<RefCell<Self>> {
         let this = Self {
             data,
             this: None,
@@ -90,9 +90,7 @@ impl<T> State<T> {
     pub(crate) fn weak(&self) -> Weak<RefCell<Self>> {
         self.this.as_ref().expect("Weak not set").clone()
     }
-}
 
-impl<T: ComponentData> State<T> {
     /// Clear all signals
     pub(crate) fn clear(&mut self) {
         for signal in self.data.signals_mut() {
@@ -182,7 +180,7 @@ impl<T: ComponentData> State<T> {
 }
 
 /// Drop all children of the hook
-fn drop_hook_children<T: ComponentData>(ctx: &mut State<T>, hook: &mut Box<dyn ReactiveHook<T>>) {
+fn drop_hook_children<T: Component>(ctx: &mut State<T>, hook: &mut Box<dyn ReactiveHook<T>>) {
     if let Some(invalid_hooks) = hook.drop_deps() {
         for invalid_hook in invalid_hooks {
             if let Some(mut hook) = ctx.hooks.remove(invalid_hook) {
@@ -195,22 +193,22 @@ fn drop_hook_children<T: ComponentData>(ctx: &mut State<T>, hook: &mut Box<dyn R
 /// Wrapper around a mutable state that only allows read-only access
 ///
 /// This holds a mutable state to faciliate a few rendering features such as `.watch`
-pub struct RenderCtx<'c, C> {
+pub struct RenderCtx<'c, C: Component> {
     /// The inner context
     pub(crate) ctx: &'c mut State<C>,
     /// The render state for this state
     pub(crate) render_state: RenderingState<'c>,
 }
 
-impl<C> Deref for RenderCtx<'_, C> {
-    type Target = C;
+impl<C: Component> Deref for RenderCtx<'_, C> {
+    type Target = C::Data;
 
     fn deref(&self) -> &Self::Target {
         &self.ctx.data
     }
 }
 
-impl<C: ComponentData> RenderCtx<'_, C> {
+impl<C: Component> RenderCtx<'_, C> {
     /// Calculate the value using the function and cache it using `clone`.
     /// Then whenever any signals read in the function are modified re-run the function and check
     /// if the new result is different.
@@ -268,7 +266,7 @@ struct WatchState<F, T> {
 
 impl<C, F, T> ReactiveHook<C> for WatchState<F, T>
 where
-    C: ComponentData,
+    C: Component,
     T: PartialEq,
     F: Fn(&State<C>) -> T,
 {
@@ -381,11 +379,11 @@ pub mod async_impl {
 
     use ouroboros::self_referencing;
 
-    use super::{ComponentData, State};
+    use super::{Component, State};
 
     /// A combiend `Weak` and `RefCell` that facilities upgrading and borrowing as a shared
     /// operation
-    pub struct AsyncCtx<T> {
+    pub struct AsyncCtx<T: Component> {
         /// The `Weak<RefCell<T>>` in question
         inner: Weak<RefCell<State<T>>>,
     }
@@ -393,7 +391,7 @@ pub mod async_impl {
     // We put a bound on `'p` so that users are not able to store the upgraded reference (unless
     // they want to use ouroboros themself to store it alongside the weak).
     #[self_referencing]
-    struct AsyncRefInner<'p, T: 'static> {
+    struct AsyncRefInner<'p, T: Component> {
         rc: Rc<RefCell<State<T>>>,
         lifetime: PhantomData<&'p ()>,
         #[borrows(rc)]
@@ -404,9 +402,9 @@ pub mod async_impl {
     /// a `RefMut` that also holds a `Rc`.
     /// See the `WeakRefCell::borrow_mut` on drop semantics and safety
     #[cfg_attr(feature = "nightly", must_not_suspend)]
-    pub struct AsyncRef<'p, T: ComponentData + 'static>(AsyncRefInner<'p, T>);
+    pub struct AsyncRef<'p, T: Component>(AsyncRefInner<'p, T>);
 
-    impl<T: ComponentData> AsyncCtx<T> {
+    impl<T: Component> AsyncCtx<T> {
         /// Borrow this `Weak<RefCell<...>>`, this will create a `Rc` for as long as the borrow is
         /// active. Returns `None` if the component was dropped. Its recommended to use the
         /// following construct to safely cancel async tasks:
@@ -453,20 +451,20 @@ pub mod async_impl {
         }
     }
 
-    impl<T: ComponentData> Deref for AsyncRef<'_, T> {
+    impl<T: Component> Deref for AsyncRef<'_, T> {
         type Target = State<T>;
 
         fn deref(&self) -> &Self::Target {
             self.0.borrow_reference()
         }
     }
-    impl<T: ComponentData> DerefMut for AsyncRef<'_, T> {
+    impl<T: Component> DerefMut for AsyncRef<'_, T> {
         fn deref_mut(&mut self) -> &mut Self::Target {
             self.0.with_reference_mut(|cell| &mut **cell)
         }
     }
 
-    impl<T: ComponentData> Drop for AsyncRef<'_, T> {
+    impl<T: Component> Drop for AsyncRef<'_, T> {
         fn drop(&mut self) {
             self.0.with_reference_mut(|ctx| {
                 ctx.update();
@@ -474,7 +472,7 @@ pub mod async_impl {
         }
     }
 
-    impl<T: ComponentData> State<T> {
+    impl<T: Component> State<T> {
         /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
         /// framework assumptions.
         fn get_async_ctx(&mut self) -> AsyncCtx<T> {

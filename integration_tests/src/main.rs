@@ -25,7 +25,7 @@ scoped_css!("
 struct NotUsed;
 
 impl Component for NotUsed {
-    fn render() -> impl Element<Self::Data> {
+    fn render() -> impl Element<Self> {
         e::div().class(I_AM_NOT_USED)
     }
 }
@@ -36,7 +36,7 @@ struct HelloWorld {
 }
 
 impl Component for HelloWorld {
-    fn render() -> impl Element<Self::Data> {
+    fn render() -> impl Element<Self> {
         e::div()
             .child(
                 e::h1()
