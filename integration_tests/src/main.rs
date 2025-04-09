@@ -47,7 +47,7 @@ impl Component for HelloWorld {
                     .class("hello_world")
                     .class(HELLO),
             )
-            .child(C(integration_tests_dependency::DepComp))
+            .child(C::new(integration_tests_dependency::DepComp))
     }
 }
 

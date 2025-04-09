@@ -1,8 +1,10 @@
 alias c := check
 alias t := test
 alias p := publish
+alias f := full
 
 default: test_native test_web
+full: test check
 
 test: test_native test_web integration_tests project_gen_test
 

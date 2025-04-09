@@ -16,6 +16,7 @@ struct AsyncComponent {
 }
 
 impl Component for AsyncComponent {
+    type EmitMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)

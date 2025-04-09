@@ -27,9 +27,8 @@
     reason = "Our api design does this on purpose"
 )]
 #![cfg_attr(feature = "nightly", feature(must_not_suspend))]
+#![cfg_attr(feature = "nightly", warn(must_not_suspend))]
 #![cfg_attr(feature = "nightly", feature(associated_type_defaults))]
-#![cfg_attr(feature = "nightly", feature(negative_impls))]
-#![cfg_attr(feature = "nightly", feature(auto_traits))]
 #![cfg_attr(nightly, feature(min_specialization))]
 
 #[cfg(feature = "async")]

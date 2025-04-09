@@ -42,23 +42,6 @@ pub trait ComponentBase: Sized + 'static {
 // (I suppose it could be the result of Generics)
 pub enum NoMessages {}
 
-/// Trait to allow us to deny calling message handlers on components that do not emit messages.
-///
-/// This is behind the feature flag instead of being automatic because it affects the
-/// public API of the framework, even if the stuff it breaks is already likely to be a bug.
-#[cfg(feature = "nightly")]
-pub(crate) auto trait IsntNever {}
-#[cfg(feature = "nightly")]
-impl !IsntNever for NoMessages {}
-
-/// Trait to allow us to deny calling message handlers on components that do not emit messages.
-///
-/// Always impleneted on stable
-#[cfg(not(feature = "nightly"))]
-pub(crate) trait IsntNever {}
-#[cfg(not(feature = "nightly"))]
-impl<T> IsntNever for T {}
-
 /// The user facing part of the Component traits.
 ///
 /// This requires `ComponentBase` to be implemented, which can be done via the `#[derive(Component)]` macro.
@@ -115,25 +98,79 @@ pub trait Component: ComponentBase {
     fn on_mount(_ctx: &mut S<Self>) {}
 }
 
-/// Wrapper around a component to let it be used as a subcomponet, `.child(C(MyComponent))`
+/// Type of the emitting message handler
+type MessageHandler<P, M> = Box<dyn Fn(&mut S<P>, M)>;
+
+/// Trait for maybe getting a message handler
+trait MaybeHandler<C: Component, M> {
+    /// Get the message handler
+    fn get(self) -> Option<MessageHandler<C, M>>;
+}
+
+impl<C: Component, M> MaybeHandler<C, M> for () {
+    fn get(self) -> Option<MessageHandler<C, M>> {
+        None
+    }
+}
+impl<C: Component, M> MaybeHandler<C, M> for MessageHandler<C, M> {
+    fn get(self) -> Option<MessageHandler<C, M>> {
+        Some(self)
+    }
+}
+
+/// Wrapper around a component to let it be used as a subcomponet, `.child(C::new(MyComponent))`
 ///
 /// This exsists because of type system limitations.
-pub struct C<I>(pub I);
+#[must_use = "This is useless if not mounted"]
+pub struct C<I: Component, Im> {
+    /// The component data
+    data: I,
+    /// Message handler
+    message_handler: Im,
+}
 
-impl<I, P> Element<P> for C<I>
+impl<I: Component> C<I, ()> {
+    /// Create a new sub component wrapper
+    pub fn new(data: I) -> Self {
+        C {
+            data,
+            message_handler: (),
+        }
+    }
+
+    /// Handle messages from the component
+    pub fn on<P: Component>(
+        self,
+        handler: impl Fn(&mut S<P>, I::EmitMessage) + 'static,
+    ) -> C<I, MessageHandler<P, I::EmitMessage>> {
+        C {
+            data: self.data,
+            message_handler: Box::new(handler),
+        }
+    }
+}
+
+impl<I, P, H> Element<P> for C<I, H>
 where
     I: Component,
     P: Component,
+    H: MaybeHandler<P, I::EmitMessage> + 'static,
 {
     fn render_box(
         self: Box<Self>,
-        _ctx: &mut State<P>,
+        ctx: &mut State<P>,
         render_state: &mut RenderingState,
     ) -> web_sys::Node {
-        let data = self.0.into_state();
+        let data = self.data.into_state();
         let element = I::render();
 
         let mut borrow_data = data.borrow_mut();
+        if let Some(handler) = self.message_handler.get() {
+            let (tx, rx) = futures::channel::mpsc::unbounded();
+            borrow_data.register_parent(tx);
+
+            ctx.spawn_listening_task(handler, rx);
+        }
         I::on_mount(&mut borrow_data);
 
         let mut hooks = Vec::new();
