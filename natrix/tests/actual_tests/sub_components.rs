@@ -27,6 +27,7 @@ impl Component for Counter {
 
     fn handle_message(ctx: &mut S<Self>, msg: Self::ReceiveMessage) {
         *ctx.value += msg;
+        ctx.emit(*ctx.value);
     }
 }
 
@@ -111,19 +112,24 @@ async fn parent_to_child() {
     crate::mount_test(RootOne { double: 0 });
 
     let button = crate::get(BUTTON_ID);
+    let double = crate::get(DOUBLE_ID);
     let add_button = crate::get(ADD_ID);
 
     assert_eq!(button.text_content(), Some("0".to_owned()));
+    assert_eq!(double.text_content(), Some("0".to_owned()));
 
     add_button.click();
     async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("10".to_owned()));
+    assert_eq!(double.text_content(), Some("20".to_owned()));
 
     add_button.click();
     async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("20".to_owned()));
+    assert_eq!(double.text_content(), Some("40".to_owned()));
 
     add_button.click();
     async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("30".to_owned()));
+    assert_eq!(double.text_content(), Some("60".to_owned()));
 }
