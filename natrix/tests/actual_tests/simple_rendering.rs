@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use natrix::component::NonReactive;
 use natrix::prelude::*;
 use proptest::proptest;
 use wasm_bindgen_test::*;
@@ -12,7 +13,8 @@ const HELLO_ID: &str = "__HELLO";
 struct HelloWorld;
 
 impl Component for HelloWorld {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::h1().id(HELLO_ID).text("Hello World!")
     }
 }
@@ -28,9 +30,11 @@ fn renders_fine() {
 #[derive(Component)]
 struct Render<T>(T);
 
-impl<T: Element<Self::Data> + Clone> Component for Render<T> {
-    fn render() -> impl Element<Self::Data> {
-        e::div().text(|ctx: R<Self>| ctx.0.clone()).id(HELLO_ID)
+impl<T: Element<()> + Clone> Component for Render<T> {
+    fn render() -> impl Element<Self> {
+        e::div()
+            .text(|ctx: R<Self>| NonReactive(ctx.0.clone()))
+            .id(HELLO_ID)
     }
 }
 

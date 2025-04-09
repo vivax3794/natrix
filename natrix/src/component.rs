@@ -5,7 +5,8 @@ use std::rc::Rc;
 
 use crate::element::Element;
 use crate::get_document;
-use crate::signal::RenderingState;
+use crate::html_elements::ToAttribute;
+use crate::signal::{RenderingState, SignalMethods};
 use crate::state::{ComponentData, HookKey, S, State};
 use crate::utils::SmallAny;
 
@@ -33,8 +34,13 @@ pub trait ComponentBase: Sized + 'static {
     }
 }
 
-/// Alias to `std::convert::Infallible` to indicate a component that never returns a message.
-pub type NoMessages = std::convert::Infallible;
+/// A type that has no possible values.
+/// Similar to the stdlib `!` type.
+// The reason we do not use `std::convert::Infallible` is
+// That we do not want the auto trait to be not implemented on say `Result<Self, !>`
+// Why a component would declare a message type with `!` is beyond me, but it is possible
+// (I suppose it could be the result of Generics)
+pub enum NoMessages {}
 
 /// Trait to allow us to deny calling message handlers on components that do not emit messages.
 ///
@@ -223,4 +229,83 @@ pub fn render_component<C: Component>(component: C, target_id: &str) -> RenderRe
     drop(borrow_data);
 
     RenderResult { data, keep_alive }
+}
+
+impl ComponentData for () {
+    type FieldRef<'a> = [&'a mut dyn SignalMethods; 0];
+    type SignalState = ();
+
+    fn signals_mut(&mut self) -> Self::FieldRef<'_> {
+        []
+    }
+
+    fn pop_signals(&mut self) -> Self::SignalState {}
+    fn set_signals(&mut self, _state: Self::SignalState) {}
+}
+
+impl ComponentBase for () {
+    type Data = ();
+
+    fn into_data(self) -> Self::Data {}
+}
+impl Component for () {
+    type EmitMessage = NoMessages;
+
+    fn render() -> impl Element<Self> {
+        crate::element::Comment
+    }
+}
+
+/// Allows you to mark a node as non-reactive.
+/// This should mainly be used when creating components that are generic over a type it wants to
+/// render
+///
+/// As the naive solution:
+/// ```rust
+/// impl<T: Element<Self>> Component for MyStruct<T> {
+///     // ...
+/// }
+/// ```
+/// Causes a recursion loop in the trait analyzer, as it has to prove `Self: Component` to satisify
+/// `Element<Self>`, which again tries to satifiy `Element<Self>`.
+///
+/// The solution is to use `Element<()>` and `NonReactive`
+///
+/// ```rust
+/// #[derive(Component)]
+/// struct MyStruct<T>(T);
+///
+/// impl<T: Element<()> + Copy> Component for MyStruct<T> {
+///     // ...
+///     fn render() -> impl Element<Self> {
+///         e::div().child(|ctx: R<Self>| NonReactive(*ctx.0))
+///     }
+/// }
+/// ```
+pub struct NonReactive<E>(pub E);
+
+impl<E: Element<()>, C: Component> Element<C> for NonReactive<E> {
+    fn render_box(
+        self: Box<Self>,
+        _ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+    ) -> web_sys::Node {
+        let state = State::new(());
+        let mut state = state.borrow_mut();
+        self.0.render(&mut state, render_state)
+    }
+}
+
+impl<A: ToAttribute<()>, C: Component> ToAttribute<C> for NonReactive<A> {
+    fn apply_attribute(
+        self: Box<Self>,
+        name: &'static str,
+        node: &web_sys::Element,
+        _ctx: &mut State<C>,
+        rendering_state: &mut RenderingState,
+    ) {
+        let state = State::new(());
+        let mut state = state.borrow_mut();
+        Box::new(self.0).apply_attribute(name, node, &mut state, rendering_state);
+    }
 }

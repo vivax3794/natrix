@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use natrix::component::NonReactive;
 use natrix::html_elements::ToAttribute;
 use natrix::prelude::*;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
@@ -10,9 +11,12 @@ const ROOT: &str = "ROOT";
 #[derive(Component, Default)]
 struct Generic<T>(T);
 
-impl<T: ToAttribute<Self::Data> + Copy> Component for Generic<T> {
-    fn render() -> impl Element<Self::Data> {
-        e::div().attr("abc", |ctx: R<Self>| *ctx.0).id(ROOT)
+impl<T: ToAttribute<()> + Copy> Component for Generic<T> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
+        e::div()
+            .attr("abc", |ctx: R<Self>| NonReactive(*ctx.0))
+            .id(ROOT)
     }
 }
 
@@ -73,7 +77,8 @@ struct Counter {
 }
 
 impl Component for Counter {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::button()
             .id(ROOT)
             .attr("abc", |ctx: R<Self>| format!("{}", *ctx.value))
@@ -110,7 +115,8 @@ struct Toggle {
 }
 
 impl Component for Toggle {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::button()
             .id(ROOT)
             .attr("abc", |ctx: R<Self>| *ctx.value)
