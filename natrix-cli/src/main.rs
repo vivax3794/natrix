@@ -280,7 +280,11 @@ fn generate_main_rs(root: &Path, name: &str, nightly: bool) -> Result<(), anyhow
     let nightly_associated_types_are_optional = if nightly {
         ""
     } else {
-        r"type EmitMessage = NoMessages;".trim()
+        "
+    type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
+"
+        .trim()
     };
     let main_rs = format!(
         r#"

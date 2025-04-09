@@ -20,6 +20,7 @@ pub struct DepComp;
 
 impl Component for DepComp {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::h1().text(DEP_TEXT).id(DEP_ID).class(HELLO)
     }

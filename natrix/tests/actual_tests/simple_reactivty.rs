@@ -14,6 +14,7 @@ struct Counter {
 
 impl Component for Counter {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)

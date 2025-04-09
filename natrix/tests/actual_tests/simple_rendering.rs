@@ -14,6 +14,7 @@ struct HelloWorld;
 
 impl Component for HelloWorld {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::h1().id(HELLO_ID).text("Hello World!")
     }
@@ -32,6 +33,7 @@ struct Render<T>(T);
 
 impl<T: Element<()> + Clone> Component for Render<T> {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::div()
             .text(|ctx: R<Self>| NonReactive(ctx.0.clone()))

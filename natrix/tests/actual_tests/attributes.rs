@@ -13,6 +13,7 @@ struct Generic<T>(T);
 
 impl<T: ToAttribute<()> + Copy> Component for Generic<T> {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::div()
             .attr("abc", |ctx: R<Self>| NonReactive(*ctx.0))
@@ -78,6 +79,7 @@ struct Counter {
 
 impl Component for Counter {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::button()
             .id(ROOT)
@@ -116,6 +118,7 @@ struct Toggle {
 
 impl Component for Toggle {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::button()
             .id(ROOT)

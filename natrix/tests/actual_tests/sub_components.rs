@@ -6,7 +6,6 @@ use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 wasm_bindgen_test_configure!(run_in_browser);
 
 const BUTTON_ID: &str = "BUTTON";
-const BUTTON_TWO: &str = "BUTTON_TWO";
 
 #[derive(Component)]
 struct Counter {
@@ -15,6 +14,7 @@ struct Counter {
 
 impl Component for Counter {
     type EmitMessage = u8;
+    type ReceiveMessage = u8;
     fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)
@@ -24,9 +24,14 @@ impl Component for Counter {
                 ctx.emit(*ctx.value);
             })
     }
+
+    fn handle_message(ctx: &mut S<Self>, msg: Self::ReceiveMessage) {
+        *ctx.value += msg;
+    }
 }
 
 const DOUBLE_ID: &str = "DOUBLE_ID";
+const ADD_ID: &str = "ADD_ID";
 
 #[derive(Component)]
 struct RootOne {
@@ -35,14 +40,21 @@ struct RootOne {
 
 impl Component for RootOne {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
+        let (child, sender) = C::new(Counter { value: 0 }).sender();
         e::div()
-            .child(
-                C::new(Counter { value: 0 }).on(|ctx: &mut S<Self>, amount| {
-                    *ctx.double = amount * 2;
-                }),
-            )
+            .child(child.on(|ctx: &mut S<Self>, amount| {
+                *ctx.double = amount * 2;
+            }))
             .child(e::div().id(DOUBLE_ID).text(|ctx: R<Self>| *ctx.double))
+            .child(
+                e::button()
+                    .id(ADD_ID)
+                    .on::<events::Click>(move |_ctx: &mut S<Self>, _| {
+                        sender.send(10);
+                    }),
+            )
     }
 }
 
@@ -90,4 +102,28 @@ async fn child_to_parent() {
     async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("3".to_owned()));
     assert_eq!(double.text_content(), Some("6".to_owned()));
+}
+
+#[wasm_bindgen_test]
+#[cfg(feature = "async_utils")]
+async fn parent_to_child() {
+    use natrix::async_utils;
+    crate::mount_test(RootOne { double: 0 });
+
+    let button = crate::get(BUTTON_ID);
+    let add_button = crate::get(ADD_ID);
+
+    assert_eq!(button.text_content(), Some("0".to_owned()));
+
+    add_button.click();
+    async_utils::next_animation_frame().await;
+    assert_eq!(button.text_content(), Some("10".to_owned()));
+
+    add_button.click();
+    async_utils::next_animation_frame().await;
+    assert_eq!(button.text_content(), Some("20".to_owned()));
+
+    add_button.click();
+    async_utils::next_animation_frame().await;
+    assert_eq!(button.text_content(), Some("30".to_owned()));
 }

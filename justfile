@@ -18,8 +18,8 @@ test_web:
 
 check:
     cargo fmt --check
-    cargo +stable hack clippy --feature-powerset --skip nightly --tests -- -Dwarnings
-    cargo +nightly hack clippy --feature-powerset --tests -- -Dwarnings
+    cargo +stable hack clippy --each-feature --skip nightly --tests -- -Dwarnings
+    cargo +nightly hack clippy --each-feature --tests -- -Dwarnings
 
 [working-directory: "./integration_tests"]
 integration_tests: install_cli

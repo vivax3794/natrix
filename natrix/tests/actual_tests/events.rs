@@ -14,6 +14,7 @@ struct Counter {
 
 impl Component for Counter {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)
@@ -45,6 +46,7 @@ struct OnMount {
 
 impl Component for OnMount {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::div().id(BUTTON_ID).text(|ctx: R<Self>| *ctx.value)
     }

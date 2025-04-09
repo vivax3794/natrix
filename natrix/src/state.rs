@@ -218,6 +218,24 @@ impl<T: Component> State<T> {
             }
         });
     }
+
+    /// Spawn a async task to recv messages from the parent
+    pub(crate) fn spawn_recivier_task(&self, mut rx: UnboundedReceiver<T::ReceiveMessage>) {
+        let this = self.weak();
+        wasm_bindgen_futures::spawn_local(async move {
+            while let Some(messages) = utils::recv_all(&mut rx).await {
+                let Some(this) = this.upgrade() else {
+                    break;
+                };
+                let mut this = this.borrow_mut();
+                this.clear();
+                for message in messages {
+                    T::handle_message(&mut this, message);
+                }
+                this.update();
+            }
+        });
+    }
 }
 
 /// Drop all children of the hook

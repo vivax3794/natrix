@@ -3,12 +3,14 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
+
 use crate::element::Element;
 use crate::get_document;
 use crate::html_elements::ToAttribute;
 use crate::signal::{RenderingState, SignalMethods};
 use crate::state::{ComponentData, HookKey, S, State};
-use crate::utils::SmallAny;
+use crate::utils::{SmallAny, debug_expect};
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
 /// associating a component with its reactive state as well as converting to a struct to its
@@ -79,6 +81,17 @@ pub trait Component: ComponentBase {
     #[cfg(not(feature = "nightly"))]
     type EmitMessage;
 
+    /// Message that can be received by this component.
+    ///
+    /// Use `NoMessages` if you do not need to receive any messages.
+    #[cfg(feature = "nightly")]
+    type ReceiveMessage = NoMessages;
+    /// Message that can be received by this component.
+    ///     
+    /// Use `NoMessages` if you do not need to receive any messages.
+    #[cfg(not(feature = "nightly"))]
+    type ReceiveMessage;
+
     /// Return the root element of the component.
     ///
     /// You **can not** dirrectly reference state in this function, and should use narrowly scoped
@@ -96,6 +109,31 @@ pub trait Component: ComponentBase {
     /// Called when the component is mounted.
     /// Can be used to setup Effects or start async tasks.
     fn on_mount(_ctx: &mut S<Self>) {}
+
+    /// Handle a incoming messag
+    /// Default implementation does nothing
+    #[expect(
+        unused_variables,
+        reason = "We want the auto-completion for this method to be connvenient"
+    )]
+    fn handle_message(ctx: &mut S<Self>, msg: Self::ReceiveMessage) {
+        // This doesnt have anything to do with panic hooks
+        // but `panic_hook` does pull in `web_sys::console`
+        // And it feels very silly to add a cargo feature for
+        // "warn_on_handle_message_not_implemented"
+        // (I suppose we could also just always pull in `web_sys::console`)
+        //
+        // Also since the default (should) be `NoMessages` (which is `!`) this will only ever actually be called
+        // If the user has a `ReceiveMessage` type that is not `NoMessages`.
+        #[cfg(feature = "panic_hook")]
+        web_sys::console::warn_1(
+            &format!(
+                "Component {} received message, but does not implement a handler",
+                std::any::type_name::<Self>(),
+            )
+            .into(),
+        );
+    }
 }
 
 /// Type of the emitting message handler
@@ -118,43 +156,98 @@ impl<C: Component, M> MaybeHandler<C, M> for MessageHandler<C, M> {
     }
 }
 
+/// Trait for maybe getting a message receiver
+trait MaybeRecv<M> {
+    /// Get the message handler
+    fn get(self) -> Option<UnboundedReceiver<M>>;
+}
+impl<M> MaybeRecv<M> for () {
+    fn get(self) -> Option<UnboundedReceiver<M>> {
+        None
+    }
+}
+impl<M> MaybeRecv<M> for UnboundedReceiver<M> {
+    fn get(self) -> Option<UnboundedReceiver<M>> {
+        Some(self)
+    }
+}
+
 /// Wrapper around a component to let it be used as a subcomponet, `.child(C::new(MyComponent))`
 ///
 /// This exsists because of type system limitations.
 #[must_use = "This is useless if not mounted"]
-pub struct C<I: Component, Im> {
+pub struct C<I: Component, Im, Ir> {
     /// The component data
     data: I,
     /// Message handler
     message_handler: Im,
+    /// The receiver for messages
+    receiver: Ir,
 }
 
-impl<I: Component> C<I, ()> {
+impl<I: Component> C<I, (), ()> {
     /// Create a new sub component wrapper
     pub fn new(data: I) -> Self {
         C {
             data,
             message_handler: (),
+            receiver: (),
         }
     }
-
+}
+impl<I: Component, Ir> C<I, (), Ir> {
     /// Handle messages from the component
     pub fn on<P: Component>(
         self,
         handler: impl Fn(&mut S<P>, I::EmitMessage) + 'static,
-    ) -> C<I, MessageHandler<P, I::EmitMessage>> {
+    ) -> C<I, MessageHandler<P, I::EmitMessage>, Ir> {
         C {
             data: self.data,
             message_handler: Box::new(handler),
+            receiver: self.receiver,
         }
     }
 }
 
-impl<I, P, H> Element<P> for C<I, H>
+/// Allows sending messages to the component
+#[derive(Clone)]
+pub struct Sender<M>(UnboundedSender<M>);
+
+impl<M> Sender<M> {
+    /// Send a message to the component
+    pub fn send(&self, msg: M) {
+        debug_expect!(
+            self.0.unbounded_send(msg),
+            "Failed to send message to component"
+        );
+    }
+}
+
+impl<I: Component, Im> C<I, Im, ()> {
+    /// Get a sender to allow sending messages to the component
+    pub fn sender(
+        self,
+    ) -> (
+        C<I, Im, UnboundedReceiver<I::ReceiveMessage>>,
+        Sender<I::ReceiveMessage>,
+    ) {
+        let (tx, rx) = futures::channel::mpsc::unbounded();
+        let comp = C {
+            data: self.data,
+            message_handler: self.message_handler,
+            receiver: rx,
+        };
+
+        (comp, Sender(tx))
+    }
+}
+
+impl<I, P, H, R> Element<P> for C<I, H, R>
 where
     I: Component,
     P: Component,
     H: MaybeHandler<P, I::EmitMessage> + 'static,
+    R: MaybeRecv<I::ReceiveMessage> + 'static,
 {
     fn render_box(
         self: Box<Self>,
@@ -170,6 +263,9 @@ where
             borrow_data.register_parent(tx);
 
             ctx.spawn_listening_task(handler, rx);
+        }
+        if let Some(receiver) = self.receiver.get() {
+            borrow_data.spawn_recivier_task(receiver);
         }
         I::on_mount(&mut borrow_data);
 
@@ -287,6 +383,7 @@ impl ComponentBase for () {
 }
 impl Component for () {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
 
     fn render() -> impl Element<Self> {
         crate::element::Comment

@@ -26,6 +26,7 @@ struct NotUsed;
 
 impl Component for NotUsed {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::div().class(I_AM_NOT_USED)
     }
@@ -38,6 +39,7 @@ struct HelloWorld {
 
 impl Component for HelloWorld {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::div()
             .child(

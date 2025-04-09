@@ -17,6 +17,7 @@ struct DoulbeCounter {
 
 impl Component for DoulbeCounter {
     type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::div()
             .child(
