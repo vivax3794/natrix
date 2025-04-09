@@ -55,6 +55,21 @@ fn find_target_natrix(mode: BuildProfile) -> Result<PathBuf> {
     Ok(target.join(format!("natrix-{}", mode.redable())))
 }
 
+/// Get the current target project name
+fn get_project_name() -> Result<String> {
+    let metadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
+    let packages = metadata.workspace_default_packages();
+    let package = packages.first().ok_or(anyhow!("No package found"))?;
+
+    if packages.len() > 1 {
+        return Err(anyhow!(
+            "Multiple packages found, please specify the package name"
+        ));
+    }
+
+    Ok(package.name.clone())
+}
+
 /// Natrix CLI
 #[derive(Parser)]
 enum Cli {
@@ -222,7 +237,35 @@ dist
     .trim();
     fs::write(root.join(".gitignore"), gitignore)?;
 
-    let extra_nightly = if nightly {
+    generate_main_rs(&root, name, nightly)?;
+
+    let rust_fmt = r#"
+skip_macro_invocations = ["global_css", "scoped_css"]
+    "#
+    .trim();
+    fs::write(root.join("rustfmt.toml"), rust_fmt)?;
+
+    std::process::Command::new("git")
+        .args(["init", "--initial-branch=main"])
+        .current_dir(&root)
+        .status()?;
+
+    println!(
+        "✨ {} {}",
+        "Project created".bright_green(),
+        path_str(&root).cyan()
+    );
+    println!(
+        "{}",
+        "Run `natrix dev` to start the dev server".bright_blue()
+    );
+
+    Ok(())
+}
+
+/// Generate the main.rs file for a new project
+fn generate_main_rs(root: &Path, name: &str, nightly: bool) -> Result<(), anyhow::Error> {
+    let nightly_lints = if nightly {
         "
 // This is a nightly only feature to warn you when you are passing certain types across a
 // `await` boundary, `natrix` marks multiple types with this attribute to prevent you from
@@ -234,9 +277,14 @@ dist
     } else {
         ""
     };
+    let nightly_associated_types_are_optional = if nightly {
+        ""
+    } else {
+        r"type EmitMessage = NoMessages;".trim()
+    };
     let main_rs = format!(
         r#"
-{extra_nightly}
+{nightly_lints}
 // Panicing in a wasm module will cause the state to be invalid
 // And it might cause UB on the next event handler execution.
 // (By default natrix uses a panic hook that blocks further event handler calls after a panic)
@@ -260,7 +308,8 @@ mod css {{
 struct HelloWorld;
 
 impl Component for HelloWorld {{
-    fn render() -> impl Element<Self::Data> {{
+    {nightly_associated_types_are_optional}
+    fn render() -> impl Element<Self> {{
         e::h1().text("Hello {name}").class(css::HELLO_WORLD)
     }}
 }}
@@ -274,26 +323,15 @@ fn main() {{
     fs::create_dir_all(&src)?;
     fs::write(src.join("main.rs"), main_rs)?;
 
-    let rust_fmt = r#"
-skip_macro_invocations = ["global_css", "scoped_css"]
-    "#
-    .trim();
-    fs::write(root.join("rustfmt.toml"), rust_fmt)?;
-
-    std::process::Command::new("git")
-        .args(["init", "--initial-branch=main"])
-        .current_dir(&root)
-        .status()?;
-
-    println!(
-        "✨ {} {}",
-        "Project created".bright_green(),
-        path_str(&root).cyan()
+    let channel = if nightly { "nightly" } else { "stable" };
+    let toolchain_toml = format!(
+        r#"
+        [toolchain]
+        channel = "{channel}"
+        targets = ["wasm32-unknown-unknown"]
+        "#
     );
-    println!(
-        "{}",
-        "Run `natrix dev` to start the dev server".bright_blue()
-    );
+    fs::write(root.join("rust-toolchain.toml"), toolchain_toml)?;
 
     Ok(())
 }
@@ -619,15 +657,16 @@ fn is_feature_enabled(feature: &str, is_default: bool) -> Result<bool> {
 /// Return the path to the first wasm file in the folder
 fn find_wasm(config: &BuildConfig) -> Result<PathBuf> {
     let target = find_target()?;
+    let name = get_project_name()?;
     let target = target
         .join("wasm32-unknown-unknown")
         .join(config.profile.target());
 
-    if let Some(wasm) = search_dir_for_wasm(&target)? {
+    if let Some(wasm) = search_dir_for_wasm(&target, &name)? {
         return Ok(wasm);
     }
 
-    if let Some(wasm) = search_dir_for_wasm(&target.join("deps"))? {
+    if let Some(wasm) = search_dir_for_wasm(&target.join("deps"), &name)? {
         return Ok(wasm);
     }
 
@@ -635,11 +674,13 @@ fn find_wasm(config: &BuildConfig) -> Result<PathBuf> {
 }
 
 /// Search the given directory for a wasm file
-fn search_dir_for_wasm(target: &Path) -> Result<Option<PathBuf>, anyhow::Error> {
+fn search_dir_for_wasm(target: &Path, name: &str) -> Result<Option<PathBuf>, anyhow::Error> {
+    let expected_file_name = format!("{name}.wasm");
     for file in target.read_dir()?.flatten() {
         let path = file.path();
-        if let Some(extension) = path.extension() {
-            if extension == "wasm" {
+        if let Some(name) = path.file_name() {
+            let name = name.to_string_lossy();
+            if name == expected_file_name {
                 return Ok(Some(file.path()));
             }
         }
