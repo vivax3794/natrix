@@ -71,10 +71,6 @@ install_cli:
 publish: fmt test check
     cargo publish -Z package-workspace -p natrix_shared -p natrix_macros -p natrix-cli -p natrix
 
-[working-directory: './bench_project']
-bench:
-    rustup run nightly wasm_bench
-
 fmt:
     cargo fmt
 
@@ -91,5 +87,4 @@ docs:
 clean:
     cargo clean
     rm -rv docs/book || true
-    rm -v bench_project/.tmp* || true
     rm -rv integration_tests/dist || true
