@@ -6,7 +6,7 @@ use std::rc::{Rc, Weak};
 
 use slotmap::{SlotMap, new_key_type};
 
-use crate::component::Component;
+use crate::component::{Component, IsntNever};
 use crate::render_callbacks::DummyHook;
 use crate::signal::{ReactiveHook, RenderingState, SignalMethods, UpdateResult};
 use crate::utils::{SmallAny, debug_expect};
@@ -176,6 +176,14 @@ impl<T: Component> State<T> {
         F: Fn(&Self) -> A,
     {
         (guard.getter)(self)
+    }
+
+    /// Emit a message to the parent component
+    pub fn emit(&mut self, msg: T::EmitMessage)
+    where
+        T::EmitMessage: IsntNever,
+    {
+        todo!()
     }
 }
 

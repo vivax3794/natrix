@@ -33,6 +33,26 @@ pub trait ComponentBase: Sized + 'static {
     }
 }
 
+/// Alias to `std::convert::Infallible` to indicate a component that never returns a message.
+pub type NoMessages = std::convert::Infallible;
+
+/// Trait to allow us to deny calling message handlers on components that do not emit messages.
+///
+/// This is behind the feature flag instead of being automatic because it affects the
+/// public API of the framework, even if the stuff it breaks is already likely to be a bug.
+#[cfg(feature = "nightly")]
+pub(crate) auto trait IsntNever {}
+#[cfg(feature = "nightly")]
+impl !IsntNever for NoMessages {}
+
+/// Trait to allow us to deny calling message handlers on components that do not emit messages.
+///
+/// Always impleneted on stable
+#[cfg(not(feature = "nightly"))]
+pub(crate) trait IsntNever {}
+#[cfg(not(feature = "nightly"))]
+impl<T> IsntNever for T {}
+
 /// The user facing part of the Component traits.
 ///
 /// This requires `ComponentBase` to be implemented, which can be done via the `#[derive(Component)]` macro.
@@ -63,7 +83,7 @@ pub trait Component: ComponentBase {
     ///
     /// Use `NoMessages` if you do not need to emit any messages.
     #[cfg(feature = "nightly")]
-    type EmitMessage = std::convert::Infallible;
+    type EmitMessage = NoMessages;
     /// Messages this component can emit.
     ///
     /// Use `NoMessages` if you do not need to emit any messages.

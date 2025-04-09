@@ -28,6 +28,8 @@
 )]
 #![cfg_attr(feature = "nightly", feature(must_not_suspend))]
 #![cfg_attr(feature = "nightly", feature(associated_type_defaults))]
+#![cfg_attr(feature = "nightly", feature(negative_impls))]
+#![cfg_attr(feature = "nightly", feature(auto_traits))]
 #![cfg_attr(nightly, feature(min_specialization))]
 
 #[cfg(feature = "async")]
@@ -127,12 +129,10 @@ pub(crate) use return_if_panic;
 
 /// Public export of everything.
 pub mod prelude {
-    /// Alias to `std::convert::Infallible` to indicate a component that never returns a message.
-    pub type NoMessages = std::convert::Infallible;
 
     pub use natrix_macros::{Component, global_css, scoped_css};
 
-    pub use super::component::{C, Component, mount};
+    pub use super::component::{C, Component, NoMessages, mount};
     pub use super::element::Element;
     pub use super::state::{R, S};
     pub use super::{events, guard_option, guard_result, html_elements as e};
