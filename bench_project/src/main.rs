@@ -71,7 +71,6 @@ fn main() {
             })
             .await;
 
-        natrix::test_utils::setup();
         mount_test(ManyButtons::<10_000> { counter: 0 });
         let button = natrix::test_utils::get("BUTTON");
         bencher
