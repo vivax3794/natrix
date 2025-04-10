@@ -1,10 +1,12 @@
 //! Types for handling the component state
 
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
+use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
+use ouroboros::self_referencing;
 use slotmap::{SlotMap, new_key_type};
 
 use crate::component::Component;
@@ -466,124 +468,115 @@ impl<F> Guard<F> {
 }
 
 /// Async features
-#[cfg(feature = "async")]
-pub mod async_impl {
-    use std::cell::{RefCell, RefMut};
-    use std::marker::PhantomData;
-    use std::ops::{Deref, DerefMut};
-    use std::rc::{Rc, Weak};
 
-    use ouroboros::self_referencing;
+/// A combiend `Weak` and `RefCell` that facilities upgrading and borrowing as a shared
+/// operation
+pub struct AsyncCtx<T: Component> {
+    /// The `Weak<RefCell<T>>` in question
+    inner: Weak<RefCell<State<T>>>,
+}
 
-    use super::{Component, State};
+// We put a bound on `'p` so that users are not able to store the upgraded reference (unless
+// they want to use ouroboros themself to store it alongside the weak).
+#[self_referencing]
+struct AsyncRefInner<'p, T: Component> {
+    rc: Rc<RefCell<State<T>>>,
+    lifetime: PhantomData<&'p ()>,
+    #[borrows(rc)]
+    #[covariant]
+    reference: RefMut<'this, State<T>>,
+}
 
-    /// A combiend `Weak` and `RefCell` that facilities upgrading and borrowing as a shared
-    /// operation
-    pub struct AsyncCtx<T: Component> {
-        /// The `Weak<RefCell<T>>` in question
-        inner: Weak<RefCell<State<T>>>,
+/// a `RefMut` that also holds a `Rc`.
+/// See the `WeakRefCell::borrow_mut` on drop semantics and safety
+#[cfg_attr(feature = "nightly", must_not_suspend)]
+pub struct AsyncRef<'p, T: Component>(AsyncRefInner<'p, T>);
+
+impl<T: Component> AsyncCtx<T> {
+    /// Borrow this `Weak<RefCell<...>>`, this will create a `Rc` for as long as the borrow is
+    /// active. Returns `None` if the component was dropped. Its recommended to use the
+    /// following construct to safely cancel async tasks:
+    /// ```ignore
+    /// let Some(borrow) = ctx.borrow_mut() else {return;};
+    /// // ...
+    /// drop(borrow);
+    /// foo().await;
+    /// let Some(borrow) = ctx.borrow_mut() else {return;};
+    /// // ...
+    /// };
+    /// ```
+    ///
+    /// # Reactivity
+    /// Calling this function clears the internal reactive flags (which is safe as long as the
+    /// borrow safety rules below are followed).
+    /// Once this value is dropped it will trigger a reactive update for any changed fields.
+    ///
+    /// # Borrow Safety
+    /// The framework guarantees that it will never hold a borrow between event calls.
+    /// This means the only source of panics is if you are holding a borrow when you yield to
+    /// the event loop, i.e you should *NOT* hold this value across `.await` points.
+    /// framework will regularly borrow the state on any registered event handler trigger, for
+    /// example a user clicking a button.
+    ///
+    /// Keeping this type across an `.await` point or otherwise leading control to the event
+    /// loop while the borrow is active could also lead to reactivity failrues and desyncs, and
+    /// should be considered UB (not ub as in compile ub, but as in this framework makes no
+    /// guarantees about what state the reactivity system will be in)
+    ///
+    /// ## Nightly
+    /// The nightly feature flag enables a lint to detect this misuse.
+    /// See the [Features]() chapther for details on how to set it up (it requires a bit more
+    /// setup than just turning on the feature flag).
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "This happens when we already are in a panic"
+    )]
+    pub fn borrow_mut(&mut self) -> Option<AsyncRef<'_, T>> {
+        #[cfg(feature = "panic_hook")]
+        assert!(!crate::panics::has_panicked());
+
+        let rc = self.inner.upgrade()?;
+        let mut borrow = AsyncRefInner::new(rc, PhantomData, |rc| rc.borrow_mut());
+        borrow.with_reference_mut(|ctx| ctx.clear());
+        Some(AsyncRef(borrow))
+    }
+}
+
+impl<T: Component> Deref for AsyncRef<'_, T> {
+    type Target = State<T>;
+
+    fn deref(&self) -> &Self::Target {
+        self.0.borrow_reference()
+    }
+}
+impl<T: Component> DerefMut for AsyncRef<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0.with_reference_mut(|cell| &mut **cell)
+    }
+}
+
+impl<T: Component> Drop for AsyncRef<'_, T> {
+    fn drop(&mut self) {
+        self.0.with_reference_mut(|ctx| {
+            ctx.update();
+        });
+    }
+}
+
+impl<T: Component> State<T> {
+    /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
+    /// framework assumptions.
+    fn get_async_ctx(&mut self) -> AsyncCtx<T> {
+        AsyncCtx { inner: self.weak() }
     }
 
-    // We put a bound on `'p` so that users are not able to store the upgraded reference (unless
-    // they want to use ouroboros themself to store it alongside the weak).
-    #[self_referencing]
-    struct AsyncRefInner<'p, T: Component> {
-        rc: Rc<RefCell<State<T>>>,
-        lifetime: PhantomData<&'p ()>,
-        #[borrows(rc)]
-        #[covariant]
-        reference: RefMut<'this, State<T>>,
-    }
-
-    /// a `RefMut` that also holds a `Rc`.
-    /// See the `WeakRefCell::borrow_mut` on drop semantics and safety
-    #[cfg_attr(feature = "nightly", must_not_suspend)]
-    pub struct AsyncRef<'p, T: Component>(AsyncRefInner<'p, T>);
-
-    impl<T: Component> AsyncCtx<T> {
-        /// Borrow this `Weak<RefCell<...>>`, this will create a `Rc` for as long as the borrow is
-        /// active. Returns `None` if the component was dropped. Its recommended to use the
-        /// following construct to safely cancel async tasks:
-        /// ```ignore
-        /// let Some(borrow) = ctx.borrow_mut() else {return;};
-        /// // ...
-        /// drop(borrow);
-        /// foo().await;
-        /// let Some(borrow) = ctx.borrow_mut() else {return;};
-        /// // ...
-        /// };
-        /// ```
-        ///
-        /// # Reactivity
-        /// Calling this function clears the internal reactive flags (which is safe as long as the
-        /// borrow safety rules below are followed).
-        /// Once this value is dropped it will trigger a reactive update for any changed fields.
-        ///
-        /// # Panics
-        /// This function will panic if a borrow already exists.
-        ///
-        /// # Borrow Safety
-        /// The framework guarantees that it will never hold a borrow between event calls.
-        /// This means the only source of panics is if you are holding a borrow when you yield to
-        /// the event loop, i.e you should *NOT* hold this value across `.await` points.
-        /// framework will regularly borrow the state on any registered event handler trigger, for
-        /// example a user clicking a button.
-        ///
-        /// Keeping this type across an `.await` point or otherwise leading control to the event
-        /// loop while the borrow is active could also lead to reactivity failrues and desyncs, and
-        /// should be considered UB (not ub as in compile ub, but as in this framework makes no
-        /// guarantees about what state the reactivity system will be in)
-        ///
-        /// ## Nightly
-        /// The nightly feature flag enables a lint to detect this misuse.
-        /// See the [Features]() chapther for details on how to set it up (it requires a bit more
-        /// setup than just turning on the feature flag).
-        pub fn borrow_mut(&mut self) -> Option<AsyncRef<'_, T>> {
-            crate::return_if_panic!(None);
-
-            let rc = self.inner.upgrade()?;
-            let mut borrow = AsyncRefInner::new(rc, PhantomData, |rc| rc.borrow_mut());
-            borrow.with_reference_mut(|ctx| ctx.clear());
-            Some(AsyncRef(borrow))
-        }
-    }
-
-    impl<T: Component> Deref for AsyncRef<'_, T> {
-        type Target = State<T>;
-
-        fn deref(&self) -> &Self::Target {
-            self.0.borrow_reference()
-        }
-    }
-    impl<T: Component> DerefMut for AsyncRef<'_, T> {
-        fn deref_mut(&mut self) -> &mut Self::Target {
-            self.0.with_reference_mut(|cell| &mut **cell)
-        }
-    }
-
-    impl<T: Component> Drop for AsyncRef<'_, T> {
-        fn drop(&mut self) {
-            self.0.with_reference_mut(|ctx| {
-                ctx.update();
-            });
-        }
-    }
-
-    impl<T: Component> State<T> {
-        /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
-        /// framework assumptions.
-        fn get_async_ctx(&mut self) -> AsyncCtx<T> {
-            AsyncCtx { inner: self.weak() }
-        }
-
-        /// Spawn a async task in the local event loop, which will run on the next possible moment.
-        // This is `&mut` to make sure it cant be called in render callbacks.
-        pub fn use_async<C, F>(&mut self, func: C)
-        where
-            C: FnOnce(AsyncCtx<T>) -> F,
-            F: Future<Output = ()> + 'static,
-        {
-            wasm_bindgen_futures::spawn_local(func(self.get_async_ctx()));
-        }
+    /// Spawn a async task in the local event loop, which will run on the next possible moment.
+    // This is `&mut` to make sure it cant be called in render callbacks.
+    pub fn use_async<C, F>(&mut self, func: C)
+    where
+        C: FnOnce(AsyncCtx<T>) -> F,
+        F: Future<Output = ()> + 'static,
+    {
+        wasm_bindgen_futures::spawn_local(func(self.get_async_ctx()));
     }
 }

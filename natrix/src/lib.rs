@@ -31,7 +31,6 @@
 #![cfg_attr(feature = "nightly", feature(associated_type_defaults))]
 #![cfg_attr(nightly, feature(min_specialization))]
 
-#[cfg(feature = "async")]
 pub mod async_utils;
 pub mod callbacks;
 pub mod component;

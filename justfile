@@ -25,6 +25,10 @@ check_docs:
     typos
     cargo test --doc --all-features --workspace 
 
+    rm -rv target/debug/deps/*natrix*
+    cargo build -p natrix --all-features
+    cd docs && mdbook test -L ../target/debug/deps
+
 [working-directory: "./integration_tests"]
 integration_tests: install_cli
     #!/usr/bin/bash
@@ -90,5 +94,5 @@ docs:
 # Remove all build artifacts
 clean:
     cargo clean
-    rm -rv docs/book || true
+    cd docs && mdbook clean
     rm -rv integration_tests/dist || true

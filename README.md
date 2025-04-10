@@ -31,8 +31,8 @@ impl Component for Counter {
 * ✅ **Derive macros for reactive state** – No need for `useSignal` everywhere, state is directly tied to Rust’s type system.
 * ✅ **Callbacks use references to state** – Instead of closures capturing state setters, Natrix callbacks take a reference to the state, which better aligns with Rust’s ownership model.
 * ✅ **Fine-grained reactivity** – Natrix only updates what's necessary, minimizing re-renders and maximizing performance.
-* ✅ **Smart feature selection** - Natrix will automatically use nightly-only optimizations if possible without needing a explicit `nightly` flag.
 * ✅ **Borrow Safety** - We only use one `RefCell` per component instance, all other state is managed within the rust borrowing rules, which gives stronger guarantees of no panics as well as performance. 
+* ✅ **No Panic Policy** - Natrix has a naunced panic policy, see the [Panic Policy](TODO) chapter for more information.
 
 # Design Goals
 * **Developer experience first** – Natrix is designed to feel natural for Rust developers.

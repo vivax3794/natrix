@@ -459,6 +459,15 @@ fn build(config: &BuildConfig) -> Result<()> {
     );
     std::fs::create_dir_all(&config.dist).context("Creating dist")?;
 
+    if !is_feature_enabled("panic_hook", true)? {
+        println!(
+            "{}",
+            "⚠️ `panic_hook` feature is disabled, panicking without this feature enabled is instant UB"
+                .red()
+                .bold()
+        );
+    }
+
     let source_wasm_file = build_wasm(config).context("Building wasm")?;
     let (wasm_file, js_file) = wasm_bindgen(config, &source_wasm_file)?;
     if config.profile == BuildProfile::Release {
@@ -576,7 +585,7 @@ fn minimize_js(js_file: &PathBuf) -> Result<(), anyhow::Error> {
             ..Default::default()
         }),
         compress: Some(oxc::minifier::CompressOptions {
-            drop_console: !is_feature_enabled("panic_hook", true)?,
+            drop_console: true,
             drop_debugger: true,
             ..Default::default()
         }),
@@ -709,23 +718,26 @@ fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         .arg(wasm_file)
         .arg("-o")
         .arg(wasm_file)
-        .arg("--all-features")
-        .args([
-            "-O4",
-            "--flatten",
-            "--generate-global-effects",
-            "--rereloop",
-            "-Oz",
-            "-Oz",
-            "-O3",
-            "--monomorphize",
-            "-O3",
-            "--generate-global-effects",
-            "--gufa",
-            "--generate-global-effects",
-            "--converge",
-            "-Oz",
-        ]);
+        .arg("--all-features");
+    if !is_feature_enabled("panic_hook", true)? {
+        command.arg("--traps-never-happen");
+    }
+    command.args([
+        "-O4",
+        "--flatten",
+        "--generate-global-effects",
+        "--rereloop",
+        "-Oz",
+        "-Oz",
+        "-O3",
+        "--monomorphize",
+        "-O3",
+        "--generate-global-effects",
+        "--gufa",
+        "--generate-global-effects",
+        "--converge",
+        "-Oz",
+    ]);
 
     #[cfg(feature = "bundle-wasm-opt")]
     let result = wasm_opt::integration::run_from_command_args(command).is_ok();

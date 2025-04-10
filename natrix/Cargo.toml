@@ -24,16 +24,15 @@ slotmap = "1.0.6"
 # Async
 wasm-bindgen-futures = { version = "0.4.50" }
 futures = { version = "0.3.31", default-features = false , features = ["std"]}
-ouroboros = { version = "0.18.0", optional = true }
+ouroboros = { version = "0.18.0" }
 gloo = { version = "0.11.0", optional = true, default-features = false, features=["timers", "futures", "render"]}
 
 # Other
 either = { version = "1.0.0", optional = true, default-features = false }
 
 [features]
-default = ["async", "panic_hook"]
-async = ["dep:ouroboros"]
-async_utils = ["async", "dep:gloo"]
+default = ["panic_hook"]
+async_utils = ["dep:gloo"]
 panic_hook = ["web-sys/console"]
 
 nightly = []

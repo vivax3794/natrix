@@ -7,3 +7,5 @@ title = "Natrix"
 
 [output.html.playground]
 runnable = false
+
+[preprocessor.callouts]
