@@ -98,8 +98,11 @@ If you which to allow execution after a panic (not recommended) you can disable 
                 // This is a no-op, we just want to mark that a panic has happened
             });
 
-            let panic_message = info.to_string();
-            web_sys::console::error_1(&panic_message.into());
+            #[cfg(debug_assertions)]
+            {
+                let panic_message = info.to_string();
+                web_sys::console::error_1(&panic_message.into());
+            }
         }));
     }
 }
