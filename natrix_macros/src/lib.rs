@@ -35,7 +35,7 @@ use template_quote::{ToTokens, quote};
 
 /// Derive the `ComponentBase` trait for a struct, required for implementing `Component`
 ///
-/// ```rust
+/// ```ignore
 /// #[derive(Component)]
 /// struct HelloWorld;
 ///
@@ -153,8 +153,8 @@ fn component_derive_implementation(item: ItemStruct) -> TokenStream {
     }
 }
 
-/// Retrive abstract fields from a struct, as well as a boolean indicating wether its a named
-/// struct or not (unit structs are considerd named)
+/// Retrieve abstract fields from a struct, as well as a boolean indicating whether its a named
+/// struct or not (unit structs are considered named)
 fn get_fields(fields: syn::Fields) -> (Vec<Field>, bool) {
     match fields {
         syn::Fields::Unit => (vec![], true),
@@ -195,7 +195,7 @@ struct Field {
 /// If this is the first time a macro is used in this crate we should clear out the target folder
 static FIRST_USE_IN_CRATE: AtomicBool = AtomicBool::new(true);
 
-/// Counter to generate unqiue file names
+/// Counter to generate unique file names
 static FILE_COUNTER: AtomicU32 = AtomicU32::new(0);
 
 /// Register global css to be included in the final bundle.
@@ -255,6 +255,7 @@ fn emit_css(css: String) -> TokenStream {
 /// This generates a set of constants for every class and id in the css.
 ///
 /// ```rust
+/// # use natrix_macros::scoped_css;
 /// scoped_css!("
 ///    .hello {
 ///        color: red;
@@ -282,8 +283,8 @@ fn emit_css(css: String) -> TokenStream {
 /// ```
 ///
 /// Its is generally recommended to use this macro in a module to make it clear where constants are
-/// comming from
-/// ```rust
+/// coming from
+/// ```ignore
 /// mod css {
 ///     scoped_css!("
 ///     .hello {

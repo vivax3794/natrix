@@ -10,12 +10,12 @@ const BUTTON_2: &str = "_BUTTON_2";
 const TEXT: &str = "_TEXT";
 
 #[derive(Component, Default)]
-struct DoulbeCounter {
+struct DoubleCounter {
     value_one: u8,
     value_two: u8,
 }
 
-impl Component for DoulbeCounter {
+impl Component for DoubleCounter {
     type EmitMessage = NoMessages;
     type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
@@ -43,7 +43,7 @@ impl Component for DoulbeCounter {
 
 #[wasm_bindgen_test]
 fn update_affects_inner_node() {
-    crate::mount_test(DoulbeCounter::default());
+    crate::mount_test(DoubleCounter::default());
 
     let button_1 = crate::get(BUTTON_1);
     let button_2 = crate::get(BUTTON_2);

@@ -52,11 +52,14 @@ pub enum NoMessages {}
 ///
 /// # Example
 /// ```rust
+/// # use natrix::prelude::*;
 /// #[derive(Component)]
 /// struct HelloWorld;
 ///
 /// impl Component for HelloWorld {
-///     fn render() -> impl Element<Self::Data> {
+///     type EmitMessage = NoMessages;
+///     type ReceiveMessage = NoMessages;
+///     fn render() -> impl Element<Self> {
 ///         e::h1().text("Hello World")
 ///     }
 /// }
@@ -94,13 +97,20 @@ pub trait Component: ComponentBase {
 
     /// Return the root element of the component.
     ///
-    /// You **can not** dirrectly reference state in this function, and should use narrowly scoped
+    /// You **can not** directly reference state in this function, and should use narrowly scoped
     /// closures in the element tree instead.
     ///
     /// ```rust
-    /// fn render() -> impl Element<Self::Data> {
-    ///     e::h1().text(|ctx: &S<Self>| *ctx.welcome_message)
+    /// # use natrix::prelude::*;
+    /// # #[derive(Component)]
+    /// # struct HelloWorld {welcome_message: &'static str};
+    /// # impl Component for HelloWorld {
+    /// #     type EmitMessage = NoMessages;
+    /// #     type ReceiveMessage = NoMessages;
+    /// fn render() -> impl Element<Self> {
+    ///     e::h1().text(|ctx: R<Self>| *ctx.welcome_message)
     /// }
+    /// # }
     /// ```
     ///
     /// See the [Reactivity](TODO) chapther in the book for more info
@@ -110,7 +120,7 @@ pub trait Component: ComponentBase {
     /// Can be used to setup Effects or start async tasks.
     fn on_mount(_ctx: &mut S<Self>) {}
 
-    /// Handle a incoming messag
+    /// Handle a incoming message
     /// Default implementation does nothing
     #[expect(
         unused_variables,
@@ -174,7 +184,7 @@ impl<M> MaybeRecv<M> for UnboundedReceiver<M> {
 
 /// Wrapper around a component to let it be used as a subcomponet, `.child(C::new(MyComponent))`
 ///
-/// This exsists because of type system limitations.
+/// This exists because of type system limitations.
 #[must_use = "This is useless if not mounted"]
 pub struct C<I: Component, Im, Ir> {
     /// The component data
@@ -395,22 +405,31 @@ impl Component for () {
 /// render
 ///
 /// As the naive solution:
-/// ```rust
+/// ```compile_fail
+/// # use natrix::prelude::*;
+/// # #[derive(Component)]
+/// # struct MyStruct<T>(T);
 /// impl<T: Element<Self>> Component for MyStruct<T> {
-///     // ...
+/// # type EmitMessage = NoMessages;
+/// # type ReceiveMessage = NoMessages;
+/// # fn render() -> impl Element<Self> { e::div()}
+/// # let _ = MyStruct(10);
 /// }
 /// ```
-/// Causes a recursion loop in the trait analyzer, as it has to prove `Self: Component` to satisify
+/// Causes a recursion loop in the trait analyzer, as it has to prove `Self: Component` to satisfy
 /// `Element<Self>`, which again tries to satifiy `Element<Self>`.
 ///
 /// The solution is to use `Element<()>` and `NonReactive`
 ///
 /// ```rust
+/// # use natrix::prelude::*;
+/// # use natrix::component::NonReactive;
 /// #[derive(Component)]
 /// struct MyStruct<T>(T);
 ///
 /// impl<T: Element<()> + Copy> Component for MyStruct<T> {
-///     // ...
+///     # type EmitMessage = NoMessages;
+///     # type ReceiveMessage = NoMessages;
 ///     fn render() -> impl Element<Self> {
 ///         e::div().child(|ctx: R<Self>| NonReactive(*ctx.0))
 ///     }

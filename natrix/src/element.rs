@@ -18,17 +18,18 @@ use crate::type_macros;
 /// ## ❌ Don't
 /// Avoid manually implementing `Element` for custom components:
 ///
-/// ```rust
+/// ```ignore
 /// struct MyFancyButton(&'static str);
-/// impl<C> Element<C> for MyFancyButton {/* ... */}
+/// impl<C: Component> Element<C> for MyFancyButton {/* ... */}
 /// ```
 ///
 /// ## ✅ Do
 /// Instead, use a **function-based stateless component**:
 ///
 /// ```rust
-/// fn my_fancy_button<C>(name: &'static str) -> impl Element<C> {
-///     e::button() /* ... */
+/// # use natrix::prelude::*;
+/// fn my_fancy_button<C: Component>(name: &'static str) -> impl Element<C> {
+///     e::button().text(name)
 /// }
 /// ```
 ///
@@ -124,11 +125,11 @@ macro_rules! string_element {
 
 type_macros::strings!(string_element);
 
-/// Generate a implemention of `Element` for a specific integer type.
+/// Generate a implementation of `Element` for a specific integer type.
 ///
 /// This uses the `itoa` crate for fast string conversions.
 ///
-/// Note: The reason we can not do a blanket implemention on `itoa::Integer` here is that it would
+/// Note: The reason we can not do a blanket implementation on `itoa::Integer` here is that it would
 /// conflict with the blanket closure implementation of `Element` (Thanks rust :/)
 macro_rules! int_element {
     ($T:ident, $fmt:ident) => {

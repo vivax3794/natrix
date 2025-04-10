@@ -2,6 +2,7 @@
 
 use crate::component::Component;
 use crate::element::Element;
+use crate::events::Event;
 use crate::html_elements::ToAttribute;
 use crate::render_callbacks::{ReactiveAttribute, ReactiveNode, SimpleReactive};
 use crate::signal::RenderingState;
@@ -19,7 +20,7 @@ where
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
     ) -> web_sys::Node {
-        let (me, node) = ReactiveNode::create_inital(Box::new(self), ctx);
+        let (me, node) = ReactiveNode::create_initial(Box::new(self), ctx);
         render_state.hooks.push(me);
         node
     }
@@ -53,20 +54,22 @@ where
 
 /// Utility trait for use in stateless components
 ///
-/// When defining a stateless component it is much easier to use `impl Event<C>` than writting out
+/// When defining a stateless component it is much easier to use `impl Event<C>` than writing out
 /// the whole function trait yourself.
 ///
 /// ```
-/// fn my_button<C>(click: impl EventHandler<C>) -> impl Element<C> {
-///     e::button().on("click", click)
+/// # use natrix::prelude::*;
+/// # use natrix::callbacks::EventHandler;
+/// fn my_button<C: Component>(click: impl EventHandler<C, events::Click>) -> impl Element<C> {
+///     e::button().on::<events::Click>(click)
 /// }
 /// ```
-pub trait EventHandler<C, E> {
+pub trait EventHandler<C, E: Event> {
     /// Return a boxed version of the function in this event
-    fn func(self) -> impl Fn(&mut State<C>, E) + 'static;
+    fn func(self) -> impl Fn(&mut State<C>, E::JsEvent) + 'static;
 }
-impl<C, E, F: Fn(&mut State<C>, E) + 'static> EventHandler<C, E> for F {
-    fn func(self) -> impl Fn(&mut State<C>, E) + 'static {
+impl<C, E: Event, F: Fn(&mut State<C>, E::JsEvent) + 'static> EventHandler<C, E> for F {
+    fn func(self) -> impl Fn(&mut State<C>, E::JsEvent) + 'static {
         self
     }
 }

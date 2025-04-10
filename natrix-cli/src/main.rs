@@ -43,8 +43,8 @@ const CSS_OUTPUT_NAME: &str = "styles.css";
 
 /// Find the target folder
 fn find_target() -> Result<PathBuf> {
-    let metatadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
-    let target = metatadata.target_directory;
+    let metadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
+    let target = metadata.target_directory;
     let target = PathBuf::from(target);
     Ok(target)
 }
@@ -52,7 +52,7 @@ fn find_target() -> Result<PathBuf> {
 /// Find the natrix target folder
 fn find_target_natrix(mode: BuildProfile) -> Result<PathBuf> {
     let target = find_target()?;
-    Ok(target.join(format!("natrix-{}", mode.redable())))
+    Ok(target.join(format!("natrix-{}", mode.readable())))
 }
 
 /// Get the current target project name
@@ -102,7 +102,7 @@ struct BuildConfigArgs {
 struct BuildConfig {
     /// Build profile to use
     profile: BuildProfile,
-    /// Location to putput build files
+    /// Location to output build files
     dist: PathBuf,
     /// Location for the temp dir
     temp_dir: PathBuf,
@@ -152,8 +152,8 @@ enum BuildProfile {
 }
 
 impl BuildProfile {
-    /// Return a more redable version of this profile name
-    fn redable(self) -> &'static str {
+    /// Return a more readable version of this profile name
+    fn readable(self) -> &'static str {
         match self {
             Self::Release => "release",
             Self::Dev => "dev",
@@ -289,7 +289,7 @@ fn generate_main_rs(root: &Path, name: &str, nightly: bool) -> Result<(), anyhow
     let main_rs = format!(
         r#"
 {nightly_lints}
-// Panicing in a wasm module will cause the state to be invalid
+// Panicking in a wasm module will cause the state to be invalid
 // And it might cause UB on the next event handler execution.
 // (By default natrix uses a panic hook that blocks further event handler calls after a panic)
 #![deny(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
@@ -455,7 +455,7 @@ fn build(config: &BuildConfig) -> Result<()> {
     println!(
         "🚧 {} (using profile {})",
         "Starting Build".bright_blue(),
-        config.profile.redable().cyan()
+        config.profile.readable().cyan()
     );
     std::fs::create_dir_all(&config.dist).context("Creating dist")?;
 

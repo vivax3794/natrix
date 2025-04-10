@@ -8,8 +8,8 @@ use crate::state::{HookKey, KeepAlive, RenderCtx, State};
 use crate::utils::debug_expect;
 use crate::{get_document, type_macros};
 
-/// A noop hook used to fill the `Rc<RefCell<...>>` while the inital render pass runs so that that
-/// a real hook can be swapped in once initalized
+/// A noop hook used to fill the `Rc<RefCell<...>>` while the initial render pass runs so that that
+/// a real hook can be swapped in once initialized
 pub(crate) struct DummyHook;
 impl<C: Component> ReactiveHook<C> for DummyHook {
     fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) -> UpdateResult {
@@ -21,9 +21,9 @@ impl<C: Component> ReactiveHook<C> for DummyHook {
 pub(crate) struct ReactiveNode<C: Component, E> {
     /// The callback to produce nodes
     callback: Box<dyn Fn(&mut RenderCtx<C>) -> E>,
-    /// The current renderd node to replace
+    /// The current rendered node to replace
     target_node: web_sys::Node,
-    /// Vector of various objects to be kept alive for the duration of the renderd content
+    /// Vector of various objects to be kept alive for the duration of the rendered content
     keep_alive: Vec<KeepAlive>,
     /// Hooks that are a child of this
     hooks: Vec<HookKey>,
@@ -33,7 +33,7 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
     /// Render this hook and simply return the node
     ///
     /// IMPORTANT: This function works with the assumption what it returns will be put in its
-    /// `target_node` field. This function is split out to facilitate `Self::create_inital`
+    /// `target_node` field. This function is split out to facilitate `Self::create_initial`
     fn render(&mut self, ctx: &mut State<C>, you: HookKey) -> web_sys::Node {
         ctx.clear();
 
@@ -56,9 +56,9 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
         element.render(ctx, &mut state)
     }
 
-    /// Create a new `ReactiveNode` registering the inital depdencies and returning both the `Rc`
-    /// reference to it and the inital node (Which should be inserted in the dom)
-    pub(crate) fn create_inital(
+    /// Create a new `ReactiveNode` registering the initial dependencies and returning both the `Rc`
+    /// reference to it and the initial node (Which should be inserted in the dom)
+    pub(crate) fn create_initial(
         callback: Box<dyn Fn(&mut RenderCtx<C>) -> E>,
         ctx: &mut State<C>,
     ) -> (HookKey, web_sys::Node) {
@@ -188,14 +188,14 @@ pub(crate) trait ReactiveValue<C: Component> {
     fn apply(self, ctx: &mut State<C>, render_state: &mut RenderingState, node: &web_sys::Element);
 }
 
-/// A common wrapper for simple reactive operations to deduplicate depdency tracking code
+/// A common wrapper for simple reactive operations to deduplicate dependency tracking code
 pub(crate) struct SimpleReactive<C: Component, K> {
     /// The callback to call, takes state and returns the needed data for the reactive
     /// transformation
     callback: Box<dyn Fn(&mut RenderCtx<C>) -> K>,
     /// The node to apply transformations to
     node: web_sys::Element,
-    /// Vector of various objects to be kept alive for the duration of the renderd content
+    /// Vector of various objects to be kept alive for the duration of the rendered content
     keep_alive: Vec<KeepAlive>,
     /// Hooks to use
     hooks: Vec<HookKey>,
@@ -233,7 +233,7 @@ impl<C: Component, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K>
 }
 
 impl<C: Component, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
-    /// Creates a new simple reactive hook, applying the inital transformation.
+    /// Creates a new simple reactive hook, applying the initial transformation.
     /// Returns a Rc of the hook
     pub(crate) fn init_new(
         callback: Box<dyn Fn(&mut RenderCtx<C>) -> K>,

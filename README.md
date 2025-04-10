@@ -7,11 +7,15 @@ Natrix is a ***Rust-first*** frontend framework. Where other frameworks aim to b
 # A Simple Example
 A simple counter in Natrix looks like this: 
 ```rust
+use natrix::prelude::*;
+
 #[derive(Component)]
 struct Counter(usize);
 
 impl Component for Counter {
-    fn render() -> impl Element<Self::Data> {
+    type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
+    fn render() -> impl Element<Self> {
         e::button()
             .text(|ctx: R<Self>| *ctx.0)
             .on::<events::Click>(|ctx: &mut S<Self>, _| {

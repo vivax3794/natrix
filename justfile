@@ -4,7 +4,7 @@ alias p := publish
 alias f := full
 
 default: test_native test_web
-full: test check
+full: test check check_docs
 
 test: test_native test_web integration_tests project_gen_test
 
@@ -20,6 +20,10 @@ check:
     cargo fmt --check
     cargo +stable hack clippy --each-feature --skip nightly --tests -- -Dwarnings
     cargo +nightly hack clippy --each-feature --tests -- -Dwarnings
+
+check_docs:
+    typos
+    cargo test --doc --all-features --workspace 
 
 [working-directory: "./integration_tests"]
 integration_tests: install_cli
@@ -68,7 +72,7 @@ install_cli:
     cargo install --path natrix-cli --profile dev --frozen
 
 # Publish the crate to crates.io
-publish: fmt test check
+publish: fmt full
     cargo publish -Z package-workspace -p natrix_shared -p natrix_macros -p natrix-cli -p natrix
 
 fmt:

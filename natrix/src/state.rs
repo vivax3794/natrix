@@ -64,11 +64,11 @@ impl<T: Component> DerefMut for State<T> {
     }
 }
 
-/// A type alias for `State<C::Data>`, should be prefered in closure argument hints.
+/// A type alias for `State<C::Data>`, should be preferred in closure argument hints.
 /// such as `|ctx: &mut S<Self>| ...`
 pub type S<C> = State<C>;
 
-/// A type alias for `RenderCtx<C::Data>`, should be prefered in closure argument hints.
+/// A type alias for `RenderCtx<C::Data>`, should be preferred in closure argument hints.
 /// such as `|ctx: R<Self>| ...`
 pub type R<'a, 'c, C> = &'a mut RenderCtx<'c, C>;
 
@@ -174,7 +174,7 @@ impl<T: Component> State<T> {
         }
     }
 
-    /// Get the unwraped data referenced by this guard
+    /// Get the unwrapped data referenced by this guard
     pub fn get<F, A>(&self, guard: &Guard<F>) -> A
     where
         F: Fn(&Self) -> A,
@@ -251,7 +251,7 @@ fn drop_hook_children<T: Component>(ctx: &mut State<T>, hook: &mut Box<dyn React
 
 /// Wrapper around a mutable state that only allows read-only access
 ///
-/// This holds a mutable state to faciliate a few rendering features such as `.watch`
+/// This holds a mutable state to facilitate a few rendering features such as `.watch`
 pub struct RenderCtx<'c, C: Component> {
     /// The inner context
     pub(crate) ctx: &'c mut State<C>,
@@ -275,11 +275,21 @@ impl<C: Component> RenderCtx<'_, C> {
     ///
     /// # Example
     /// ```rust
+    /// # use natrix::prelude::*;
+    /// # #[derive(Component)]
+    /// # struct MyComponent {value: u32}
+    /// #
+    /// # impl Component for MyComponent {
+    /// # type EmitMessage = NoMessages;
+    /// # type ReceiveMessage = NoMessages;
+    /// # fn render() -> impl Element<Self> {
+    /// # |ctx: R<Self>| {
     /// if ctx.watch(|ctx| *ctx.value > 2) {
-    ///     e::div().text(|ctx: &S<Self>| *ctx.value)
+    ///     e::div().text(|ctx: R<Self>| *ctx.value)
     /// } else {
-    ///     // ...
+    ///     e::div().text("Value is too low")
     /// }
+    /// # }}}
     /// ```
     pub fn watch<T, F>(&mut self, func: F) -> T
     where
@@ -304,7 +314,7 @@ impl<C: Component> RenderCtx<'_, C> {
         result
     }
 
-    /// Get the unwraped data referenced by this guard
+    /// Get the unwrapped data referenced by this guard
     pub fn get<F, A>(&self, guard: &Guard<F>) -> A
     where
         F: Fn(&State<C>) -> A,
@@ -319,7 +329,7 @@ struct WatchState<F, T> {
     calc_value: F,
     /// The previous cached value
     last_value: T,
-    /// The depdency that owns us.
+    /// The dependency that owns us.
     dep: HookKey,
 }
 
@@ -350,28 +360,46 @@ pub struct Guard<F> {
     getter: F,
 }
 
-/// Get a guard handle that can be used to retrive the `Some` variant of a option without having to
+/// Get a guard handle that can be used to retrieve the `Some` variant of a option without having to
 /// use `.unwrap`.
-/// Should be used to achive find-grained reactivity (internally this uses `.watch` on `.is_some()`)
+/// Should be used to achieve find-grained reactivity (internally this uses `.watch` on `.is_some()`)
 ///
 /// # Why?
 /// The usecase can be seen by considering this logic:
 /// ```rust
+/// # use natrix::prelude::*;
+/// # #[derive(Component)]
+/// # struct MyComponent {value: Option<u32>}
+/// # impl Component for MyComponent {
+/// # type EmitMessage = NoMessages;
+/// # type ReceiveMessage = NoMessages;
+/// # fn render() -> impl Element<Self> {
+/// # |ctx: R<Self>| {
 /// if let Some(value) = *ctx.value {
 ///     e::div().text(value)
 /// } else {
 ///     e::div().text("Is none")
 /// }
+/// # }}}
 /// ```
 /// The issue here is that the outer div (which might be a more expensive structure to create) is
 /// recreated everytime `value` changes, even if it is `Some(0) -> Some(1)`
 /// This is where you might reach for `ctx.watch`, and in fact that works perfectly:
 /// ```rust
+/// # use natrix::prelude::*;
+/// # #[derive(Component)]
+/// # struct MyComponent {value: Option<u32>}
+/// # impl Component for MyComponent {
+/// # type EmitMessage = NoMessages;
+/// # type ReceiveMessage = NoMessages;
+/// # fn render() -> impl Element<Self> {
+/// # |ctx: R<Self>| {
 /// if ctx.watch(|ctx| ctx.value.is_some()) {
 ///     e::div().text(|ctx: R<Self>| ctx.value.unwrap())
 /// } else {
 ///     e::div().text("Is none")
 /// }
+/// # }}}
 /// ```
 /// And this works, Now a change from `Some(0)` to `Some(1)` will only run the inner closure and
 /// the outer div is reused. but there is one downside, we need `.unwrap` because the inner closure is
@@ -380,11 +408,20 @@ pub struct Guard<F> {
 ///
 /// This is where guards come into play:
 /// ```rust
+/// # use natrix::prelude::*;
+/// # #[derive(Component)]
+/// # struct MyComponent {value: Option<u32>}
+/// # impl Component for MyComponent {
+/// # type EmitMessage = NoMessages;
+/// # type ReceiveMessage = NoMessages;
+/// # fn render() -> impl Element<Self> {
+/// # |ctx: R<Self>| {
 /// if let Some(value_guard) = guard_option!(ctx.value) {
 ///     e::div().text(move |ctx: R<Self>| ctx.get(&value_guard))
 /// } else {
 ///     e::div().text("Is none")
 /// }
+/// # }}}
 /// ```
 /// Here `value_guard` is actually not the value at all, its a lightweight value thats can be
 /// captured by child closures and basically is a way to say "I know that in this context this
@@ -404,7 +441,7 @@ macro_rules! guard_option {
     };
 }
 
-/// Get a guard handle that can be used to retrive the `Ok` variant of a option without having to
+/// Get a guard handle that can be used to retrieve the `Ok` variant of a option without having to
 /// use `.unwrap`, or the `Err` variant.
 #[macro_export]
 macro_rules! guard_result {
@@ -467,13 +504,14 @@ pub mod async_impl {
         /// Borrow this `Weak<RefCell<...>>`, this will create a `Rc` for as long as the borrow is
         /// active. Returns `None` if the component was dropped. Its recommended to use the
         /// following construct to safely cancel async tasks:
-        /// ```rust
+        /// ```ignore
         /// let Some(borrow) = ctx.borrow_mut() else {return;};
         /// // ...
         /// drop(borrow);
         /// foo().await;
         /// let Some(borrow) = ctx.borrow_mut() else {return;};
         /// // ...
+        /// };
         /// ```
         ///
         /// # Reactivity
@@ -482,18 +520,18 @@ pub mod async_impl {
         /// Once this value is dropped it will trigger a reactive update for any changed fields.
         ///
         /// # Panics
-        /// This function will panic if a borrow already exsists.
+        /// This function will panic if a borrow already exists.
         ///
         /// # Borrow Safety
         /// The framework guarantees that it will never hold a borrow between event calls.
         /// This means the only source of panics is if you are holding a borrow when you yield to
         /// the event loop, i.e you should *NOT* hold this value across `.await` points.
-        /// framework will regulary borrow the state on any registerd event handler trigger, for
+        /// framework will regularly borrow the state on any registered event handler trigger, for
         /// example a user clicking a button.
         ///
         /// Keeping this type across an `.await` point or otherwise leading control to the event
         /// loop while the borrow is active could also lead to reactivity failrues and desyncs, and
-        /// should be considerd UB (not ub as in compile ub, but as in this framework makes no
+        /// should be considered UB (not ub as in compile ub, but as in this framework makes no
         /// guarantees about what state the reactivity system will be in)
         ///
         /// ## Nightly

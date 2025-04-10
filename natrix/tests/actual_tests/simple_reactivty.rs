@@ -24,7 +24,7 @@ impl Component for Counter {
 }
 
 #[wasm_bindgen_test]
-fn renders_inital() {
+fn renders_initial() {
     crate::mount_test(Counter { value: 0 });
 
     let button = crate::get(BUTTON_ID);
@@ -32,7 +32,7 @@ fn renders_inital() {
 }
 
 #[wasm_bindgen_test]
-fn uses_inital_data() {
+fn uses_initial_data() {
     crate::mount_test(Counter { value: 123 });
 
     let button = crate::get(BUTTON_ID);

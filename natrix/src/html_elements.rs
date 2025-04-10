@@ -1,4 +1,4 @@
-//! Implemention of html elements, as well as helper constructors.
+//! Implementation of html elements, as well as helper constructors.
 //!
 //! This module is generally used via its alias in the prelude, `e`.
 //! Most commonly you will just use the element functions directly, but you can construct a
@@ -6,9 +6,12 @@
 //!
 //! # Example
 //! ```rust
+//! # use natrix::prelude::*;
+//! # let _: e::HtmlElement<()> =
 //! e::div()
 //!     .child(e::button().text("Click me"))
 //!     .child(e::h1().text("Wow!"))
+//! # ;
 //! ```
 
 use std::rc::Weak;
@@ -179,12 +182,22 @@ impl<C: Component> HtmlElement<C> {
     ///
     /// The event handler is a closure taking a mutable reference to `S<Self>`.
     /// ```rust
-    /// e::button().on("click", |ctx: &mut S<Self>| {
+    /// # use natrix::prelude::*;
+    /// # #[derive(Component)]
+    /// # struct MyComponent {
+    /// #     some_value: i32,
+    /// # }
+    /// # impl Component for MyComponent {
+    /// # type EmitMessage = NoMessages;
+    /// # type ReceiveMessage = NoMessages;
+    /// # fn render() -> impl Element<Self> {
+    /// e::button().on::<events::Click>(|ctx: &mut S<Self>, _| {
     ///     *ctx.some_value += 1;
     /// })
+    /// # }}
     /// ```
     /// For more information see [Reactivity](TODO) in the book.
-    pub fn on<E: Event>(mut self, function: impl EventHandler<C, E::JsEvent>) -> Self {
+    pub fn on<E: Event>(mut self, function: impl EventHandler<C, E>) -> Self {
         let function = function.func();
         self.events.push((
             E::EVENT_NAME,
@@ -192,7 +205,7 @@ impl<C: Component> HtmlElement<C> {
                 if let Ok(event) = event.dyn_into::<E::JsEvent>() {
                     function(ctx, event);
                 } else {
-                    debug_assert!(false, "Missmatched event types");
+                    debug_assert!(false, "Mismatched event types");
                 }
             }),
         ));
@@ -202,15 +215,25 @@ impl<C: Component> HtmlElement<C> {
     /// Push a child to this element.
     /// This accepts any valid element including closures.
     /// ```rust
+    /// # use natrix::prelude::*;
+    /// # #[derive(Component)]
+    /// # struct MyComponent {
+    /// #     toggle: bool,
+    /// # }
+    /// # impl Component for MyComponent {
+    /// # type EmitMessage = NoMessages;
+    /// # type ReceiveMessage = NoMessages;
+    /// # fn render() -> impl Element<Self> {
     /// e::div()
     ///     .child(e::h1().text("Wow!"))
-    ///     .child(|ctx: &S<Self>| {
+    ///     .child(|ctx: R<Self>| {
     ///         if *ctx.toggle {
     ///             "Hello"
     ///         } else {
     ///             "World"
     ///         }
     ///     })
+    /// # }}
     /// ```
     pub fn child<E: Element<C> + 'static>(mut self, child: E) -> Self {
         self.children.push(Box::new(child));

@@ -1,4 +1,4 @@
-//! utilities for writting unit tests on wasm
+//! utilities for writing unit tests on wasm
 #![cfg(feature = "test_utils")]
 #![expect(clippy::expect_used, reason = "tests only")]
 

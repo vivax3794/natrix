@@ -1,4 +1,4 @@
-//! Signals for tracking reactive depdencies and modifications.
+//! Signals for tracking reactive dependencies and modifications.
 
 use std::cell::Cell;
 use std::ops::{Deref, DerefMut};
@@ -12,7 +12,7 @@ pub(crate) struct RenderingState<'s> {
     pub(crate) keep_alive: &'s mut Vec<KeepAlive>,
     /// The hooks that are a child of this
     pub(crate) hooks: &'s mut Vec<HookKey>,
-    /// The parent render context, can be used to register it as a depdency of yourself
+    /// The parent render context, can be used to register it as a dependency of yourself
     pub(crate) parent_dep: HookKey,
 }
 
@@ -27,8 +27,8 @@ pub struct Signal<T> {
     read: Cell<bool>,
     /// A hashset of the dependencies.
     ///
-    /// Actually calling said depdencies is the responsibility of the `State` struct.
-    /// Depdencies are also lazily removed by the `State` struct, and hence might contain stale
+    /// Actually calling said dependencies is the responsibility of the `State` struct.
+    /// Dependencies are also lazily removed by the `State` struct, and hence might contain stale
     /// pointers.
     deps: Vec<HookKey>,
 }
@@ -87,9 +87,9 @@ impl<T> Signal<T> {
 pub trait SignalMethods {
     /// Clear the `read` and `written` flags.
     fn clear(&mut self);
-    /// Adds the given depedency to the hashset if the `read` flag is set.
+    /// Adds the given dependency to the hashset if the `read` flag is set.
     fn register_dep(&mut self, dep: HookKey);
-    /// Return a mutable reference to the depdencies to facilitate efficent cleanup and
+    /// Return a mutable reference to the dependencies to facilitate efficient cleanup and
     /// deduplication in the `State struct`
     ///
     /// We are doing the cleaning in the `State` struct because it lets us deduplicate the changed
@@ -139,9 +139,9 @@ impl<T> DerefMut for Signal<T> {
 pub(crate) trait ReactiveHook<C: Component> {
     /// Recalculate the hook and apply its update.
     ///
-    /// Hooks should recall `ctx.reg_dep` with the you paramater to re-register any potential
-    /// depdencies as the update method uses `.drain(..)` on depdencies (this is also to ensure
-    /// reactive state that is only accesed in some conditions is recorded).
+    /// Hooks should recall `ctx.reg_dep` with the you parameter to re-register any potential
+    /// dependencies as the update method uses `.drain(..)` on dependencies (this is also to ensure
+    /// reactive state that is only accessed in some conditions is recorded).
     fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) -> UpdateResult;
     /// Drop keep alives and other state that will be invalidated in `update`
     fn drop_deps(&mut self) -> Option<std::vec::Drain<'_, HookKey>> {
@@ -268,10 +268,10 @@ mod tests {
         }
 
         macro_rules! test_inplace {
-        ($name:ident: $inital:literal $operation:tt $value:literal -> $expected:literal) => {
+        ($name:ident: $initial:literal $operation:tt $value:literal -> $expected:literal) => {
             #[test]
             fn $name() {
-                let foo = &mut Holder(Signal::new($inital));
+                let foo = &mut Holder(Signal::new($initial));
 
                 foo.0 $operation $value;
 

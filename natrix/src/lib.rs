@@ -59,7 +59,7 @@ thread_local! {
     };
 }
 
-/// Get the globaly aquired document
+/// Get the globally acquired document
 ///
 /// This is cached so we dont need the slowdown of the js interop and `Result` handling for every
 /// use of document.
@@ -71,11 +71,11 @@ pub(crate) fn get_document() -> web_sys::Document {
 #[cfg(feature = "panic_hook")]
 mod panics {
     /// Mark that a panic has happened
-    static PANIC_HAPPEND: std::sync::Once = std::sync::Once::new();
+    static PANIC_HAPPENED: std::sync::Once = std::sync::Once::new();
 
     /// Is the panic hook set?
-    pub(crate) fn has_paniced() -> bool {
-        let result = PANIC_HAPPEND.is_completed();
+    pub(crate) fn has_panicked() -> bool {
+        let result = PANIC_HAPPENED.is_completed();
         #[cfg(debug_assertions)]
         if result {
             web_sys::console::warn_1(
@@ -94,7 +94,7 @@ If you which to allow execution after a panic (not recommended) you can disable 
     /// Set the panic hook to mark that a panic has happened
     pub fn set_panic_hook() {
         std::panic::set_hook(Box::new(|info| {
-            PANIC_HAPPEND.call_once(|| {
+            PANIC_HAPPENED.call_once(|| {
                 // This is a no-op, we just want to mark that a panic has happened
             });
 
@@ -113,13 +113,13 @@ pub use panics::set_panic_hook;
 macro_rules! return_if_panic {
     ($val:expr) => {
         #[cfg(feature = "panic_hook")]
-        if $crate::panics::has_paniced() {
+        if $crate::panics::has_panicked() {
             return $val;
         }
     };
     () => {
         #[cfg(feature = "panic_hook")]
-        if $crate::panics::has_paniced() {
+        if $crate::panics::has_panicked() {
             return;
         }
     };
