@@ -280,13 +280,12 @@ impl<C: Component> Element<C> for HtmlElement<C> {
         } = *self;
 
         let document = get_document();
-        #[expect(
-            clippy::panic,
-            reason = "No good recovery for not being able to create a element"
-        )]
-        let element = document
-            .create_element(intern(name))
-            .unwrap_or_else(|_| panic!("Failed to create element {name}"));
+        let Ok(element) = document.create_element(intern(name)) else {
+            debug_assert!(false, "Failed to create element {name}");
+            return web_sys::Comment::new()
+                .unwrap_or_else(wasm_bindgen::JsCast::unchecked_into)
+                .into();
+        };
 
         for child in children {
             let child = child.render_box(ctx, render_state);
