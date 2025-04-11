@@ -3,7 +3,6 @@
 The framework only makes use of `debug_assert!`, its our goal that any issues should be highlighted in debug builds, but not in release builds. On release builds natrix will silently fail in many cases, this is to ensure that the framework does not panic in production.
 
 ## When does Natrix panic (in debug builds)?
-
 * **Js Environment Corruption** - If something causes requires javascript methods to be missing, or otherwise fail.
     * In release natrix will skip executing the action it attempted, for example creating a dom node.
 * **Unexpected Dom State** - If natrix cant find a expected dom node or the node isnt of the expected type.

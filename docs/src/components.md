@@ -119,3 +119,38 @@ impl Component for HelloWorld {
 #     mount(HelloWorld { counter: 0 });
 # }
 ```
+
+## Defining methods
+
+### Construction
+Construction methods can simple be defined as normal
+```rust,no_run
+# extern crate natrix;
+# use natrix::prelude::*;
+#
+#[derive(Component)]
+pub struct MyComponent {
+    private_field: u8,
+}
+
+impl MyComponent {
+    pub fn new(initial_value: u8) -> Self {
+        Self { private_field: initial_value }
+    }
+}
+
+# impl Component for MyComponent {
+#     fn render() -> impl Element<Self> {
+#         e::div()
+#     }
+# }
+# 
+fn main() {
+    mount(MyComponent::new(0));
+}
+```
+
+### Methods for `ctx`
+The above wont let you define methods that work on `ctx`, this is because `ctx` is actually a different type constructed by the derive macro.
+> [!FAILURE]
+> This feature isnt implemented yet

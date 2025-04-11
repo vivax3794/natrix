@@ -221,6 +221,7 @@ impl<I: Component, Ir> C<I, (), Ir> {
 
 /// Allows sending messages to the component
 #[derive(Clone)]
+#[must_use]
 pub struct Sender<M>(UnboundedSender<M>);
 
 impl<M> Sender<M> {
