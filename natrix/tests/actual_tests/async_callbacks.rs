@@ -2,8 +2,8 @@
 
 use std::time::Duration;
 
-use natrix::async_utils;
 use natrix::prelude::*;
+use natrix::{async_utils, borrow_or_return};
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
@@ -22,10 +22,11 @@ impl Component for AsyncComponent {
         e::button()
             .id(BUTTON_ID)
             .text(|ctx: R<Self>| *ctx.data)
-            .on::<events::Click>(|ctx: &mut S<Self>, _| {
+            .on::<events::Click>(|ctx: E<Self>, _| {
                 ctx.use_async(async |mut ctx| {
                     async_utils::sleep(Duration::from_millis(10)).await;
-                    *ctx.borrow_mut().unwrap().data += 10;
+                    let mut borrow = borrow_or_return!(ctx);
+                    *borrow.data += 10;
                 });
             })
     }

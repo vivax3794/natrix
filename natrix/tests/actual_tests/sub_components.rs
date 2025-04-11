@@ -19,13 +19,13 @@ impl Component for Counter {
         e::button()
             .id(BUTTON_ID)
             .text(|ctx: R<Self>| *ctx.value)
-            .on::<events::Click>(|ctx: &mut S<Self>, _| {
+            .on::<events::Click>(|ctx: E<Self>, _| {
                 *ctx.value += 1;
                 ctx.emit(*ctx.value);
             })
     }
 
-    fn handle_message(ctx: &mut S<Self>, msg: Self::ReceiveMessage) {
+    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage) {
         *ctx.value += msg;
         ctx.emit(*ctx.value);
     }
@@ -45,14 +45,14 @@ impl Component for RootOne {
     fn render() -> impl Element<Self> {
         let (child, sender) = C::new(Counter { value: 0 }).sender();
         e::div()
-            .child(child.on(|ctx: &mut S<Self>, amount| {
+            .child(child.on(|ctx: E<Self>, amount| {
                 *ctx.double = amount * 2;
             }))
             .child(e::div().id(DOUBLE_ID).text(|ctx: R<Self>| *ctx.double))
             .child(
                 e::button()
                     .id(ADD_ID)
-                    .on::<events::Click>(move |_ctx: &mut S<Self>, _| {
+                    .on::<events::Click>(move |_ctx: E<Self>, _| {
                         sender.send(10);
                     }),
             )

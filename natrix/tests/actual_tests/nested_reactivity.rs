@@ -23,14 +23,14 @@ impl Component for DoubleCounter {
             .child(
                 e::button()
                     .id(BUTTON_1)
-                    .on::<events::Click>(|ctx: &mut S<Self>, _| {
+                    .on::<events::Click>(|ctx: E<Self>, _| {
                         *ctx.value_one += 1;
                     }),
             )
             .child(
                 e::button()
                     .id(BUTTON_2)
-                    .on::<events::Click>(|ctx: &mut S<Self>, _| {
+                    .on::<events::Click>(|ctx: E<Self>, _| {
                         *ctx.value_two += 1;
                     }),
             )

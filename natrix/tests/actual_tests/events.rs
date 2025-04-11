@@ -19,7 +19,7 @@ impl Component for Counter {
         e::button()
             .id(BUTTON_ID)
             .child(|ctx: R<Self>| *ctx.value)
-            .on::<events::Click>(|ctx: &mut S<Self>, _| *ctx.value += 1)
+            .on::<events::Click>(|ctx: E<Self>, _| *ctx.value += 1)
     }
 }
 
@@ -50,7 +50,7 @@ impl Component for OnMount {
     fn render() -> impl Element<Self> {
         e::div().id(BUTTON_ID).text(|ctx: R<Self>| *ctx.value)
     }
-    fn on_mount(ctx: &mut S<Self>) {
+    fn on_mount(ctx: E<Self>) {
         *ctx.value = 10;
     }
 }

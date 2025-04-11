@@ -9,7 +9,7 @@ use crate::element::Element;
 use crate::get_document;
 use crate::html_elements::ToAttribute;
 use crate::signal::{RenderingState, SignalMethods};
-use crate::state::{ComponentData, HookKey, S, State};
+use crate::state::{ComponentData, E, HookKey, State};
 use crate::utils::{SmallAny, debug_expect};
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
@@ -118,7 +118,7 @@ pub trait Component: ComponentBase {
 
     /// Called when the component is mounted.
     /// Can be used to setup Effects or start async tasks.
-    fn on_mount(_ctx: &mut S<Self>) {}
+    fn on_mount(_ctx: E<Self>) {}
 
     /// Handle a incoming message
     /// Default implementation does nothing
@@ -126,7 +126,7 @@ pub trait Component: ComponentBase {
         unused_variables,
         reason = "We want the auto-completion for this method to be connvenient"
     )]
-    fn handle_message(ctx: &mut S<Self>, msg: Self::ReceiveMessage) {
+    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage) {
         // This doesnt have anything to do with panic hooks
         // but `panic_hook` does pull in `web_sys::console`
         // And it feels very silly to add a cargo feature for
@@ -147,7 +147,7 @@ pub trait Component: ComponentBase {
 }
 
 /// Type of the emitting message handler
-type MessageHandler<P, M> = Box<dyn Fn(&mut S<P>, M)>;
+type MessageHandler<P, M> = Box<dyn Fn(E<P>, M)>;
 
 /// Trait for maybe getting a message handler
 trait MaybeHandler<C: Component, M> {
@@ -209,7 +209,7 @@ impl<I: Component, Ir> C<I, (), Ir> {
     /// Handle messages from the component
     pub fn on<P: Component>(
         self,
-        handler: impl Fn(&mut S<P>, I::EmitMessage) + 'static,
+        handler: impl Fn(E<P>, I::EmitMessage) + 'static,
     ) -> C<I, MessageHandler<P, I::EmitMessage>, Ir> {
         C {
             data: self.data,
@@ -315,11 +315,17 @@ pub struct RenderResult<C: Component> {
 /// If the `panic_hook` feature is enabled, this will set the panic hook as well.
 ///
 /// **WARNING:** This method implicitly leaks the memory of the root component
+/// # Panics
+/// If the mount point is not found, which should never happen if using `natrix build`
+#[expect(
+    clippy::expect_used,
+    reason = "This will never happen if `natrix build` is used, and also happens early in the app lifecycle"
+)]
 pub fn mount<C: Component>(component: C) {
     #[cfg(feature = "panic_hook")]
     crate::panics::set_panic_hook();
 
-    mount_at(component, natrix_shared::MOUNT_POINT);
+    mount_at(component, natrix_shared::MOUNT_POINT).expect("Failed to mount");
 }
 
 /// Mounts the component at the target id
@@ -327,24 +333,23 @@ pub fn mount<C: Component>(component: C) {
 ///
 /// **WARNING:** This method implicitly leaks the memory of the root component
 ///
-/// # Panics
+/// # Errors
 /// If target mount point is not found.
-pub fn mount_at<C: Component>(component: C, target_id: &'static str) {
-    let result = render_component(component, target_id);
+pub fn mount_at<C: Component>(component: C, target_id: &'static str) -> Result<(), &'static str> {
+    let result = render_component(component, target_id)?;
 
     std::mem::forget(result);
+    Ok(())
 }
 
 /// Mounts the component at the target id
 /// Replacing the element with the component
-///
-/// # Panics
+/// # Errors
 /// If target mount point is not found.
-#[expect(
-    clippy::expect_used,
-    reason = "This is the entry point of the framework, and it fails fast."
-)]
-pub fn render_component<C: Component>(component: C, target_id: &str) -> RenderResult<C> {
+pub fn render_component<C: Component>(
+    component: C,
+    target_id: &str,
+) -> Result<RenderResult<C>, &'static str> {
     let data = component.into_state();
     let element = C::render();
 
@@ -364,14 +369,14 @@ pub fn render_component<C: Component>(component: C, target_id: &str) -> RenderRe
     let document = get_document();
     let target = document
         .get_element_by_id(target_id)
-        .expect("Failed to get mount point");
+        .ok_or("Failed to get mount point")?;
     target
         .replace_with_with_node_1(&node)
-        .expect("Failed to replace mount point");
+        .map_err(|_| "Failed to replace mount point")?;
 
     drop(borrow_data);
 
-    RenderResult { data, keep_alive }
+    Ok(RenderResult { data, keep_alive })
 }
 
 impl ComponentData for () {

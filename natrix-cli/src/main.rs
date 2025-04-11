@@ -449,7 +449,7 @@ fn spawn_server(folder: PathBuf, reload_signal: Receiver<()>) {
 
 /// Build a project
 fn build(config: &BuildConfig) -> Result<()> {
-    println!("🧹 {}", "Cleaning dist".bright_red(),);
+    println!("🧹 {}", "Cleaning dist".bright_black(),);
     let _ = fs::remove_dir_all(&config.dist);
 
     println!(
@@ -555,7 +555,8 @@ fn wasm_bindgen(config: &BuildConfig, wasm_file: &PathBuf) -> Result<(PathBuf, P
     } else {
         command
             .arg("--remove-name-section")
-            .arg("--remove-producers-section");
+            .arg("--remove-producers-section")
+            .arg("--no-demangle");
     }
     run_with_spinner(command, create_spinner("✍️ wasm_bindgen")?)?;
 
@@ -622,7 +623,8 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
             config.temp_dir.join(MACRO_OUTPUT_DIR),
         );
     if config.profile == BuildProfile::Release {
-        let mut rustc_flags = String::from("-C target-feature=+bulk-memory ");
+        let mut rustc_flags =
+            String::from("-C target-feature=+bulk-memory -C target-feature=+reference-types ");
         if rustc_is_nightly {
             let mut std_features = String::from("optimize_for_size");
             if !is_feature_enabled("panic_hook", true)? {
@@ -718,7 +720,9 @@ fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         .arg(wasm_file)
         .arg("-o")
         .arg(wasm_file)
-        .arg("--all-features");
+        .arg("--enable-bulk-memory")
+        .arg("--enable-reference-types")
+        .arg("--strip-producers");
     if !is_feature_enabled("panic_hook", true)? {
         command.arg("--traps-never-happen");
     }

@@ -1,7 +1,7 @@
 //! Implements the reactive hooks for updating the dom in response to signal changessz.
 
 use crate::component::Component;
-use crate::element::Element;
+use crate::element::{Element, generate_fallback_node};
 use crate::html_elements::ToAttribute;
 use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
 use crate::state::{HookKey, KeepAlive, RenderCtx, State};
@@ -62,13 +62,13 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
         callback: Box<dyn Fn(&mut RenderCtx<C>) -> E>,
         ctx: &mut State<C>,
     ) -> (HookKey, web_sys::Node) {
-        #[expect(
-            clippy::expect_used,
-            reason = "If there is no body, then wtf is our job."
-        )]
-        let dummy_node: web_sys::Node = get_document().body().expect("<body> not found").into();
-
         let me = ctx.insert_hook(Box::new(DummyHook));
+
+        let Some(dummy_node) = get_document().body() else {
+            debug_assert!(false, "Document body not found");
+            return (me, generate_fallback_node());
+        };
+        let dummy_node = dummy_node.into();
 
         let mut this = Self {
             callback,

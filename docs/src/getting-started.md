@@ -6,7 +6,7 @@ The natrix cli requires the following dependencies:
 * [Rust/Cargo](https://www.rust-lang.org/)
 * [wasm-bindgen](https://crates.io/crates/wasm-bindgen-cli)
 * [wasm-opt](https://github.com/WebAssembly/binaryen), Usually installed via `binaryen` for your platform.
-    - Alternativly you can use the `bundle-wasm-opt` feature flag to use to bundle the wasm-opt binary in the CLI. Be warned that this causes the installation to be much slower, and also results in much larger wasm files due to outdated wasm-opt version on crates.io.
+    - Alternatively you can use the `bundle-wasm-opt` feature flag to use to bundle the wasm-opt binary in the CLI. Be warned that this causes the installation to be much slower, and also results in much larger wasm files due to outdated wasm-opt version on crates.io.
 
 Install the natrix cli with the following command:
 ```bash
@@ -32,3 +32,11 @@ To run the project, navigate to the project directory and run:
 natrix dev
 ```
 This will start a local server that auto reloads on changes. Try changing the text in `src/main.rs` to see the changes live. 
+
+## Further Reading
+
+* [Components](components.md) - Components are the core of natrix, and are the most important part of the framework.
+* [Html](html.md) - This goes over the [`html_elements`] module and how to use it.
+* [Reactivity](reactivity.md) - This goes over the reactivity system and how to use it.
+    * You dont need to know all the reactivity constructs to get started, but it is recommended to read the first part.
+* [Element](elements.md) - This goes over the [`Element`](element::Element) trait and which std types implement it.

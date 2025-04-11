@@ -5,7 +5,15 @@ multilingual = false
 src = "src"
 title = "Natrix"
 
+[rust]
+edition = "2024"
+
 [output.html.playground]
 runnable = false
 
 [preprocessor.callouts]
+[preprocessor.rustdoc-link]
+manifest-dir = "../natrix"
+after = ["links"]
+cargo-features = ["all"]
+cache-dir = "../target/doc-cache"

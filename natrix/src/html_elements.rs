@@ -21,7 +21,7 @@ use wasm_bindgen::{JsCast, intern};
 
 use crate::callbacks::EventHandler;
 use crate::component::Component;
-use crate::element::Element;
+use crate::element::{Element, generate_fallback_node};
 use crate::events::Event;
 use crate::signal::RenderingState;
 use crate::state::State;
@@ -191,7 +191,7 @@ impl<C: Component> HtmlElement<C> {
     /// # type EmitMessage = NoMessages;
     /// # type ReceiveMessage = NoMessages;
     /// # fn render() -> impl Element<Self> {
-    /// e::button().on::<events::Click>(|ctx: &mut S<Self>, _| {
+    /// e::button().on::<events::Click>(|ctx: E<Self>, _| {
     ///     *ctx.some_value += 1;
     /// })
     /// # }}
@@ -282,9 +282,7 @@ impl<C: Component> Element<C> for HtmlElement<C> {
         let document = get_document();
         let Ok(element) = document.create_element(intern(name)) else {
             debug_assert!(false, "Failed to create element {name}");
-            return web_sys::Comment::new()
-                .unwrap_or_else(wasm_bindgen::JsCast::unchecked_into)
-                .into();
+            return generate_fallback_node();
         };
 
         for child in children {

@@ -12,6 +12,6 @@ fn main() {
 
     #[cfg(not(feature = "panic_hook"))]
     println!(
-        "cargo::warning=`panic_hook` feature disabled, panicing without this feature enabled is instant UB"
+        "cargo::warning=`panic_hook` feature disabled, panicking without this feature enabled is instant UB"
     );
 }

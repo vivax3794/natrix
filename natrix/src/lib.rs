@@ -4,10 +4,10 @@
     clippy::unreachable,
     clippy::unwrap_used,
     clippy::unreachable,
-    clippy::indexing_slicing
+    clippy::indexing_slicing,
+    unsafe_code
 )]
 #![deny(
-    unsafe_code,
     clippy::dbg_macro,
     clippy::expect_used,
     clippy::allow_attributes,
@@ -133,9 +133,10 @@ pub mod prelude {
 
     pub use natrix_macros::{Component, global_css, scoped_css};
 
+    pub use super::callbacks::EventHandler;
     pub use super::component::{C, Component, NoMessages, mount};
     pub use super::element::Element;
-    pub use super::state::{R, S};
+    pub use super::state::{E, R};
     pub use super::{events, guard_option, guard_result, html_elements as e};
 }
 
@@ -144,5 +145,5 @@ pub mod prelude {
 pub mod macro_ref {
     pub use super::component::ComponentBase;
     pub use super::signal::{Signal, SignalMethods, SignalState};
-    pub use super::state::{ComponentData, Guard, S};
+    pub use super::state::{ComponentData, E, Guard, State};
 }

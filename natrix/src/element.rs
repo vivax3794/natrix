@@ -73,10 +73,12 @@ impl<C: Component> Element<C> for Comment {
         _ctx: &mut State<C>,
         _render_state: &mut RenderingState,
     ) -> web_sys::Node {
-        #[expect(clippy::expect_used, reason = "I have no clue how this can fail.")]
-        web_sys::Comment::new()
-            .expect("Failed to make comment")
-            .into()
+        let Ok(node) = web_sys::Comment::new() else {
+            debug_assert!(false, "Failed to create comment node");
+            return generate_fallback_node();
+        };
+
+        node.into()
     }
 }
 
@@ -171,4 +173,15 @@ mod either_element {
             }
         }
     }
+}
+
+/// Attempt to create a comment node.
+/// If this fails (wrongly) convert the error to a comment node.
+/// This allows us to satisfy a non-Result `web_sys::Node` return type.
+/// This conversion should never happen, but if it does, code down the line will simply hit a error
+/// and will ignore it as needed.
+pub(crate) fn generate_fallback_node() -> web_sys::Node {
+    web_sys::Comment::new()
+        .unwrap_or_else(wasm_bindgen::JsCast::unchecked_into)
+        .into()
 }

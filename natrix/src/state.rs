@@ -67,8 +67,8 @@ impl<T: Component> DerefMut for State<T> {
 }
 
 /// A type alias for `State<C::Data>`, should be preferred in closure argument hints.
-/// such as `|ctx: &mut S<Self>| ...`
-pub type S<C> = State<C>;
+/// such as `|ctx: S<Self>| ...`
+pub type E<'c, C> = &'c mut State<C>;
 
 /// A type alias for `RenderCtx<C::Data>`, should be preferred in closure argument hints.
 /// such as `|ctx: R<Self>| ...`
@@ -157,9 +157,16 @@ impl<T: Component> State<T> {
             }
         }
 
-        hooks.sort_unstable_by_key(|hook_key| Some(self.hooks.get(*hook_key)?.1));
+        hooks.sort_by_key(|hook_key| Some(self.hooks.get(*hook_key)?.1));
+
+        let mut prev_hook = None;
         while !hooks.is_empty() {
             for hook_key in std::mem::take(&mut hooks) {
+                if prev_hook == Some(hook_key) {
+                    continue;
+                }
+                prev_hook = Some(hook_key);
+
                 self.run_with_hook_and_self(hook_key, |ctx, hook| {
                     drop_hook_children(ctx, hook);
                     match hook.update(ctx, hook_key) {
@@ -200,41 +207,35 @@ impl<T: Component> State<T> {
     }
 
     /// Spawn the listening task with the given callback
-    pub(crate) fn spawn_listening_task<F, M>(&self, handler: F, mut rx: UnboundedReceiver<M>)
+    pub(crate) fn spawn_listening_task<F, M>(&mut self, handler: F, mut rx: UnboundedReceiver<M>)
     where
         M: 'static,
         F: Fn(&mut Self, M) + 'static,
     {
-        let this = self.weak();
+        let mut this = self.deferred_borrow();
         wasm_bindgen_futures::spawn_local(async move {
             while let Some(messages) = utils::recv_all(&mut rx).await {
-                let Some(this) = this.upgrade() else {
+                let Some(mut this) = this.borrow_mut() else {
                     break;
                 };
-                let mut this = this.borrow_mut();
-                this.clear();
                 for message in messages {
                     handler(&mut this, message);
                 }
-                this.update();
             }
         });
     }
 
     /// Spawn a async task to recv messages from the parent
-    pub(crate) fn spawn_recivier_task(&self, mut rx: UnboundedReceiver<T::ReceiveMessage>) {
-        let this = self.weak();
+    pub(crate) fn spawn_recivier_task(&mut self, mut rx: UnboundedReceiver<T::ReceiveMessage>) {
+        let mut this = self.deferred_borrow();
         wasm_bindgen_futures::spawn_local(async move {
             while let Some(messages) = utils::recv_all(&mut rx).await {
-                let Some(this) = this.upgrade() else {
+                let Some(mut this) = this.borrow_mut() else {
                     break;
                 };
-                let mut this = this.borrow_mut();
-                this.clear();
                 for message in messages {
                     T::handle_message(&mut this, message);
                 }
-                this.update();
             }
         });
     }
@@ -357,6 +358,7 @@ where
 /// This guard ensures that when it is in scope the data it was created for is `Some`
 #[cfg_attr(feature = "nightly", must_not_suspend)]
 #[derive(Clone, Copy)]
+#[must_use]
 pub struct Guard<F> {
     /// The closure for getting the value from a ctx
     getter: F,
@@ -435,7 +437,7 @@ macro_rules! guard_option {
     ($ctx:ident. $($getter:tt)+) => {
         if $ctx.watch(move |ctx| ctx.$($getter)+.is_some()) {
             Some(::natrix::macro_ref::Guard::new(
-                move |ctx: &::natrix::macro_ref::S<Self>| ctx.$($getter)+.expect("Guard used on None value"),
+                move |ctx: &::natrix::macro_ref::State<Self>| ctx.$($getter)+.expect("Guard used on None value"),
             ))
         } else {
             None
@@ -450,11 +452,11 @@ macro_rules! guard_result {
     ($ctx:ident. $($getter:tt)+) => {
         if $ctx.watch(move |ctx| ctx.$($getter)+.is_ok()) {
             Ok(::natrix::macro_ref::Guard::new(
-                move |ctx: &::natrix::macro_ref::S<Self>| ctx.$($getter)+.expect("Ok-Guard used on Err value"),
+                move |ctx: &::natrix::macro_ref::State<Self>| ctx.$($getter)+.expect("Ok-Guard used on Err value"),
             ))
         } else {
             Err(::natrix::macro_ref::Guard::new(
-                move |ctx: &::natrix::macro_ref::S<Self>| ctx.$($getter)+.expect_err("Err-Guard used on Ok value"),
+                move |ctx: &::natrix::macro_ref::State<Self>| ctx.$($getter)+.expect_err("Err-Guard used on Ok value"),
             ))
         }
     };
@@ -467,11 +469,10 @@ impl<F> Guard<F> {
     }
 }
 
-/// Async features
-
 /// A combiend `Weak` and `RefCell` that facilities upgrading and borrowing as a shared
 /// operation
-pub struct AsyncCtx<T: Component> {
+#[must_use]
+pub struct DeferredCtx<T: Component> {
     /// The `Weak<RefCell<T>>` in question
     inner: Weak<RefCell<State<T>>>,
 }
@@ -479,7 +480,7 @@ pub struct AsyncCtx<T: Component> {
 // We put a bound on `'p` so that users are not able to store the upgraded reference (unless
 // they want to use ouroboros themself to store it alongside the weak).
 #[self_referencing]
-struct AsyncRefInner<'p, T: Component> {
+struct DeferredRefInner<'p, T: Component> {
     rc: Rc<RefCell<State<T>>>,
     lifetime: PhantomData<&'p ()>,
     #[borrows(rc)]
@@ -490,18 +491,19 @@ struct AsyncRefInner<'p, T: Component> {
 /// a `RefMut` that also holds a `Rc`.
 /// See the `WeakRefCell::borrow_mut` on drop semantics and safety
 #[cfg_attr(feature = "nightly", must_not_suspend)]
-pub struct AsyncRef<'p, T: Component>(AsyncRefInner<'p, T>);
+#[must_use]
+pub struct DeferredRef<'p, T: Component>(DeferredRefInner<'p, T>);
 
-impl<T: Component> AsyncCtx<T> {
+impl<T: Component> DeferredCtx<T> {
     /// Borrow this `Weak<RefCell<...>>`, this will create a `Rc` for as long as the borrow is
     /// active. Returns `None` if the component was dropped. Its recommended to use the
     /// following construct to safely cancel async tasks:
     /// ```ignore
-    /// let Some(borrow) = ctx.borrow_mut() else {return;};
+    /// let Some(mut borrow) = ctx.borrow_mut() else {return;};
     /// // ...
     /// drop(borrow);
     /// foo().await;
-    /// let Some(borrow) = ctx.borrow_mut() else {return;};
+    /// let Some(mut borrow) = ctx.borrow_mut() else {return;};
     /// // ...
     /// };
     /// ```
@@ -527,35 +529,47 @@ impl<T: Component> AsyncCtx<T> {
     /// The nightly feature flag enables a lint to detect this misuse.
     /// See the [Features]() chapther for details on how to set it up (it requires a bit more
     /// setup than just turning on the feature flag).
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "This happens when we already are in a panic"
+    #[cfg_attr(
+        feature = "panic_hook",
+        expect(
+            clippy::missing_panics_doc,
+            reason = "This happens when we already are in a panic"
+        )
     )]
-    pub fn borrow_mut(&mut self) -> Option<AsyncRef<'_, T>> {
+    pub fn borrow_mut(&mut self) -> Option<DeferredRef<'_, T>> {
         #[cfg(feature = "panic_hook")]
         assert!(!crate::panics::has_panicked());
 
         let rc = self.inner.upgrade()?;
-        let mut borrow = AsyncRefInner::new(rc, PhantomData, |rc| rc.borrow_mut());
+        let borrow = DeferredRefInner::try_new(rc, PhantomData, |rc| rc.try_borrow_mut());
+
+        let Ok(mut borrow) = borrow else {
+            debug_assert!(
+                false,
+                "Deferred state borrowed while already borrowed. This might happen due to holding it across a yield point"
+            );
+            return None;
+        };
+
         borrow.with_reference_mut(|ctx| ctx.clear());
-        Some(AsyncRef(borrow))
+        Some(DeferredRef(borrow))
     }
 }
 
-impl<T: Component> Deref for AsyncRef<'_, T> {
+impl<T: Component> Deref for DeferredRef<'_, T> {
     type Target = State<T>;
 
     fn deref(&self) -> &Self::Target {
         self.0.borrow_reference()
     }
 }
-impl<T: Component> DerefMut for AsyncRef<'_, T> {
+impl<T: Component> DerefMut for DeferredRef<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.with_reference_mut(|cell| &mut **cell)
     }
 }
 
-impl<T: Component> Drop for AsyncRef<'_, T> {
+impl<T: Component> Drop for DeferredRef<'_, T> {
     fn drop(&mut self) {
         self.0.with_reference_mut(|ctx| {
             ctx.update();
@@ -566,17 +580,37 @@ impl<T: Component> Drop for AsyncRef<'_, T> {
 impl<T: Component> State<T> {
     /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
     /// framework assumptions.
-    fn get_async_ctx(&mut self) -> AsyncCtx<T> {
-        AsyncCtx { inner: self.weak() }
+    pub fn deferred_borrow(&mut self) -> DeferredCtx<T> {
+        DeferredCtx { inner: self.weak() }
     }
 
     /// Spawn a async task in the local event loop, which will run on the next possible moment.
     // This is `&mut` to make sure it cant be called in render callbacks.
     pub fn use_async<C, F>(&mut self, func: C)
     where
-        C: FnOnce(AsyncCtx<T>) -> F,
+        C: FnOnce(DeferredCtx<T>) -> F,
         F: Future<Output = ()> + 'static,
     {
-        wasm_bindgen_futures::spawn_local(func(self.get_async_ctx()));
+        wasm_bindgen_futures::spawn_local(func(self.deferred_borrow()));
     }
+}
+
+/// A macro to borrow the state and return it if it is `None`.
+/// This is a convenience macro to avoid having to write the same verbose code in async tasks. (or
+/// other deferred borrow contexts)
+///
+/// ```rust,ignore
+/// // Instead of
+/// let Some(mut borrow) = ctx.borrow_mut() else {return;};
+/// // You can do
+/// let mut borrow = borrow_or_return!(ctx);
+/// ```
+#[macro_export]
+macro_rules! borrow_or_return {
+    ($ctx:ident) => {{
+        let Some(borrow) = $ctx.borrow_mut() else {
+            return;
+        };
+        borrow
+    }};
 }

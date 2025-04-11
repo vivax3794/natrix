@@ -25,6 +25,7 @@ check_docs:
     typos
     cargo test --doc --all-features --workspace 
 
+    cd docs && mdbook build
     rm -rv target/debug/deps/*natrix*
     cargo build -p natrix --all-features
     cd docs && mdbook test -L ../target/debug/deps

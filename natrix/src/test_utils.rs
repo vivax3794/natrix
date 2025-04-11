@@ -16,9 +16,11 @@ const MOUNT_PARENT: &str = "__TESTING_PARENT";
 pub const MOUNT_POINT: &str = "__TESTING_MOUNT_POINT";
 
 /// Mount a component at the test location (creating/resetting it if needed)
+/// # Panics
+/// If the js is in a invalid state or the element is not found
 pub fn mount_test<C: Component>(component: C) {
     setup();
-    mount_at(component, MOUNT_POINT);
+    mount_at(component, MOUNT_POINT).expect("Failed to mount");
 }
 
 /// Setup `MOUNT_POINt` as a valid mount location

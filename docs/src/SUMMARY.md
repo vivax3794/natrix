@@ -2,16 +2,18 @@
 
 [Introduction](README.md)
 [Getting Started](getting-started.md)
+[FAQ](faq.md)
 
 ---
 * [Features](features.md)
 * [Panic Policy](panics.md)
 * [Components](components.md)
+    * [State Less Components](stateless-components.md)
     * [Sub Components](sub-components.md)
     * [Generic Components](generic-components.md)
-    * [State Less Components](stateless-components.md)
     * [Async](async-components.md)
 * [Html](html.md)
+    * [`Elements`](elements.md)
 * [Css](css.md)
 * [Reactivity](reactivity.md)
 * [Testing](testing.md)
@@ -25,5 +27,4 @@
     * [Reactivity](internals-reactivity.md)
     * [Inter-Component Communication](internals-communication.md)
     * [Build System](internals-build.md)
-        * [Css Tree-shaking](internals-build-css.md)
-* [FAQ](faq.md)
+        * [Css](internals-build-css.md)
