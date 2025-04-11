@@ -26,7 +26,7 @@ check_docs:
     cargo test --doc --all-features --workspace 
 
     cd docs && mdbook build
-    rm -rv target/debug/deps/*natrix*
+    rm -r target/debug/deps/*natrix*
     cargo build -p natrix --all-features
     cd docs && mdbook test -L ../target/debug/deps
 
@@ -85,8 +85,14 @@ fmt:
 
 # Open the guide book with a auto reloading server
 [working-directory: './docs']
-book:
+book: 
     mdbook serve --open
+
+book_deps:
+    cargo install mdbook 
+    cargo install mdbook-callouts
+    cargo install mdbookkit --features rustdoc-link
+
 
 # Generate and open public docs
 docs:

@@ -10,7 +10,7 @@ use crate::get_document;
 use crate::html_elements::ToAttribute;
 use crate::signal::{RenderingState, SignalMethods};
 use crate::state::{ComponentData, E, HookKey, State};
-use crate::utils::{SmallAny, debug_expect};
+use crate::utils::SmallAny;
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
 /// associating a component with its reactive state as well as converting to a struct to its
@@ -227,10 +227,10 @@ pub struct Sender<M>(UnboundedSender<M>);
 impl<M> Sender<M> {
     /// Send a message to the component
     pub fn send(&self, msg: M) {
-        debug_expect!(
-            self.0.unbounded_send(msg),
-            "Failed to send message to component"
-        );
+        if self.0.unbounded_send(msg).is_err() {
+            #[cfg(all(feature = "panic_hook", debug_assertions))]
+            web_sys::console::warn_1(&"Failed to send message to component ".into());
+        }
     }
 }
 
