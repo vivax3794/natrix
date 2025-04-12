@@ -16,7 +16,6 @@ notify = "8.0.0"
 tiny_http = "0.12.0"
 oxc = {version="0.63.0", default-features=false, features=["minifier", "codegen"]}
 lightningcss = { version = "1.0.0-alpha.65", default-features = false, features = ["grid", "visitor"] }
-wasm-opt = { version = "0.116.1", optional = true }
 wasmparser = "0.228"
 rustc_version = "0.4.1"
 cargo_metadata = "0.19.2"
@@ -24,6 +23,3 @@ cargo_metadata = "0.19.2"
 [[bin]]
 name = "natrix"
 path = "src/main.rs"
-
-[features]
-bundle-wasm-opt = ["dep:wasm-opt"]

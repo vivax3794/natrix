@@ -328,6 +328,7 @@ fn main() {{
     fs::write(src.join("main.rs"), main_rs)?;
 
     let channel = if nightly { "nightly" } else { "stable" };
+
     let toolchain_toml = format!(
         r#"
         [toolchain]
@@ -703,19 +704,11 @@ fn search_dir_for_wasm(target: &Path, name: &str) -> Result<Option<PathBuf>, any
     Ok(None)
 }
 
-/// Alias to Command for consistent code between `process` and `wasm-opt`
-#[cfg(not(feature = "bundle-wasm-opt"))]
-type Command = std::process::Command;
-
-/// Alias to Command for consistent code between `process` and `wasm-opt`
-#[cfg(feature = "bundle-wasm-opt")]
-type Command = wasm_opt::integration::Command;
-
 /// Optimize the given wasm file
 fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
     let spinner = create_spinner("🔎 Optimize wasm")?;
 
-    let mut command = Command::new("wasm-opt");
+    let mut command = process::Command::new("wasm-opt");
     command
         .arg(wasm_file)
         .arg("-o")
@@ -743,10 +736,6 @@ fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         "-Oz",
     ]);
 
-    #[cfg(feature = "bundle-wasm-opt")]
-    let result = wasm_opt::integration::run_from_command_args(command).is_ok();
-
-    #[cfg(not(feature = "bundle-wasm-opt"))]
     let result = command.status()?.success();
 
     spinner.finish();
