@@ -9,7 +9,7 @@ full: test check check_docs
 test: test_native test_web integration_tests project_gen_test
 
 test_native:
-    cargo +nightly nextest run --all-features --workspace --exclude "integration_tests"
+    cargo +nightly nextest run --all-features -p natrix
 
 [working-directory: './natrix']
 test_web:
@@ -18,8 +18,14 @@ test_web:
 
 check:
     cargo fmt --check
-    cargo +stable hack clippy --each-feature --skip nightly --tests -- -Dwarnings
-    cargo +nightly hack clippy --each-feature --tests -- -Dwarnings
+
+    cargo +stable clippy -p natrix_macros -- -Dwarnings
+    cargo +stable clippy -p natrix_shared -- -Dwarnings
+    cargo +stable clippy -p natrix-cli -- -Dwarnings
+
+    cargo +stable hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --skip nightly --tests -- -Dwarnings
+    cargo +nightly clippy -p natrix --target wasm32-unknown-unknown --all-features --tests -- -Dwarnings
+
 
 check_docs:
     typos
@@ -46,6 +52,9 @@ integration_tests: install_cli
     }
     trap cleanup EXIT
 
+    natrix build
+    natrix build -p dev
+
     chromedriver --port=9999 &
     chrome_pid=$!
     sleep 1
@@ -65,11 +74,9 @@ integration_tests: install_cli
 
 [working-directory: "/tmp"]
 project_gen_test: install_cli
-    rm -rf ./test_project || true
     NATRIX_PATH="{{justfile_directory()}}/natrix" natrix new test_project --stable
     cd test_project && rustup run stable natrix build
 
-    rm -rf ./test_project || true
     NATRIX_PATH="{{justfile_directory()}}/natrix" natrix new test_project
     cd test_project && rustup run nightly natrix build
 
