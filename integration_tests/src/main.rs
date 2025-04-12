@@ -2,6 +2,8 @@ use natrix::prelude::*;
 
 const HELLO_TEXT: &str = "HELLO WORLD, TEST TEST";
 const HELLO_ID: &str = "HELLO";
+const PANIC_ID: &str = "PANIC";
+const BUTTON_ID: &str = "BUTTON";
 
 global_css!("
     h1 {
@@ -50,6 +52,21 @@ impl Component for HelloWorld {
                     .class(HELLO),
             )
             .child(C::new(integration_tests_dependency::DepComp))
+            .child(
+                e::button()
+                    .id(PANIC_ID)
+                    .on::<events::Click>(|_ctx: E<Self>, _| {
+                        panic!("Panic button clicked!");
+                    }),
+            )
+            .child(
+                e::button()
+                    .id(BUTTON_ID)
+                    .on::<events::Click>(|ctx: E<Self>, _| {
+                        *ctx.counter += 1;
+                    })
+                    .text(|ctx: R<Self>| *ctx.counter),
+            )
     }
 }
 
@@ -64,7 +81,7 @@ mod tests {
     use thirtyfour::{By, ChromiumLikeCapabilities, DesiredCapabilities, WebDriver};
     use tokio::time::sleep;
 
-    use crate::{HELLO_ID, HELLO_TEXT};
+    use crate::{BUTTON_ID, HELLO_ID, HELLO_TEXT, PANIC_ID};
 
     async fn create_client() -> WebDriver {
         let mut caps = DesiredCapabilities::chrome();
@@ -144,5 +161,25 @@ mod tests {
             .unwrap();
         let text = element.css_value("height").await.unwrap();
         assert_eq!(text, "600px");
+    }
+
+    #[tokio::test]
+    async fn panic_button() {
+        let client = create_client().await;
+
+        let panic_button = client.find(By::Id(PANIC_ID)).await.unwrap();
+        let button = client.find(By::Id(BUTTON_ID)).await.unwrap();
+
+        button.click().await.unwrap();
+        let text = button.text().await.unwrap();
+        assert_eq!(text, "1");
+
+        panic_button.click().await.unwrap();
+        button.click().await.unwrap();
+        let text = button.text().await.unwrap();
+        assert_eq!(
+            text, "1",
+            "Panic should have prevented further rust execution"
+        );
     }
 }
