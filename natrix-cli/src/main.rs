@@ -864,12 +864,42 @@ fn optimize_css(css_content: &str, wasm_file: &Path) -> Result<String> {
 struct SymbolVisitor {
     /// The collected symbols
     symbols: HashSet<String>,
+    /// Symbols the should always be kept
+    keep: HashSet<String>,
 }
 
 impl<'i> lightningcss::visitor::Visitor<'i> for SymbolVisitor {
     type Error = std::convert::Infallible;
     fn visit_types(&self) -> lightningcss::visitor::VisitTypes {
-        lightningcss::visit_types!(SELECTORS)
+        lightningcss::visit_types!(SELECTORS | RULES)
+    }
+
+    fn visit_rule(
+        &mut self,
+        rule: &mut lightningcss::rules::CssRule<'i>,
+    ) -> std::result::Result<(), Self::Error> {
+        if let lightningcss::rules::CssRule::Unknown(unknown_rule) = rule {
+            if unknown_rule.name == "keep" {
+                let tokens = &unknown_rule.prelude.0;
+                if let Some(token) = tokens.first() {
+                    match token {
+                        lightningcss::properties::custom::TokenOrValue::Token(
+                            lightningcss::properties::custom::Token::Ident(ident),
+                        ) => {
+                            let ident = ident.to_string();
+                            self.keep.insert(ident);
+                        }
+                        lightningcss::properties::custom::TokenOrValue::DashedIdent(ident) => {
+                            let ident = ident.to_string();
+                            self.keep.insert(ident);
+                        }
+                        _ => (),
+                    }
+                }
+                *rule = lightningcss::rules::CssRule::Ignored;
+            }
+        }
+        rule.visit_children(self)
     }
 
     fn visit_selector(
@@ -907,13 +937,14 @@ impl<'i> lightningcss::visitor::Visitor<'i> for SymbolVisitor {
     }
 }
 
-/// Get the symbols in a style sheet
+/// Get the symbols to DCE in a style sheet
 fn get_symbols(stylesheet: &mut lightningcss::stylesheet::StyleSheet) -> HashSet<String> {
     let mut visitor = SymbolVisitor {
         symbols: HashSet::new(),
+        keep: HashSet::new(),
     };
     let _ = stylesheet.visit(&mut visitor);
-    visitor.symbols
+    visitor.symbols.difference(&visitor.keep).cloned().collect()
 }
 
 /// Get all files in the sub folders of `MACRO_OUTPUT_DIR`

@@ -1,3 +1,5 @@
+use std::hint::black_box;
+
 use natrix::prelude::*;
 
 const HELLO_TEXT: &str = "HELLO WORLD, TEST TEST";
@@ -11,6 +13,12 @@ global_css!("
     }
     .hello_world {
         width: 100px;
+    }
+
+    @keep dynamic;
+
+    .dynamic {
+        margin: 100px;
     }
 ");
 
@@ -49,7 +57,8 @@ impl Component for HelloWorld {
                     .text(HELLO_TEXT)
                     .id(HELLO_ID)
                     .class("hello_world")
-                    .class(HELLO),
+                    .class(HELLO)
+                    .class(format!("dyn{}", black_box("amic"))),
             )
             .child(C::new(integration_tests_dependency::DepComp))
             .child(
@@ -181,5 +190,13 @@ mod tests {
             text, "1",
             "Panic should have prevented further rust execution"
         );
+    }
+
+    #[tokio::test]
+    async fn dynamic_class() {
+        let client = create_client().await;
+        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+        let text = element.css_value("margin").await.unwrap();
+        assert_eq!(text, "100px");
     }
 }
