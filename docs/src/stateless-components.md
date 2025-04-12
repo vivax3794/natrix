@@ -1,9 +1,10 @@
 # State-Less Components
 
-Stateless components are, technically speaking, not even a explicit feature of natrix. But just a by product of the design. They are simply functions (or methods, or anything else) that returns `impl Element<...>`, this chapther is here to outline what they usually look like and some common patterns. 
+Stateless components are, technically speaking, not even a explicit feature of natrix. But just a by product of the design. They are simply functions (or methods, or anything else) that returns `impl Element<...>`, this chapther is here to outline what they usually look like and some common patterns.
 
 As mentioned in the component chaphter `Element` is generic over the component state it references, this is true even if it doesnt reference any state.
 This means that your stateless component functions needs to be generic:
+
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
@@ -14,6 +15,7 @@ fn hello<C: Component>() -> impl Element<C> {
 ```
 
 These can then be called from within a component, or even from other stateless components:
+
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
@@ -33,7 +35,9 @@ impl Component for HelloWorld {
 ```
 
 ## Passing arguments
+
 Since they are just functions stateless functions can take arguments like any other function.
+
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
@@ -43,6 +47,7 @@ fn hello<C: Component>(name: String) -> impl Element<C> {
 ```
 
 Now this has a downside, imagine if we wanted `name` to be reactive? we would have to put the entire component call in the reactive closure.
+
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
@@ -75,6 +80,7 @@ fn hello<C: Component>(name: impl Element<C>) -> impl Element<C> {
 ```
 
 Now we can make just the name part reactive
+
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
@@ -94,11 +100,12 @@ impl Component for HelloWorld {
             .child(hello(|ctx: R<Self>| ctx.name.clone()))
     }
 }
-``````
+```
 
 And now only the name part will be recreated when `name` changes.
 
 ## Events
+
 Natrix provides the [`EventHandler`](callbacks::EventHandler) trait which makes taking event handlers in stateless components easier, in reality this trait is only implement for closures of the appropriate signature.
 
 ```rust
@@ -114,6 +121,7 @@ fn fancy_button<C: Component>(
 ```
 
 This can be used like this:
+
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;

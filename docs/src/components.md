@@ -1,11 +1,12 @@
 # Components
 
-[`Component`](component::Component)s are important part of natrix, and are the core of the [reactivity system](reactivity.md). 
+[`Component`](component::Component)s are important part of natrix, and are the core of the [reactivity system](reactivity.md).
 
 > [!NOTE]
 > If you are looking for a way to create a component without any state there is a more light weight alternative in the [Stateless Components](stateless-components.md) section.
 
 ## Basic Components
+
 Components are implemented by using the `Component` derive macro **and** manually implementing the [`Component`](component::Component) trait. This is because the derive macro actually implements the [`ComponentBase`](component::ComponentBase) trait.
 
 Components have 3 required items, [`render`](component::Component::render), [`EmitMessage`](component::Component::EmitMessage) and [`ReceiveMessage`](component::Component::ReceiveMessage).
@@ -36,6 +37,7 @@ impl Component for HelloWorld {
 The `render` function should return a type that implements the [`Element`](element::Element) trait. This is usually done by using the [Html Elements](html.md) or rust types that implement the [`Element`](element::Element) trait. Elements are generic over the component type, hence `impl Element<Self>`, this provides strong type guarantees for reactivity and event handlers without needing to capture signals like in other frameworks.
 
 In contrast to frameworks like React, the `render` function is not called every time the component needs to be updated. Instead, it is only called when the component is mounted. This is because natrix uses a [reactivity system](reactivity.md) that allows fine-grained reactivity.
+
 ## State
 
 Now components with no state are not very useful (well they are, but you should use [Stateless Components](stateless-components.md) instead), so lets add some state to our component. This is done simply by adding fields to the struct.
@@ -88,6 +90,7 @@ impl Component for HelloWorld {
 #     mount(HelloWorld { counter: 0 });
 # }
 ```
+
 We need to specify the argument type of the closure, this is because of limitation in the type inference system. The closures also can return anything that implements the [`Element`](element::Element) trait, so you can use any of the [`Html Elements`](html.md) or any other type that implements the [`Element`](element::Element) trait.
 
 > [!TIP]
@@ -123,7 +126,9 @@ impl Component for HelloWorld {
 ## Defining methods
 
 ### Construction
+
 Construction methods can simple be defined as normal
+
 ```rust,no_run
 # extern crate natrix;
 # use natrix::prelude::*;
@@ -144,13 +149,15 @@ impl MyComponent {
 #         e::div()
 #     }
 # }
-# 
+#
 fn main() {
     mount(MyComponent::new(0));
 }
 ```
 
 ### Methods for `ctx`
+
 The above wont let you define methods that work on `ctx`, this is because `ctx` is actually a different type constructed by the derive macro.
+
 > [!FAILURE]
 > This feature isnt implemented yet

@@ -34,10 +34,13 @@ impl Component for MyParent {
 ```
 
 ## Message Passing
+
 A common requirement is communication between components. This is where the [`EmitMessage`](component::Component::EmitMessage) and [`ReceiveMessage`](component::Component::ReceiveMessage) associated types come in. These are used to declare what type is used for message passing to and from the component. The `NoMessages` type is a enum with no variants (i.e similar to [`Infallible`](std::convert::Infallible)) and is used when you do not need to pass messages.
 
 ### Child to Parent
+
 Define the `EmitMessage` type to the type of the message you will be emitting and then use [`ctx.emit`](state::State::emit), you can then use [`.on`](component::C::on) to listen for the message in the parent component.
+
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
@@ -72,6 +75,7 @@ impl Component for MyParent {
 ```
 
 ### Parent to Child
+
 Similaryly you can use [`ReceiveMessage`](component::Component::ReceiveMessage) to listen for messages from the parent component. You overwrite the default [`handle_message`](component::Component::handle_message) method to handle the message. In the parent you use [`.sender`](component::C::sender) to get a sender for the child component.
 
 ```rust
@@ -110,7 +114,9 @@ impl Component for MyParent {
     }
 }
 ```
+
 As you see this generally requires you to use a `let` binding to split the return of `.sender`. The [`Sender`](component::Sender) is also cloneable.
 
 ### When do messages get processed?
-Messages passing uses async channels internally, this means the messages will be processed once the current components reactivity cycle is finished. This will still run before the next reflow of the browser, and all messages are batched for efficiency. 
+
+Messages passing uses async channels internally, this means the messages will be processed once the current components reactivity cycle is finished. This will still run before the next reflow of the browser, and all messages are batched for efficiency.
