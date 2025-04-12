@@ -14,6 +14,7 @@
 //! # ;
 //! ```
 
+use std::borrow::Cow;
 use std::rc::Weak;
 
 use wasm_bindgen::prelude::Closure;
@@ -161,7 +162,7 @@ pub struct HtmlElement<C: Component, T = ()> {
     /// Potentially dynamic attributes to apply
     attributes: Vec<(&'static str, Box<dyn ToAttribute<C>>)>,
     /// Css classes to apply
-    classes: Vec<&'static str>,
+    classes: Vec<Cow<'static, str>>,
     /// Phantom data to allow for genericity
     phantom: std::marker::PhantomData<T>,
 }
@@ -257,8 +258,8 @@ impl<C: Component, T> HtmlElement<C, T> {
     }
 
     /// Add a class to the element.
-    pub fn class(mut self, class: &'static str) -> Self {
-        self.classes.push(class);
+    pub fn class(mut self, class: impl Into<Cow<'static, str>>) -> Self {
+        self.classes.push(class.into());
         self
     }
 }
@@ -299,7 +300,7 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
         }
         for class in classes {
             debug_expect!(
-                element.class_list().add_1(class),
+                element.class_list().add_1(&class),
                 "Failed to add class {class}"
             );
         }
