@@ -8,7 +8,6 @@ use crate::render_callbacks::{ReactiveAttribute, ReactiveNode, SimpleReactive};
 use crate::signal::RenderingState;
 use crate::state::{RenderCtx, State};
 
-#[diagnostic::do_not_recommend]
 impl<F, C, R> Element<C> for F
 where
     F: Fn(&mut RenderCtx<C>) -> R + 'static,
@@ -26,7 +25,6 @@ where
     }
 }
 
-#[diagnostic::do_not_recommend]
 impl<F, C, R> ToAttribute<C> for F
 where
     F: Fn(&mut RenderCtx<C>) -> R + 'static,
