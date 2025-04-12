@@ -52,6 +52,25 @@ pub trait Element<C: Component>: 'static {
     {
         Box::new(self).render_box(ctx, render_state)
     }
+
+    /// Wrap this element in a `Box`.
+    /// This lets you easially return different element types from the same function.
+    fn into_box(self) -> Box<dyn Element<C>>
+    where
+        Self: Sized,
+    {
+        Box::new(self)
+    }
+}
+
+impl<C: Component> Element<C> for Box<dyn Element<C>> {
+    fn render_box(
+        self: Box<Self>,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+    ) -> web_sys::Node {
+        (*self).render_box(ctx, render_state)
+    }
 }
 
 impl<C: Component> Element<C> for web_sys::Node {
