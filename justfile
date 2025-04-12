@@ -34,7 +34,7 @@ check_docs:
     cd docs && mdbook build
     rm -r target/debug/deps/*natrix*
     cargo build -p natrix --all-features
-    cd docs && mdbook test -L ../target/debug/deps
+    CARGO_PKG_NAME="mdbook_example" cd docs && mdbook test -L ../target/debug/deps
 
 [working-directory: "./integration_tests"]
 integration_tests: install_cli

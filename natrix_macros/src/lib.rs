@@ -213,8 +213,8 @@ pub fn global_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
 fn emit_css(css: String) -> TokenStream {
     let first_use = FIRST_USE_IN_CRATE.fetch_and(false, Ordering::AcqRel);
 
-    #[expect(clippy::expect_used, reason = "This is always set during compilation")]
-    let caller_name = std::env::var("CARGO_PKG_NAME").expect("CARGO_PKG_NAME not set");
+    let caller_name =
+        std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| String::from("unknown-caller"));
 
     let Ok(output_directory) = std::env::var(natrix_shared::MACRO_OUTPUT_ENV) else {
         return quote!();
@@ -309,8 +309,8 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
     let css = syn::parse_macro_input!(css_input as syn::LitStr);
     let css = css.value();
 
-    #[expect(clippy::expect_used, reason = "This is always set during compilation")]
-    let caller_name = std::env::var("CARGO_PKG_NAME").expect("CARGO_PKG_NAME not set");
+    let caller_name =
+        std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| String::from("unknown-caller"));
 
     #[expect(clippy::expect_used, reason = "Pattern should be valid")]
     let styles = lightningcss::stylesheet::StyleSheet::parse(
