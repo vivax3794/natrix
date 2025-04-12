@@ -14,7 +14,6 @@
   - [Generic Components](generic-components.md)
   - [Async](async-components.md)
 - [Html](html.md)
-  - [`Elements`](elements.md)
 - [Css](css.md)
 - [Reactivity](reactivity.md)
 - [Testing](testing.md)
