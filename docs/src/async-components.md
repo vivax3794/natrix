@@ -109,7 +109,7 @@ impl Component for HelloWorld {
         e::button()
             .text(|ctx: R<Self>| *ctx.counter)
             .on::<events::Click>(|ctx: E<Self>, _| {
-                ctx.use_async(async |mut ctx| {
+                ctx.use_async(async |ctx| {
                     {
                         let mut borrow = ctx.borrow_mut()?;
                         *borrow.counter += 1;

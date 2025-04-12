@@ -23,7 +23,7 @@ impl Component for AsyncComponent {
             .id(BUTTON_ID)
             .text(|ctx: R<Self>| *ctx.data)
             .on::<events::Click>(|ctx: E<Self>, _| {
-                ctx.use_async(async |mut ctx| {
+                ctx.use_async(async |ctx| {
                     async_utils::sleep(Duration::from_millis(10)).await;
                     let mut borrow = ctx.borrow_mut()?;
                     *borrow.data += 10;

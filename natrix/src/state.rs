@@ -93,7 +93,7 @@ impl<T: Component> State<T> {
 
     /// Get a weak reference to this state
     #[expect(clippy::expect_used, reason = "This is always set in the `new` method")]
-    pub(crate) fn weak(&self) -> Weak<RefCell<Self>> {
+    fn weak(&self) -> Weak<RefCell<Self>> {
         self.this.as_ref().expect("Weak not set").clone()
     }
 
@@ -212,7 +212,7 @@ impl<T: Component> State<T> {
         M: 'static,
         F: Fn(&mut Self, M) + 'static,
     {
-        let mut this = self.deferred_borrow();
+        let this = self.deferred_borrow();
         wasm_bindgen_futures::spawn_local(async move {
             while let Some(messages) = utils::recv_all(&mut rx).await {
                 let Some(mut this) = this.borrow_mut() else {
@@ -227,7 +227,7 @@ impl<T: Component> State<T> {
 
     /// Spawn a async task to recv messages from the parent
     pub(crate) fn spawn_recivier_task(&mut self, mut rx: UnboundedReceiver<T::ReceiveMessage>) {
-        let mut this = self.deferred_borrow();
+        let this = self.deferred_borrow();
         wasm_bindgen_futures::spawn_local(async move {
             while let Some(messages) = utils::recv_all(&mut rx).await {
                 let Some(mut this) = this.borrow_mut() else {
@@ -536,7 +536,8 @@ impl<T: Component> DeferredCtx<T> {
             reason = "This happens when we already are in a panic"
         )
     )]
-    pub fn borrow_mut(&mut self) -> Option<DeferredRef<'_, T>> {
+    #[must_use]
+    pub fn borrow_mut(&self) -> Option<DeferredRef<'_, T>> {
         #[cfg(feature = "panic_hook")]
         assert!(!crate::panics::has_panicked());
 

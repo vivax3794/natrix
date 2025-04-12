@@ -15,7 +15,6 @@
 //! ```
 
 use std::borrow::Cow;
-use std::rc::Weak;
 
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, intern};
@@ -25,7 +24,7 @@ use crate::component::Component;
 use crate::element::{Element, generate_fallback_node};
 use crate::events::Event;
 use crate::signal::RenderingState;
-use crate::state::State;
+use crate::state::{DeferredCtx, State};
 use crate::utils::debug_expect;
 use crate::{get_document, type_macros};
 
@@ -290,9 +289,14 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
             debug_expect!(element.append_child(&child), "Failed to append child");
         }
 
-        let ctx_weak = ctx.weak();
         for (event, function) in events {
-            create_event_handler(&element, event, function, ctx_weak.clone(), render_state);
+            create_event_handler(
+                &element,
+                event,
+                function,
+                ctx.deferred_borrow(),
+                render_state,
+            );
         }
 
         for (key, value) in attributes {
@@ -315,20 +319,19 @@ fn create_event_handler<C: Component>(
     element: &web_sys::Element,
     event: &str,
     function: Box<dyn Fn(&mut State<C>, web_sys::Event)>,
-    ctx_weak: Weak<std::cell::RefCell<State<C>>>,
+    ctx_weak: DeferredCtx<C>,
     render_state: &mut RenderingState<'_>,
 ) {
     let callback: Box<dyn Fn(web_sys::Event) + 'static> = Box::new(move |event| {
         crate::return_if_panic!();
 
-        let Some(ctx) = ctx_weak.upgrade() else {
+        let Some(mut ctx) = ctx_weak.borrow_mut() else {
             debug_assert!(
                 false,
                 "Component dropped without event handlers being cleaned up"
             );
             return;
         };
-        let mut ctx = ctx.borrow_mut();
 
         ctx.clear();
         function(&mut ctx, event);
