@@ -489,7 +489,7 @@ struct DeferredRefInner<'p, T: Component> {
 }
 
 /// a `RefMut` that also holds a `Rc`.
-/// See the `WeakRefCell::borrow_mut` on drop semantics and safety
+/// See the `DeferredCtx::borrow_mut` on drop semantics and safety
 #[cfg_attr(feature = "nightly", must_not_suspend)]
 #[must_use]
 pub struct DeferredRef<'p, T: Component>(DeferredRefInner<'p, T>);
@@ -589,28 +589,13 @@ impl<T: Component> State<T> {
     pub fn use_async<C, F>(&mut self, func: C)
     where
         C: FnOnce(DeferredCtx<T>) -> F,
-        F: Future<Output = ()> + 'static,
+        F: Future<Output = Option<()>> + 'static,
     {
-        wasm_bindgen_futures::spawn_local(func(self.deferred_borrow()));
-    }
-}
+        let deferred = self.deferred_borrow();
+        let future = func(deferred);
 
-/// A macro to borrow the state and return it if it is `None`.
-/// This is a convenience macro to avoid having to write the same verbose code in async tasks. (or
-/// other deferred borrow contexts)
-///
-/// ```rust,ignore
-/// // Instead of
-/// let Some(mut borrow) = ctx.borrow_mut() else {return;};
-/// // You can do
-/// let mut borrow = borrow_or_return!(ctx);
-/// ```
-#[macro_export]
-macro_rules! borrow_or_return {
-    ($ctx:ident) => {{
-        let Some(borrow) = $ctx.borrow_mut() else {
-            return;
-        };
-        borrow
-    }};
+        wasm_bindgen_futures::spawn_local(async {
+            let _ = future.await;
+        });
+    }
 }
