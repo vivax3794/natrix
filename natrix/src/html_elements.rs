@@ -7,7 +7,7 @@
 //! # Example
 //! ```rust
 //! # use natrix::prelude::*;
-//! # let _: e::HtmlElement<()> =
+//! # let _: e::HtmlElement<(), _> =
 //! e::div()
 //!     .child(e::button().text("Click me"))
 //!     .child(e::h1().text("Wow!"))
@@ -151,7 +151,7 @@ impl<C: Component, T: ToAttribute<C>, E: ToAttribute<C>> ToAttribute<C> for Resu
 
 /// A Generic html node with a given name.
 #[must_use = "Web elements are useless if not rendered"]
-pub struct HtmlElement<C: Component> {
+pub struct HtmlElement<C: Component, T = ()> {
     /// The name of the tag
     tag: &'static str,
     /// List of child elements
@@ -162,9 +162,11 @@ pub struct HtmlElement<C: Component> {
     attributes: Vec<(&'static str, Box<dyn ToAttribute<C>>)>,
     /// Css classes to apply
     classes: Vec<&'static str>,
+    /// Phantom data to allow for genericity
+    phantom: std::marker::PhantomData<T>,
 }
 
-impl<C: Component> HtmlElement<C> {
+impl<C: Component, T> HtmlElement<C, T> {
     /// Create a new html element with the specific tag
     ///
     /// All non-deprecated html elements have a helper function in this module
@@ -175,6 +177,7 @@ impl<C: Component> HtmlElement<C> {
             children: Vec::new(),
             attributes: Vec::new(),
             classes: Vec::new(),
+            phantom: std::marker::PhantomData,
         }
     }
 
@@ -253,11 +256,6 @@ impl<C: Component> HtmlElement<C> {
         self
     }
 
-    /// Shorthand for `.attr("id", ...)` with a specific ID.
-    pub fn id(self, id: &'static str) -> Self {
-        self.attr("id", id)
-    }
-
     /// Add a class to the element.
     pub fn class(mut self, class: &'static str) -> Self {
         self.classes.push(class);
@@ -265,7 +263,7 @@ impl<C: Component> HtmlElement<C> {
     }
 }
 
-impl<C: Component> Element<C> for HtmlElement<C> {
+impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
@@ -277,6 +275,7 @@ impl<C: Component> Element<C> for HtmlElement<C> {
             children,
             attributes,
             classes,
+            phantom: _,
         } = *self;
 
         let document = get_document();
@@ -350,12 +349,49 @@ fn create_event_handler<C: Component>(
 macro_rules! elements {
     ($($name:ident),*) => {
         $(
-            // Note to self: Do not put every possible html tag inline in your docs
-            #[doc = concat!("`<", stringify!($name), ">`")]
-            pub fn $name<C: Component>() -> HtmlElement<C> {
-                HtmlElement::new(stringify!($name))
+            paste::paste! {
+                #[doc(hidden)]
+                #[expect(non_camel_case_types, reason="We dont want to bother pulling in a case fold")]
+                pub struct [< _$name >];
+
+                #[doc = concat!("`<", stringify!($name), ">`")]
+                pub fn $name<C: Component>() -> HtmlElement<C, [< _$name >]> {
+                    HtmlElement::new(stringify!($name))
+                }
             }
         )*
+    };
+}
+
+/// A macro to define `attr` helpers for the the various elements
+macro_rules! attr_helpers {
+    ($($tag:ident => $($attr:ident),+;)*) => {
+        $(
+            paste::paste! {
+                impl<C: Component> HtmlElement<C, [< _$tag >]> {
+                    $(
+                        #[doc = concat!("Set the `", stringify!($attr), "` attribute")]
+                        pub fn $attr(self, value: impl ToAttribute<C>) -> Self {
+                            self.attr(stringify!($attr), value)
+                        }
+                    )+
+                }
+            }
+        )*
+    };
+}
+
+/// Generate a `ToAttribute` implementation for the global attributes
+macro_rules! global_attrs {
+    ($($attr:ident),*) => {
+        impl<C: Component, T> HtmlElement<C, T> {
+            $(
+                #[doc = concat!("Set the `", stringify!($attr), "` attribute")]
+                pub fn $attr(self, value: impl ToAttribute<C>) -> Self {
+                    self.attr(stringify!($attr), value)
+                }
+            )*
+        }
     };
 }
 
@@ -373,4 +409,44 @@ del, ins,
 caption, col, colgroup, table, tbody, td, tfoot, th, thead, tr,
 button, datalist, fieldset, form, input, label, legend, meter, optgroup, option, output, progress, select, textarea,
 details, dialog, summary
+}
+
+attr_helpers! {
+    a => href, target, rel, download, hreflang, referrerpolicy;
+    audio => autoplay, controls, muted, preload, src;
+    button => disabled, form, formaction, formenctype, formmethod, formnovalidate, formtarget, name, value;
+    canvas => height, width;
+    col => span;
+    colgroup => span;
+    details => open;
+    embed => height, src, width;
+    fieldset => disabled, form;
+    form => acceptcharset, action, autocomplete, enctype, method, name, novalidate, target;
+    iframe => allow, allowfullscreen, allowpaymentrequest, height, loading, name, referrerpolicy, sandbox, src, width;
+    img => alt, crossorigin, decoding, height, ismap, loading, referrerpolicy, sizes, src, srcset, usemap, width;
+    input => accept, alt, autocomplete, checked, dirname, disabled, form, formaction, formenctype, formmethod, formnovalidate, formtarget, height, list, max, maxlength, min, minlength, multiple, name, pattern, placeholder, readonly, required, size, src, step, value;
+    li => value;
+    map => name;
+    meter => form, high, low, max, min, optimum, value;
+    object => data, form, height, name, usemap, width;
+    ol => reversed, start;
+    optgroup => disabled, label;
+    option => disabled, label, selected, value;
+    picture => srcset;
+    progress => max, value;
+    script => crossorigin, defer, integrity, nomodule, referrerpolicy, src;
+    select => autocomplete, disabled, form, multiple, name, required, size;
+    source => media, sizes, src, srcset;
+    summary => open;
+    table => summary;
+    textarea => autocomplete, cols, dirname, disabled, form, maxlength, minlength, name, placeholder, readonly, required, rows, wrap;
+    time => datetime;
+    track => default, kind, label, src, srclang;
+    video => autoplay, controls, crossorigin, height, muted, playsinline, poster, preload, src, width;
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes
+global_attrs! {
+    autocapitalize, autofocus, enterkeyhint, inert, inputmode, nonce, role, writingsuggestions,
+    accesskey, contenteditable, contextmenu, dir, draggable, dropzone, hidden, id, lang, spellcheck, style, tabindex, title, translate
 }
