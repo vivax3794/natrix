@@ -116,16 +116,6 @@ e::div()
 ```
 
 Attributes can be set by anything that implements the [`ToAttribute`](html_elements::ToAttribute) trait, this includes numberics, [`Option`](std::option::Option), and [`bool`](std::primitive::bool), and others.
-
-| Value         | Description         |
-| ------------- | ------------------- |
-| `"hello"`     | `attr="hello"`      |
-| `1`           | `attr="1"`          |
-| `true`        | `attr=""`           |
-| `false`       | _attribute removed_ |
-| `Some("foo")` | `attr="foo"`        |
-| `None`        | _attribute removed_ |
-
 Attributes can also be reactive as closures implement the [`ToAttribute`](html_elements::ToAttribute) trait.
 
 ```rust
