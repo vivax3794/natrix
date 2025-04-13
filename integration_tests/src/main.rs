@@ -1,11 +1,13 @@
 use std::hint::black_box;
 
 use natrix::prelude::*;
+mod reload_tests;
 
 const HELLO_TEXT: &str = "HELLO WORLD, TEST TEST";
 const HELLO_ID: &str = "HELLO";
 const PANIC_ID: &str = "PANIC";
 const BUTTON_ID: &str = "BUTTON";
+const RELOAD_ID: &str = "RELOAD";
 
 global_css!("
     h1 {
@@ -76,6 +78,7 @@ impl Component for HelloWorld {
                     })
                     .text(|ctx: R<Self>| *ctx.counter),
             )
+            .child(e::div().id(RELOAD_ID).text(reload_tests::VALUE))
     }
 }
 
@@ -85,12 +88,12 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
     use thirtyfour::{By, ChromiumLikeCapabilities, DesiredCapabilities, WebDriver};
     use tokio::time::sleep;
 
-    use crate::{BUTTON_ID, HELLO_ID, HELLO_TEXT, PANIC_ID};
+    use crate::{BUTTON_ID, HELLO_ID, HELLO_TEXT, PANIC_ID, RELOAD_ID, reload_tests};
 
     async fn create_client() -> WebDriver {
         let mut caps = DesiredCapabilities::chrome();
@@ -99,11 +102,27 @@ mod tests {
             .await
             .expect("Failed to connect to chrome driver");
 
+        let start = Instant::now();
         loop {
             let res = driver.get("http://localhost:8000").await;
             sleep(Duration::from_millis(100)).await;
             if res.is_ok() {
                 break;
+            }
+            if start.elapsed().as_secs() > 5 {
+                panic!("Loading took too long");
+            }
+        }
+
+        let start = Instant::now();
+        loop {
+            let element = driver.find(By::Id(HELLO_ID)).await;
+            sleep(Duration::from_millis(100)).await;
+            if element.is_ok() {
+                break;
+            }
+            if start.elapsed().as_secs() > 5 {
+                panic!("Loading took too long");
             }
         }
 
@@ -198,5 +217,58 @@ mod tests {
         let element = client.find(By::Id(HELLO_ID)).await.unwrap();
         let text = element.css_value("margin").await.unwrap();
         assert_eq!(text, "100px");
+    }
+
+    #[tokio::test]
+    async fn reload() {
+        let client = create_client().await;
+        let element = client.find(By::Id(RELOAD_ID)).await.unwrap();
+
+        let text = element.text().await.unwrap();
+        assert_eq!(text, reload_tests::VALUE);
+
+        std::fs::write(
+            "src/reload_tests.rs",
+            "pub const VALUE: &str = \"I AM CHANGED\";\n",
+        )
+        .unwrap();
+
+        // Wait for the file to be reloaded
+
+        let start = Instant::now();
+        loop {
+            sleep(Duration::from_millis(100)).await;
+            if let Ok(element) = client.find(By::Id(RELOAD_ID)).await {
+                let text = element.text().await.unwrap();
+                if text == "I AM CHANGED" {
+                    break;
+                }
+            }
+
+            if start.elapsed().as_secs() > 5 {
+                panic!("Reloading took too long");
+            }
+        }
+
+        // Reset the file to its original state
+        std::fs::write(
+            "src/reload_tests.rs",
+            format!("pub const VALUE: &str = \"{}\";\n", reload_tests::VALUE),
+        )
+        .unwrap();
+
+        let start = Instant::now();
+        loop {
+            sleep(Duration::from_millis(100)).await;
+            if let Ok(element) = client.find(By::Id(RELOAD_ID)).await {
+                let text = element.text().await.unwrap();
+                if text == reload_tests::VALUE {
+                    break;
+                }
+            }
+            if start.elapsed().as_secs() > 5 {
+                panic!("Reloading took too long");
+            }
+        }
     }
 }
