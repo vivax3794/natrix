@@ -21,8 +21,10 @@
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::io::{BufRead, BufReader, Read};
+use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{fs, process, thread};
 
@@ -107,7 +109,8 @@ struct BuildConfig {
     /// Location for the temp dir
     temp_dir: PathBuf,
     /// Do live reload
-    live_reload: bool,
+    /// The Some value is the port to use
+    live_reload: Option<u16>,
 }
 
 impl BuildConfigArgs {
@@ -118,7 +121,7 @@ impl BuildConfigArgs {
             profile,
             dist: self.dist.unwrap_or_else(|| PathBuf::from("./dist")),
             temp_dir: find_target_natrix(profile)?,
-            live_reload: false,
+            live_reload: None,
         })
     }
 
@@ -133,11 +136,23 @@ impl BuildConfigArgs {
             target.join("dist")
         };
 
+        let live_reload = if let Ok(port) = get_free_port(9000) {
+            Some(port)
+        } else {
+            println!(
+                "{}",
+                "No free port found for live reload, disabling it"
+                    .red()
+                    .bold()
+            );
+            None
+        };
+
         Ok(BuildConfig {
             profile,
             dist,
             temp_dir: target,
-            live_reload: true,
+            live_reload,
         })
     }
 }
@@ -356,7 +371,11 @@ fn do_dev(config: BuildConfigArgs) -> Result<()> {
     }
 
     let dist = config.dist.clone();
-    thread::spawn(|| spawn_server(dist, rx_reload));
+    thread::spawn(|| spawn_server(dist));
+
+    if let Some(port) = config.live_reload {
+        thread::spawn(move || spawn_websocket(port, rx_reload));
+    }
 
     loop {
         let event = rx_notify.recv()??;
@@ -372,39 +391,78 @@ fn do_dev(config: BuildConfigArgs) -> Result<()> {
     }
 }
 
-/// Spawn a dev server for doing reloading
+/// Spawn a websocket server to send reload signals
 #[expect(
     clippy::expect_used,
     clippy::needless_pass_by_value,
     reason = "This is running in a thread"
 )]
-fn spawn_server(folder: PathBuf, reload_signal: Receiver<()>) {
-    let server = Server::http("0.0.0.0:8000").expect("Failed to start server");
+fn spawn_websocket(port: u16, reload_signal: Receiver<()>) {
+    let server = TcpListener::bind(("127.0.1", port)).expect("Failed to bind websocket");
+    let clients = Arc::new(Mutex::new(Vec::new()));
+
+    let clients_2 = clients.clone();
+    thread::spawn(move || {
+        for stream in server.incoming() {
+            let stream = stream.expect("Failed to accept connection");
+            let ws = tungstenite::accept(stream).expect("Failed to accept websocket");
+            let mut clients = clients_2.lock().expect("Mutex gone");
+            clients.push(ws);
+        }
+    });
+
+    loop {
+        if let Ok(()) = reload_signal.recv() {
+            let mut clients = clients.lock().expect("Mutex gone");
+            for mut client in clients.drain(..) {
+                let _ = client.write(tungstenite::Message::from("RELOAD NOW PLS"));
+                client.flush().expect("Failed to flush");
+            }
+        }
+    }
+}
+
+/// Find a free port
+fn get_free_port(mut preferred: u16) -> Result<u16, &'static str> {
+    loop {
+        if TcpListener::bind(("127.0.0.1", preferred)).is_ok() {
+            return Ok(preferred);
+        }
+        if let Some(new_port) = preferred.checked_add(1) {
+            preferred = new_port;
+        } else {
+            return Err("No free port found");
+        }
+    }
+}
+
+/// Spawn a dev server for serving files
+#[expect(
+    clippy::expect_used,
+    clippy::needless_pass_by_value,
+    reason = "This is running in a thread"
+)]
+fn spawn_server(folder: PathBuf) {
+    let server = Server::http((
+        "127.0.0.1",
+        get_free_port(8000).expect("Failed to find free port for server"),
+    ))
+    .expect("Failed to start server");
+    let port = server
+        .server_addr()
+        .to_ip()
+        .expect("Failed to get ip")
+        .port();
     println!(
-        "{}",
-        "🚀 Dev server running at http://localhost:8000".bright_green()
+        "{}{}",
+        "🚀 Dev server running at http://localhost:".green(),
+        port.to_string().bright_red()
     );
 
-    let mut should_reload = false;
-
     for request in server.incoming_requests() {
-        if reload_signal.try_recv().is_ok() {
-            should_reload = true;
-        }
-
         let url = request.url();
         let path = if url == "/" {
             folder.join("index.html")
-        } else if url == "/RELOAD" {
-            if should_reload {
-                let response = Response::from_string("RELOAD NOW");
-                let _ = request.respond(response);
-                should_reload = false;
-                continue;
-            }
-            let response = Response::from_string("NO RELOAD").with_status_code(404);
-            let _ = request.respond(response);
-            continue;
         } else {
             folder.join(url.strip_prefix("/").unwrap_or(url))
         };
@@ -495,26 +553,17 @@ fn generate_html(config: &BuildConfig, js_file: &Path) -> Result<()> {
         .ok_or(anyhow!("Js File name not found"))?
         .to_string_lossy();
 
-    let js_reload = if config.live_reload {
-        r#"
-    function check_reload() {
-        fetch("./RELOAD")
-            .then(
-                (resp) => {
-                    if (resp.ok) {
-                        location.reload();
-                    }
-                    else  {
-                        setTimeout(check_reload, 500);
-                    }
-                }
-            )
-    }
-    check_reload();
+    let js_reload = if let Some(port) = config.live_reload {
+        format!(
+            r#"
+            const reload_ws = new WebSocket("ws://localhost:{port}");
+            reload_ws.onmessage = (event) => {{
+                location.reload();
+            }};
             "#
-        .trim()
+        )
     } else {
-        ""
+        String::new()
     };
 
     let content = format!(

@@ -3,7 +3,7 @@ use std::hint::black_box;
 use natrix::prelude::*;
 mod reload_tests;
 
-const HELLO_TEXT: &str = "HELLO WORLD, TEST TEST";
+const HELLO_TEXT: &str = "HELLO WORLD, TEST TEST!";
 const HELLO_ID: &str = "HELLO";
 const PANIC_ID: &str = "PANIC";
 const BUTTON_ID: &str = "BUTTON";
