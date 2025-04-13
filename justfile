@@ -10,7 +10,7 @@ default: test_native test_web
 full: test check check_docs
 
 # Run the full set of tests
-test: test_native test_web integration_tests project_gen_test
+test: test_native test_web integration_tests test_css_tree_shaking project_gen_test
 
 # Run tests that are not dependent on the web
 test_native:
@@ -82,6 +82,18 @@ integration_tests: install_cli
     sleep 1
 
     cargo nextest run -j 1
+
+# Check that css tree-shaking works
+[working-directory: "./integration_tests"]
+test_css_tree_shaking:
+    natrix build -p dev
+    grep "I_amNotUsed" dist/styles.css
+
+    natrix build -p release
+    ! grep "I_amNotUsed" dist/styles.css
+
+
+
 
 # Run the project generation tests
 # These will use `natrix new` to create a new project and then build it
