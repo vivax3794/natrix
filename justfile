@@ -41,7 +41,8 @@ check_docs:
 
     cd docs && mdbook build
     rm -r target/debug/deps/*natrix*
-    cargo build -p natrix --all-features
+    rm -r target/debug/deps/*wasm_bindgen_test*
+    cargo build -p natrix --all-features --tests
     CARGO_PKG_NAME="mdbook_example" cd docs && mdbook test -L ../target/debug/deps
 
 # Run the integration tests

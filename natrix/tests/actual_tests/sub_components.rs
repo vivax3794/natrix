@@ -119,6 +119,9 @@ async fn parent_to_child() {
     assert_eq!(double.text_content(), Some("0".to_owned()));
 
     add_button.click();
+    assert_eq!(button.text_content(), Some("0".to_owned()));
+    assert_eq!(double.text_content(), Some("0".to_owned()));
+
     async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("10".to_owned()));
     assert_eq!(double.text_content(), Some("20".to_owned()));
