@@ -44,4 +44,3 @@ This will start a local server that auto reloads on changes. Try changing the te
 
 - [Components](components.md) - Components are the core of natrix, and are the most important part of the framework.
 - [Html](html.md) - This goes over the [`html_elements`] module and how to use it.
-- [Element](elements.md) - This goes over the [`Element`](element::Element) trait and which std types implement it.

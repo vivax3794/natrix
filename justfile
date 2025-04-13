@@ -1,6 +1,5 @@
 alias c := check
 alias t := test
-alias p := publish
 alias f := full
 
 # Run the default set of quick tests
@@ -85,7 +84,7 @@ integration_tests: install_cli
 
 # Check that css tree-shaking works
 [working-directory: "./integration_tests"]
-test_css_tree_shaking:
+test_css_tree_shaking: install_cli
     natrix build -p dev
     grep "I_amNotUsed" dist/styles.css
 
@@ -110,10 +109,6 @@ project_gen_test: install_cli
 install_cli:
     cargo install --path natrix-cli --profile dev --frozen
 
-# Publish the crate to crates.io
-publish: full
-    cargo publish -Z package-workspace -p natrix_shared -p natrix_macros -p natrix-cli -p natrix
-
 # Open the guide book with a auto reloading server
 [working-directory: './docs']
 book: 
@@ -121,10 +116,33 @@ book:
 
 # Install the book dependencies
 book_deps:
-    cargo install mdbook 
-    cargo install mdbook-callouts
-    cargo install mdbookkit --features rustdoc-link
+    command -v mdbook || cargo install mdbook
+    command -v mdbook-callouts || cargo install mdbook-callouts
+    command -v mdbook-rustdoc-link || cargo install mdbookkit --features rustdoc-link
 
+# Install all dev tool dependencies
+dev_deps: book_deps
+    command -v typos || cargo install typos-cli
+    command -v cargo-hack || cargo install cargo-hack
+    command -v cargo-nextest || cargo install cargo-nextest
+    command -v wasm-pack || cargo install wasm-pack
+
+# Check for the presence of all required system dependencies
+# That there is no cross-platform way to install
+health_check:
+    command -v chromedriver || (echo "chromedriver not found, required for integration tests" && exit 1)
+    command -v wasm-opt || (echo "wasm-opt not found, required for integration tests" && exit 1)
+
+    # These do have cross-platform ways to install
+    # But we check for them here to make sure they are installed
+    command -v wasm-pack || (echo "wasm-pack not found, required for unit tests" && exit 1)
+    command -v cargo-nextest || (echo "cargo-nextest not found, required for testing" && exit 1)
+    command -v cargo-hack || (echo "cargo-hack not found, required for linting" && exit 1)
+    command -v typos || (echo "cargo-typos not found, required for linting" && exit 1)
+    command -v mdbook || (echo "mdbook not found, required for documentation" && exit 1)
+    command -v mdbook-callouts || (echo "mdbook-callouts not found, required for documentation" && exit 1)
+    command -v mdbook-rustdoc-link || (echo "mdbook-rustdoc-link not found, required for documentation" && exit 1)
+    command -v wasm-bindgen || (echo "wasm-bindgen not found, required for building wasm" && exit 1)
 
 # Generate and open public docs
 docs:
