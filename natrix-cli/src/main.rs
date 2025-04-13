@@ -215,11 +215,12 @@ fn generate_project(name: &str, stable: bool) -> std::result::Result<(), anyhow:
     let natrix_version = env!("CARGO_PKG_VERSION");
 
     let mut natrix_table = format!(r#"version = "{natrix_version}""#);
-    if nightly {
-        natrix_table = format!(r#"{natrix_table}, features = ["nightly"]"#);
-    }
     if let Ok(path) = std::env::var("NATRIX_PATH") {
         natrix_table = format!(r#"{natrix_table}, path = "{path}""#);
+    }
+    let natrix_test_table = format!(r#"natrix = {{{natrix_table}, features=["test_utils"]}}"#);
+    if nightly {
+        natrix_table = format!(r#"{natrix_table}, features = ["nightly"]"#);
     }
 
     let natrix_decl = format!("natrix = {{ {natrix_table} }}");
@@ -234,6 +235,10 @@ edition = "2024"
 
 [dependencies]
 {natrix_decl}
+
+[dev-dependencies]
+{natrix_test_table}
+wasm-bindgen-test = "0.3.50"
 
 [profile.release]
 opt-level = "z"
@@ -329,12 +334,29 @@ struct HelloWorld;
 impl Component for HelloWorld {{
     {nightly_associated_types_are_optional}
     fn render() -> impl Element<Self> {{
-        e::h1().text("Hello {name}").class(css::HELLO_WORLD)
+        e::h1().text("Hello {name}").class(css::HELLO_WORLD).id("HELLO")
     }}
 }}
 
 fn main() {{
     mount(HelloWorld);
+}}
+
+#[cfg(test)]
+mod tests {{
+    use super::*;
+    use natrix::test_utils;
+
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen_test]
+    fn test() {{
+        test_utils::mount_test(HelloWorld);
+        let element = test_utils::get("HELLO");
+        assert_eq!(element.text_content(), Some("Hello {name}".to_string()));
+    }}
 }}
 "#
     );

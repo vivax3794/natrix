@@ -100,9 +100,11 @@ test_css_tree_shaking: install_cli
 project_gen_test: install_cli
     NATRIX_PATH="{{justfile_directory()}}/natrix" natrix new test_project --stable
     cd test_project && rustup run stable natrix build
+    cd test_project && rustup run stable wasm-pack test --headless --chrome
 
     NATRIX_PATH="{{justfile_directory()}}/natrix" natrix new test_project
     cd test_project && rustup run nightly natrix build
+    cd test_project && rustup run nightly wasm-pack test --headless --chrome
 
 # Install the CLI for use in tests
 # This installs it in debug mode and should *not* be used for actually installing
