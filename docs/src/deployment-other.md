@@ -1,1 +1,9 @@
 # Usage in other frameworks
+
+The [`mount_at`](component::mount_at) function can be used to mount a natrix component at a custom location.
+This function will return a [`RenderResult`](component::RenderResult) that should be kept alive until the component is unmounted.
+And ideally dropped when the component is unmounted.
+
+> [!IMPORTANT]
+> Features that depend on the natrix build pipeline will not work unless the application is built with `natrix build`.
+> If you do not wish to build the final application with natrix, you can use the `natrix build` command to build the application and then copy files such as `styles.css` from natrixses `dist` folder to your application.

@@ -5,6 +5,7 @@
 [FAQ](faq.md)
 
 ---
+# Natrix
 
 - [Features](features.md)
 - [Panic Policy](panics.md)
@@ -19,10 +20,11 @@
 - [Testing](testing.md)
 - [Deployment](deployment.md)
   - [Library](deployment-library.md)
-  - [Deployment with Trunk](deployment-trunk.md)
   - [Usage in other frameworks](deployment-other.md)
 
----
+--- 
+
+# Contributing To Natrix
 
 - [Internals](internals.md)
   - [Reactivity](internals-reactivity.md)

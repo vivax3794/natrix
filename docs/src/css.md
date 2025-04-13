@@ -42,6 +42,9 @@ global_css!("
 
 Scoped css is emitted using the `scoped_css!` macro, which takes a string literal. This uses [Css Modules](https://lightningcss.dev/css-modules.html) to generate unique class/id/variable names for each invocation at compile time. it then emits the transformed css to the build system. and expands to a set of constants mapping the initial name to the mangled one.
 
+> [!TIP]
+> Features such as the `:global` selector are supported as described in the [css modules documentation](https://lightningcss.dev/css-modules.html#global).
+
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
@@ -76,7 +79,7 @@ Which can then be used in a [`.class`](html_elements::HtmlElement::class) call.
 # use natrix::prelude::*;
 mod css {
     use natrix::prelude::scoped_css;
-    scoped_css!("
+scoped_css!("
         .my-class {
             background-color: red;
         }
