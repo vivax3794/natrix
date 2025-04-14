@@ -21,7 +21,7 @@ jobs:
         uses: cargo-bins/cargo-binstall@v1.12.3
 
       - name: Install just
-        run: cargo bininstall just
+        run: cargo binstall just
 
       - name: Install mdBook
         run: just book_deps
