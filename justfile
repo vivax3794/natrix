@@ -134,7 +134,7 @@ homepage: install_cli
 book_deps:
     command -v mdbook || cargo binstall mdbook
     command -v mdbook-callouts || cargo binstall mdbook-callouts
-    command -v mdbook-rustdoc-link || cargo binstall mdbookkit --features rustdoc-link
+    command -v mdbook-rustdoc-link || cargo install mdbookkit --features rustdoc-link
 
 # Install all dev tool dependencies
 dev_deps: book_deps
