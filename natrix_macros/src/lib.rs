@@ -384,7 +384,7 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
 }
 
 /// Generate a ad-hoc class with the specific style
-/// These names will be indentical for indetical styling.
+/// These names will be identical for indetical styling.
 /// This is a natrixses answer to tailwindcss, we do not do short hand classes
 /// But instead generate a class for every unique style
 /// This still isnt as strong as tailwindcss in terms of modifiers (`:hover`, `:active`, etc)
