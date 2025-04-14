@@ -23,6 +23,7 @@
 
 extern crate proc_macro;
 
+use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::{fs, io};
@@ -324,7 +325,7 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
                 animation: true,
                 grid: true,
                 pure: true,
-                pattern: lightningcss::css_modules::Pattern::parse("[hash][content-hash]-[local]")
+                pattern: lightningcss::css_modules::Pattern::parse("[content-hash]-[local]")
                     .expect("Failed to parse pattern"),
             }),
             source_index: 0,
@@ -380,4 +381,30 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
         #emit_css_result
     }
     .into()
+}
+
+/// Generate a ad-hoc class with the specific style
+/// These names will be indentical for indetical styling.
+/// This is a natrixses answer to tailwindcss, we do not do short hand classes
+/// But instead generate a class for every unique style
+/// This still isnt as strong as tailwindcss in terms of modifiers (`:hover`, `:active`, etc)
+///
+/// If a element requires many of these classes, consider using a scoped css macro instead of
+/// generate one common class for all properties
+#[proc_macro]
+pub fn style(css: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let css = syn::parse_macro_input!(css as syn::LitStr);
+    let css = css.value();
+
+    let mut hasher = ahash::AHasher::default();
+    css.hash(&mut hasher);
+    let hash = hasher.finish();
+    let hash = data_encoding::BASE64URL_NOPAD.encode(&hash.to_le_bytes());
+
+    let class_name = format!("inline-{hash}");
+
+    let css = format!(".{class_name} {{ {css} }}");
+    emit_css(css);
+
+    quote!(#class_name).into()
 }

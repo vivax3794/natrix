@@ -20,7 +20,7 @@ global_css!("
     @keep dynamic;
 
     .dynamic {
-        margin: 100px;
+        padding: 100px;
     }
 ");
 
@@ -60,7 +60,8 @@ impl Component for HelloWorld {
                     .id(HELLO_ID)
                     .class("hello_world")
                     .class(HELLO)
-                    .class(format!("dyn{}", black_box("amic"))),
+                    .class(format!("dyn{}", black_box("amic")))
+                    .class(style!("margin: 1px 2px 3px 4px")),
             )
             .child(C::new(integration_tests_dependency::DepComp))
             .child(
@@ -162,6 +163,14 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn inline_style() {
+        let client = create_client().await;
+        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+        let text = element.css_value("margin").await.unwrap();
+        assert_eq!(text, "1px 2px 3px 4px");
+    }
+
+    #[tokio::test]
     async fn simple_dep() {
         let client = create_client().await;
         let element = client
@@ -215,7 +224,7 @@ mod tests {
     async fn dynamic_class() {
         let client = create_client().await;
         let element = client.find(By::Id(HELLO_ID)).await.unwrap();
-        let text = element.css_value("margin").await.unwrap();
+        let text = element.css_value("padding").await.unwrap();
         assert_eq!(text, "100px");
     }
 

@@ -1,0 +1,14 @@
+
+[package]
+name = "homepage"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+natrix = { version = "1.0.0", path = "../natrix", features = ["nightly"] }
+
+[dev-dependencies]
+natrix = {version = "1.0.0", path = "../natrix", features=["test_utils"]}
+wasm-bindgen-test = "0.3.50"
+

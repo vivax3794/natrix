@@ -261,6 +261,15 @@ impl<C: Component, T> HtmlElement<C, T> {
         self.classes.push(class.into());
         self
     }
+
+    /// Add multiple classes to the element.
+    pub fn classes(
+        mut self,
+        classes: impl IntoIterator<Item = impl Into<Cow<'static, str>>>,
+    ) -> Self {
+        self.classes.extend(classes.into_iter().map(Into::into));
+        self
+    }
 }
 
 impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {

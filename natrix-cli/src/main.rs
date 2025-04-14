@@ -54,7 +54,8 @@ fn find_target() -> Result<PathBuf> {
 /// Find the natrix target folder
 fn find_target_natrix(mode: BuildProfile) -> Result<PathBuf> {
     let target = find_target()?;
-    Ok(target.join(format!("natrix-{}", mode.readable())))
+    let project = get_project_name()?;
+    Ok(target.join(format!("natrix-{project}-{}", mode.readable())))
 }
 
 /// Get the current target project name

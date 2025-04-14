@@ -131,7 +131,7 @@ pub(crate) use return_if_panic;
 /// Public export of everything.
 pub mod prelude {
 
-    pub use natrix_macros::{Component, global_css, scoped_css};
+    pub use natrix_macros::{Component, global_css, scoped_css, style};
 
     pub use super::callbacks::EventHandler;
     pub use super::component::{C, Component, NoMessages, mount};

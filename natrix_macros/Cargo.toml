@@ -18,6 +18,8 @@ natrix_shared = {path = "../natrix_shared", version="1.0.0"}
 
 convert_case = "0.8.0"
 lightningcss = { version = "1.0.0-alpha.65", default-features = false, features = ["grid"] }
+ahash = "0.8.11"
+data-encoding = "2.9.0"
 
 proc-macro2 = {version="1.0.83", default-features = false}
 quote = {version="1.0.35", default-features = false}

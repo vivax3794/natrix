@@ -9,7 +9,7 @@ default: test_native test_web
 full: test check check_docs
 
 # Run the full set of tests
-test: test_native test_web integration_tests test_css_tree_shaking project_gen_test
+test: test_native test_web integration_tests test_css_tree_shaking project_gen_test test_homepage
 
 # Run tests that are not dependent on the web
 test_native:
@@ -21,6 +21,12 @@ test_web:
     rustup run stable wasm-pack test --headless --chrome --features test_utils
     rustup run nightly wasm-pack test --headless --chrome --all-features
 
+# Run the homepage tests
+[working-directory: './homepage']
+test_homepage:
+    rustup run nightly wasm-pack test --headless --chrome
+
+
 # Run clippy on all packages and all features
 check:
     cargo fmt --check
@@ -31,6 +37,8 @@ check:
 
     cargo +stable hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --skip nightly --tests -- -Dwarnings
     cargo +nightly clippy -p natrix --target wasm32-unknown-unknown --all-features --tests -- -Dwarnings
+
+    cargo +nightly clippy -p homepage -- -Dwarnings
 
 
 # Check the documentation for all packages
@@ -116,6 +124,11 @@ install_cli:
 [working-directory: './docs']
 book: 
     mdbook serve --open
+
+# Serve the natrix home page with a auto reloading server
+[working-directory: './homepage']
+homepage: install_cli
+    natrix dev
 
 # Install the book dependencies
 book_deps:
