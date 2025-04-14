@@ -132,16 +132,16 @@ homepage: install_cli
 
 # Install the book dependencies
 book_deps:
-    command -v mdbook || cargo install mdbook
-    command -v mdbook-callouts || cargo install mdbook-callouts
-    command -v mdbook-rustdoc-link || cargo install mdbookkit --features rustdoc-link
+    command -v mdbook || cargo bininstall mdbook
+    command -v mdbook-callouts || cargo bininstall mdbook-callouts
+    command -v mdbook-rustdoc-link || cargo bininstall mdbookkit --features rustdoc-link
 
 # Install all dev tool dependencies
 dev_deps: book_deps
-    command -v typos || cargo install typos-cli
-    command -v cargo-hack || cargo install cargo-hack
-    command -v cargo-nextest || cargo install cargo-nextest
-    command -v wasm-pack || cargo install wasm-pack
+    command -v typos || cargo bininstall typos-cli
+    command -v cargo-hack || cargo bininstall cargo-hack
+    command -v cargo-nextest || cargo bininstall cargo-nextest
+    command -v wasm-pack || cargo bininstall wasm-pack
 
 # Check for the presence of all required system dependencies
 # That there is no cross-platform way to install

@@ -1,0 +1,37 @@
+name: Publish mdBook
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.12.3
+
+      - name: Install just
+        run: cargo bininstall just
+
+      - name: Install mdBook
+        run: just book_deps
+
+      - name: Build the mdBook
+        run: cd docs && mdbook build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/book  # adjust if your build output directory is different
+
