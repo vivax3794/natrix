@@ -11,11 +11,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Rust nightly
-        uses: actions-rs/toolchain@v1
+      - name: Set up rust nighly
+        run: rustup override set nightly
+      
+      - name: Install rust-analyzer
+        run: rustup component add rust-analyzer
+
+      - uses: Swatinem/rust-cache@v2
         with:
-          toolchain: nightly
-          override: true
+          cache-on-failure: "true"
+          cache-all-crates: "true"
 
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.12.3
