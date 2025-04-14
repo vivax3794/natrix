@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -34,9 +34,20 @@ jobs:
       - name: Build the mdBook
         run: cd docs && mdbook build
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Upload GitHub Pages artifact
+        id: upload
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/book  # adjust if your build output directory is different
+          path: ./docs/book
 
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.upload.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
