@@ -199,7 +199,7 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// })
     /// # }}
     /// ```
-    /// For more information see [Reactivity](TODO) in the book.
+    /// For more information see [Reactivity](https://vivax3794.github.io/natrix/reactivity.html) in the book.
     pub fn on<E: Event>(mut self, function: impl EventHandler<C, E>) -> Self {
         let function = function.func();
         self.events.push((
@@ -249,8 +249,6 @@ impl<C: Component, T> HtmlElement<C, T> {
     }
 
     /// Add a attribute to the node.
-    ///
-    /// See [Html Nodes](TODO) in the book for the schematics of the various valid attribute types.
     pub fn attr(mut self, key: &'static str, value: impl ToAttribute<C>) -> Self {
         self.attributes.push((key, Box::new(value)));
         self

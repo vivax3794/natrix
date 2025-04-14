@@ -22,7 +22,7 @@ impl Component for Counter {
     }
 }
 ```
-> See the [book](TODO) for more information
+> See the [book](https://vivax3794.github.io/natrix/) for more information
 
 ## Standout features
 * ✅ **No macro DSL** – Macro-based DSLs break formatting & Rust Analyzer support. Natrix avoids them completely for a smoother dev experience.

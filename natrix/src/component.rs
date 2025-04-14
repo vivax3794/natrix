@@ -65,7 +65,7 @@ pub enum NoMessages {}
 /// }
 /// ```
 ///
-/// See the [Reactivity](TODO) chapther in the book for information about using state in a
+/// See the [Reactivity](https://vivax3794.github.io/natrix/reactivity.html) chapther in the book for information about using state in a
 /// component
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a component.",
@@ -113,7 +113,7 @@ pub trait Component: ComponentBase {
     /// # }
     /// ```
     ///
-    /// See the [Reactivity](TODO) chapther in the book for more info
+    /// See the [Reactivity](https://vivax3794.github.io/natrix/reactivity.html) chapther in the book for more info
     fn render() -> impl Element<Self>;
 
     /// Called when the component is mounted.

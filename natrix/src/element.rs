@@ -9,7 +9,7 @@ use crate::type_macros;
 /// The most common examples include `HtmlElement` and types like `String`.
 ///
 /// Additionally, closures with the appropriate signature also implement this trait.
-/// See the [Reactivity](TODO) chapter in the book for more examples.
+/// See the [Reactivity](https://vivax3794.github.io/natrix/reactivity.html) chapter in the book for more examples.
 ///
 /// 🚨 **You should generally NOT implement this trait manually.**
 /// Instead, prefer **sub-components** (for stateful elements) or **stateless components**
