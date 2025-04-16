@@ -20,6 +20,9 @@ In addition a interesting thing `natrix build` does is inspect the enabled featu
 
 Yes, all css defined in dependencies is bunlded (and DCE-ed!) automatically if you use a dependency from crates.io with no extra setup needed. Similar to what you might be familiar with from component libraries in the js world. This is a unique feature of natrix, as most other rust frameworks require you to manually add the css to your project.
 
+## Can you use natrix without `#[derive(Component)]`?
+Not really, the trait the `#[derive(Component)]` macro implements is `#[doc(hidden)]` for a reason, and we might make semver-breaking changes to it in non-breaking releases.
+
 ## Can you use `natrix` with other frameworks?
 
 In theory you can, but certain features like css and asset bundling will not work as expected. But the core component system should work fine.

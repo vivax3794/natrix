@@ -1,5 +1,6 @@
 # features
 
+
 ## opt-in features
 
 ### `nightly`
@@ -80,6 +81,16 @@ Notice how we still need the dereference for a plain assignment and addition? Th
 Implements [`Component`](component::Component) and [`ToAttribute`](html_elements::ToAttribute) for [`Either`](https://docs.rs/either/latest/either/enum.either.html) from the `either` crate.
 
 ## default features
+For most complex applications you will likely need all the default features.
+But they can be disabled if you want to reduce compile times or binary size.
+
+### `scoped_css`
+This enables [Scoped Css](css.md#scoped-css). 
+This pulls in `lightningcss` *in the proc-macro*.
+As such disabling this feature will result in faster compile times.
+
+### `inline_css`
+This enables [Inline Css](css.md#inline-css). This doesnt have the same compile time impact as `scoped_css` as it only pulls in `data-encoding` in the proc-macro, but it will still impact compile times.
 
 ### `panic_hook`
 

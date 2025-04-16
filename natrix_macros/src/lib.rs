@@ -23,12 +23,10 @@
 
 extern crate proc_macro;
 
-use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::{fs, io};
 
-use convert_case::{Case, Casing};
 use proc_macro2::TokenStream;
 use quote::format_ident;
 use syn::{ItemStruct, parse_quote};
@@ -306,7 +304,10 @@ fn emit_css(css: String) -> TokenStream {
     clippy::missing_panics_doc,
     reason = "This can only panic if its not called from cargo"
 )]
+#[cfg(feature = "scoped_css")]
 pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    use convert_case::{Case, Casing};
+
     let css = syn::parse_macro_input!(css_input as syn::LitStr);
     let css = css.value();
 
@@ -392,11 +393,14 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
 /// If a element requires many of these classes, consider using a scoped css macro instead of
 /// generate one common class for all properties
 #[proc_macro]
+#[cfg(feature = "inline_css")]
 pub fn style(css: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+
     let css = syn::parse_macro_input!(css as syn::LitStr);
     let css = css.value();
 
-    let mut hasher = ahash::AHasher::default();
+    let mut hasher = DefaultHasher::default();
     css.hash(&mut hasher);
     let hash = hasher.finish();
     let hash = data_encoding::BASE64URL_NOPAD.encode(&hash.to_le_bytes());
