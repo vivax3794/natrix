@@ -94,3 +94,48 @@ impl Component for HelloWorld {
     }
 }
 ```
+
+## Inline css
+Sometimes you only need some styles for a single element, you can use `scoped_css` with a id for this, or even a `.attr("style", ...)`.
+But we provide another option, the `style!` macro:
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+#[derive(Component)]
+struct HelloWorld;
+impl Component for HelloWorld {
+    fn render() -> impl Element<Self> {
+        e::h1()
+            .text("Hello World")
+            .class(style!("font-size: 4rem"))
+    }
+}
+```
+This will emit a css file with the following contents:
+
+```css
+.SOME_HASH {
+  font-size: 4rem;
+}
+```
+And will expand to the following in rust:
+
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+#[derive(Component)]
+struct HelloWorld;
+impl Component for HelloWorld {
+    fn render() -> impl Element<Self> {
+        e::h1()
+            .text("Hello World")
+            .class("SOME_HASH")
+    }
+}
+```
+
+I.e it will **not** use the `style` attribute, but instead still emit css to the bundling system.
+This is best used for short snippets, and `scoped_css` should still be used for longer styles, even if only for a single element.
+
+> [!TIP]
+> The class name is based on the hash of the style, this means that if multiple parts of the code use, say, `style!("font-size: 4rem")` they will all resolve to the same class name and the emitted css will be deduplicated.
