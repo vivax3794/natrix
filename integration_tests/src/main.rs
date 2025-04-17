@@ -236,9 +236,10 @@ mod tests {
         let text = element.text().await.unwrap();
         assert_eq!(text, reload_tests::VALUE);
 
+        let new_text = format!("{}E", reload_tests::VALUE);
         std::fs::write(
             "src/reload_tests.rs",
-            "pub const VALUE: &str = \"I AM CHANGED\";\n",
+            format!("pub const VALUE: &str = \"{new_text}\";\n"),
         )
         .unwrap();
 
@@ -248,9 +249,10 @@ mod tests {
         loop {
             sleep(Duration::from_millis(100)).await;
             if let Ok(element) = client.find(By::Id(RELOAD_ID)).await {
-                let text = element.text().await.unwrap();
-                if text == "I AM CHANGED" {
-                    break;
+                if let Ok(text) = element.text().await {
+                    if text == new_text {
+                        break;
+                    }
                 }
             }
 
@@ -270,9 +272,10 @@ mod tests {
         loop {
             sleep(Duration::from_millis(100)).await;
             if let Ok(element) = client.find(By::Id(RELOAD_ID)).await {
-                let text = element.text().await.unwrap();
-                if text == reload_tests::VALUE {
-                    break;
+                if let Ok(text) = element.text().await {
+                    if text == reload_tests::VALUE {
+                        break;
+                    }
                 }
             }
             if start.elapsed().as_secs() > 5 {

@@ -1,1 +1,1 @@
-pub const VALUE: &str = "TESTING RELOAD";
+pub const VALUE: &str = "NICE";
