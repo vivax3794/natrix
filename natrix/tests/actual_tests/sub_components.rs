@@ -78,7 +78,6 @@ fn simple_button_child() {
 }
 
 #[wasm_bindgen_test]
-#[cfg(feature = "async_utils")]
 async fn child_to_parent() {
     use natrix::async_utils;
     crate::mount_test(RootOne { double: 0 });
@@ -106,7 +105,6 @@ async fn child_to_parent() {
 }
 
 #[wasm_bindgen_test]
-#[cfg(feature = "async_utils")]
 async fn parent_to_child() {
     use natrix::async_utils;
     crate::mount_test(RootOne { double: 0 });

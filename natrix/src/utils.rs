@@ -1,6 +1,7 @@
 //! Utility traits and structs
-use futures::channel::mpsc::UnboundedReceiver;
-use futures::{Stream, StreamExt};
+use futures_channel::mpsc::UnboundedReceiver;
+use futures_core::stream::Stream;
+use futures_util::stream::StreamExt;
 
 /// A version of the stdlib `Any` with no type ids, downcasting, etc
 /// Its the minimal possible dyn object, mainly used for keep alive.

@@ -56,6 +56,17 @@ thread_local! {
             .document()
             .expect("Document object not found")
     };
+
+    /// A lazy initlized reference to the js window.
+    static WINDOW: web_sys::Window = {
+        #[expect(
+            clippy::expect_used,
+            reason = "A web framework cant do much without access to the window"
+        )]
+        web_sys::window()
+            .expect("Window object not found")
+    };
+
 }
 
 /// Get the globally acquired document
@@ -64,6 +75,14 @@ thread_local! {
 /// use of document.
 pub(crate) fn get_document() -> web_sys::Document {
     DOCUMENT.with(Clone::clone)
+}
+
+/// Get the globally acquired window
+///
+/// This is cached so we dont need the slowdown of the js interop and `Result` handling for every
+/// use of window.
+pub(crate) fn get_window() -> web_sys::Window {
+    WINDOW.with(Clone::clone)
 }
 
 /// Panic handling

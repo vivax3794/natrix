@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
+use futures_channel::mpsc::{UnboundedReceiver, UnboundedSender};
 
 use crate::element::Element;
 use crate::get_document;
@@ -242,7 +242,7 @@ impl<I: Component, Im> C<I, Im, ()> {
         C<I, Im, UnboundedReceiver<I::ReceiveMessage>>,
         Sender<I::ReceiveMessage>,
     ) {
-        let (tx, rx) = futures::channel::mpsc::unbounded();
+        let (tx, rx) = futures_channel::mpsc::unbounded();
         let comp = C {
             data: self.data,
             message_handler: self.message_handler,
@@ -270,7 +270,7 @@ where
 
         let mut borrow_data = data.borrow_mut();
         if let Some(handler) = self.message_handler.get() {
-            let (tx, rx) = futures::channel::mpsc::unbounded();
+            let (tx, rx) = futures_channel::mpsc::unbounded();
             borrow_data.register_parent(tx);
 
             ctx.spawn_listening_task(handler, rx);

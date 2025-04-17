@@ -23,9 +23,10 @@ slotmap = "1.0.6"
 
 # Async
 wasm-bindgen-futures = { version = "0.4.50" }
-futures = { version = "0.3.31", default-features = false , features = ["std"]}
+futures-channel = { version = "0.3.31" }
+futures-util = { version = "0.3.31", default-features = false}
+futures-core = { version = "0.3.31", default-features = false}
 ouroboros = { version = "0.18.0" }
-gloo = { version = "0.11.0", optional = true, default-features = false, features=["timers", "futures", "render"]}
 
 # Other
 either = { version = "1.0.0", optional = true, default-features = false }
@@ -36,8 +37,6 @@ default = ["panic_hook", "scoped_css", "inline_css"]
 scoped_css = ["natrix_macros/scoped_css"]
 inline_css = ["natrix_macros/inline_css"]
 panic_hook = ["web-sys/console"]
-
-async_utils = ["dep:gloo"]
 
 nightly = []
 ergonomic_ops = []
