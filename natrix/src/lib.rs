@@ -37,6 +37,7 @@ pub mod component;
 pub mod element;
 pub mod events;
 pub mod html_elements;
+pub mod list;
 mod render_callbacks;
 mod signal;
 pub mod state;

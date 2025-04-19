@@ -176,3 +176,33 @@ This will work exactly the same as the previous example, but hides the `.unwrap(
 > Similarly to [`DeferredRef`](state::DeferredRef) you should not hold this across a yield point.
 > `guard_option` does in fact still use `.unwrap()` internally, meaning its effectively the same as the "bad" code above.
 > It is simply a nice api that enforces the invariant that you only `.unwrap` in a context where you have done the `.is_some()` check in a parent hook.
+
+## [`List`](list::List)
+You often have to render a list of items, and doing that in a reactive way is a bit tricky.
+The [`List`](list::List) element is a way to do this.
+
+```rust
+# extern crate natrix;
+use natrix::prelude::*;
+use natrix::state::State;
+use natrix::list::List;
+
+#[derive(Component)]
+struct HelloWorld {
+    items: Vec<u8>,
+}
+
+impl Component for HelloWorld {
+    fn render() -> impl Element<Self> {
+        e::div()
+            .child(List::new(
+            |ctx: &State<Self>| &ctx.items,
+            |_ctx: R<Self>, getter| {
+                e::div().text(move |ctx: R<Self>| getter.get_watched(ctx))
+            }
+        ))
+    }
+}
+```
+
+See the docs in the [`List`](list::List) module for more details.

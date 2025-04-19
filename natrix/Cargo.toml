@@ -62,6 +62,7 @@ features = [
     "Window",
     "HtmlElement",
     "DomTokenList",
+    "DocumentFragment",
 
     # Events
     "Event",
