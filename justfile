@@ -76,18 +76,15 @@ integration_tests: install_cli
 
     chromedriver --port=9999 &
     chrome_pid=$!
-    sleep 1
 
     (natrix dev > /dev/null 2>&1) &
     natrix_pid=$!
-    sleep 1
 
     cargo nextest run -j 1
 
     kill $natrix_pid 2>/dev/null || true
     (natrix dev -p release > /dev/null 2>&1) &
     natrix_pid=$!
-    sleep 1
 
     cargo nextest run -j 1
 
