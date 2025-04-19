@@ -158,28 +158,21 @@ impl<T: Component> State<T> {
         }
 
         hooks.sort_by_key(|hook_key| Some(self.hooks.get(*hook_key)?.1));
+        hooks.dedup_by_key(|hook_key| Some(self.hooks.get(*hook_key)?.1));
+        hooks.reverse();
 
-        let mut prev_hook = None;
-        while !hooks.is_empty() {
-            for hook_key in std::mem::take(&mut hooks) {
-                if prev_hook == Some(hook_key) {
-                    continue;
+        while let Some(hook_key) = hooks.pop() {
+            self.run_with_hook_and_self(hook_key, |ctx, hook| match hook.update(ctx, hook_key) {
+                UpdateResult::Nothing => {}
+                UpdateResult::RunHook(dep) => {
+                    hooks.push(dep);
                 }
-                prev_hook = Some(hook_key);
-
-                self.run_with_hook_and_self(hook_key, |ctx, hook| {
-                    drop_hook_children(ctx, hook);
-                    match hook.update(ctx, hook_key) {
-                        UpdateResult::Nothing => {}
-                        UpdateResult::RunHook(dep) => {
-                            hooks.push(dep);
-                            ctx.run_with_hook_and_self(dep, |ctx, hook| {
-                                drop_hook_children(ctx, hook);
-                            });
-                        }
+                UpdateResult::DropHooks(deps) => {
+                    for dep in deps {
+                        drop_hook(ctx, dep);
                     }
-                });
-            }
+                }
+            });
         }
     }
 
@@ -250,12 +243,11 @@ impl<T: Component> State<T> {
 }
 
 /// Drop all children of the hook
-fn drop_hook_children<T: Component>(ctx: &mut State<T>, hook: &mut Box<dyn ReactiveHook<T>>) {
-    if let Some(invalid_hooks) = hook.drop_deps() {
-        for invalid_hook in invalid_hooks {
-            if let Some(mut hook) = ctx.hooks.remove(invalid_hook) {
-                drop_hook_children(ctx, &mut hook.0);
-            }
+fn drop_hook<T: Component>(ctx: &mut State<T>, hook: HookKey) {
+    if let Some(hook) = ctx.hooks.remove(hook) {
+        let mut hooks = hook.0.drop_us();
+        for hook in hooks.drain(..) {
+            drop_hook(ctx, hook);
         }
     }
 }
@@ -352,6 +344,10 @@ where
         } else {
             UpdateResult::RunHook(self.dep)
         }
+    }
+
+    fn drop_us(self: Box<Self>) -> Vec<HookKey> {
+        Vec::new()
     }
 }
 

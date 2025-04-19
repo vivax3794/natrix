@@ -143,16 +143,16 @@ pub(crate) trait ReactiveHook<C: Component> {
     /// dependencies as the update method uses `.drain(..)` on dependencies (this is also to ensure
     /// reactive state that is only accessed in some conditions is recorded).
     fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) -> UpdateResult;
-    /// Drop keep alives and other state that will be invalidated in `update`
-    fn drop_deps(&mut self) -> Option<std::vec::Drain<'_, HookKey>> {
-        None
-    }
+    /// Return the list of hooks that should be dropped
+    fn drop_us(self: Box<Self>) -> Vec<HookKey>;
 }
 
 /// The result of pre-update
 pub(crate) enum UpdateResult {
     /// Do nothing extra
     Nothing,
+    /// Drop the given hooks
+    DropHooks(Vec<HookKey>),
     /// Run this hook after this one
     RunHook(HookKey),
 }

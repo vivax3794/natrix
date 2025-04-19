@@ -15,6 +15,9 @@ impl<C: Component> ReactiveHook<C> for DummyHook {
     fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) -> UpdateResult {
         UpdateResult::Nothing
     }
+    fn drop_us(self: Box<Self>) -> Vec<HookKey> {
+        Vec::new()
+    }
 }
 
 /// Reactive hook for swapping out a entire dom node.
@@ -84,12 +87,13 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
     }
 
     /// Pulled out update method to facilite marking it as `default` on nightly
-    fn update(&mut self, ctx: &mut State<C>, you: HookKey) {
+    fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
+        let hooks = std::mem::take(&mut self.hooks);
         let new_node = self.render(ctx, you);
 
         let Some(parent) = self.target_node.parent_node() else {
             debug_assert!(false, "Parent node of target node not found.");
-            return;
+            return UpdateResult::DropHooks(hooks);
         };
 
         debug_expect!(
@@ -97,25 +101,24 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
             "Failed to replace parent"
         );
         self.target_node = new_node;
+
+        UpdateResult::DropHooks(hooks)
     }
 }
 
 impl<C: Component, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
     #[cfg(not(nightly))]
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
-        self.update(ctx, you);
-        UpdateResult::Nothing
+        self.update(ctx, you)
     }
 
     #[cfg(nightly)]
     default fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
-        self.update(ctx, you);
-        UpdateResult::Nothing
+        self.update(ctx, you)
     }
 
-    fn drop_deps(&mut self) -> Option<std::vec::Drain<'_, HookKey>> {
-        self.keep_alive.clear();
-        Some(self.hooks.drain(..))
+    fn drop_us(self: Box<Self>) -> Vec<HookKey> {
+        self.hooks
     }
 }
 
@@ -124,7 +127,10 @@ impl<C: Component> ReactiveHook<C> for ReactiveNode<C, String> {
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         use wasm_bindgen::JsCast;
 
+        let hooks = std::mem::take(&mut self.hooks);
+
         ctx.clear();
+        self.keep_alive.clear();
         let element = (self.callback)(&mut RenderCtx {
             ctx,
             render_state: RenderingState {
@@ -141,7 +147,7 @@ impl<C: Component> ReactiveHook<C> for ReactiveNode<C, String> {
             debug_assert!(false, "`String` Node wasnt a text node");
         }
 
-        UpdateResult::Nothing
+        UpdateResult::DropHooks(hooks)
     }
 }
 
@@ -153,7 +159,10 @@ macro_rules! node_specialize_int {
             fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
                 use wasm_bindgen::JsCast;
 
+                let hooks = std::mem::take(&mut self.hooks);
+
                 ctx.clear();
+                self.keep_alive.clear();
                 let element = (self.callback)(&mut RenderCtx {
                     ctx,
                     render_state: RenderingState {
@@ -173,7 +182,7 @@ macro_rules! node_specialize_int {
                     debug_assert!(false, "Numeric Node wasnt a text node");
                 }
 
-                UpdateResult::Nothing
+                UpdateResult::DropHooks(hooks)
             }
         }
     };
@@ -202,8 +211,13 @@ pub(crate) struct SimpleReactive<C: Component, K> {
 }
 
 impl<C: Component, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K> {
+    fn drop_us(self: Box<Self>) -> Vec<HookKey> {
+        self.hooks
+    }
+
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         ctx.clear();
+        self.keep_alive.clear();
         let value = (self.callback)(&mut RenderCtx {
             ctx,
             render_state: RenderingState {
@@ -224,11 +238,6 @@ impl<C: Component, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K>
             &self.node,
         );
         UpdateResult::Nothing
-    }
-
-    fn drop_deps(&mut self) -> Option<std::vec::Drain<'_, HookKey>> {
-        self.keep_alive.clear();
-        Some(self.hooks.drain(..))
     }
 }
 
