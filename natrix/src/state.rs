@@ -184,9 +184,17 @@ impl<T: Component> State<T> {
     }
 
     /// Get the unwrapped data referenced by this guard
-    pub fn get<F, A>(&self, guard: &Guard<F>) -> A
+    pub fn get<'s, F, R>(&'s self, guard: &Guard<F>) -> &'s R
     where
-        F: Fn(&Self) -> A,
+        F: Fn(&'s Self) -> &'s R,
+    {
+        (guard.getter)(self)
+    }
+
+    /// Get the unwrapped data referenced by this guard, but owned
+    pub fn get_owned<F, R>(&self, guard: &Guard<F>) -> R
+    where
+        F: Fn(&Self) -> R,
     {
         (guard.getter)(self)
     }
@@ -263,10 +271,10 @@ pub struct RenderCtx<'c, C: Component> {
 }
 
 impl<C: Component> Deref for RenderCtx<'_, C> {
-    type Target = C::Data;
+    type Target = State<C>;
 
     fn deref(&self) -> &Self::Target {
-        &self.ctx.data
+        self.ctx
     }
 }
 
@@ -315,14 +323,6 @@ impl<C: Component> RenderCtx<'_, C> {
         self.ctx.set_signals(signal_state);
 
         result
-    }
-
-    /// Get the unwrapped data referenced by this guard
-    pub fn get<F, A>(&self, guard: &Guard<F>) -> A
-    where
-        F: Fn(&State<C>) -> A,
-    {
-        self.ctx.get(guard)
     }
 }
 
@@ -420,8 +420,8 @@ pub struct Guard<F> {
 /// # type ReceiveMessage = NoMessages;
 /// # fn render() -> impl Element<Self> {
 /// # |ctx: R<Self>| {
-/// if let Some(value_guard) = guard_option!(ctx.value) {
-///     e::div().text(move |ctx: R<Self>| ctx.get(&value_guard))
+/// if let Some(value_guard) = guard_option!(|ctx| ctx.value.as_ref()) {
+///     e::div().text(move |ctx: R<Self>| *ctx.get(&value_guard))
 /// } else {
 ///     e::div().text("Is none")
 /// }
@@ -432,12 +432,41 @@ pub struct Guard<F> {
 /// value is `Some`"
 ///
 /// Internally this uses `ctx.watch` and `.unwrap` (which should never fail)
+///
+/// ## Owned returns
+/// By default this macro assumes the return value is `&T`, but if you want to return an owned
+/// value you can use the `@owned` version:
+/// ```rust
+/// # use natrix::prelude::*;
+/// # #[derive(Component)]
+/// # struct MyComponent {value: Option<u32>}
+/// # impl Component for MyComponent {
+/// # type EmitMessage = NoMessages;
+/// # type ReceiveMessage = NoMessages;
+/// # fn render() -> impl Element<Self> {
+/// # |ctx: R<Self>| {
+/// if let Some(value_guard) = guard_option!(@owned |ctx| ctx.value) {
+///    e::div().text(move |ctx: R<Self>| ctx.get_owned(&value_guard))
+/// } else {
+///    e::div().text("Is none")
+/// }
+/// # }}}
+/// ```
 #[macro_export]
 macro_rules! guard_option {
-    ($ctx:ident. $($getter:tt)+) => {
-        if $ctx.watch(move |ctx| ctx.$($getter)+.is_some()) {
-            Some(::natrix::macro_ref::Guard::new(
-                move |ctx: &::natrix::macro_ref::State<Self>| ctx.$($getter)+.expect("Guard used on None value"),
+    (| $ctx:ident | $expr:expr) => {
+        if $ctx.watch(move |$ctx| $expr.is_some()) {
+            Some(::natrix::macro_ref::Guard::new::<Self, _>(move |$ctx| {
+                $expr.expect("Guard used on None value")
+            }))
+        } else {
+            None
+        }
+    };
+    (@owned | $ctx:ident | $expr:expr) => {
+        if $ctx.watch(move |$ctx| $expr.is_some()) {
+            Some(::natrix::macro_ref::Guard::new_owned::<Self, _>(
+                move |$ctx| $expr.expect("Guard used on None value"),
             ))
         } else {
             None
@@ -449,14 +478,25 @@ macro_rules! guard_option {
 /// use `.unwrap`, or the `Err` variant.
 #[macro_export]
 macro_rules! guard_result {
-    ($ctx:ident. $($getter:tt)+) => {
-        if $ctx.watch(move |ctx| ctx.$($getter)+.is_ok()) {
-            Ok(::natrix::macro_ref::Guard::new(
-                move |ctx: &::natrix::macro_ref::State<Self>| ctx.$($getter)+.expect("Ok-Guard used on Err value"),
+    (| $ctx:ident | $expr:expr) => {
+        if $ctx.watch(move |$ctx| $expr.is_ok()) {
+            Ok(::natrix::macro_ref::Guard::new::<Self, _>(move |$ctx| {
+                $expr.expect("Guard used on Err value")
+            }))
+        } else {
+            Err(::natrix::macro_ref::Guard::new::<Self, _>(move |$ctx| {
+                $expr.expect_err("Guard used on Ok value")
+            }))
+        }
+    };
+    (@owned | $ctx:ident | $expr:expr) => {
+        if $ctx.watch(move |$ctx| $expr.is_ok()) {
+            Ok(::natrix::macro_ref::Guard::new_owned::<Self, _>(
+                move |$ctx| $expr.expect("Guard used on Err value"),
             ))
         } else {
-            Err(::natrix::macro_ref::Guard::new(
-                move |ctx: &::natrix::macro_ref::State<Self>| ctx.$($getter)+.expect_err("Err-Guard used on Ok value"),
+            Err(::natrix::macro_ref::Guard::new_owned::<Self, _>(
+                move |$ctx| $expr.expect_err("Guard used on Ok value"),
             ))
         }
     };
@@ -464,7 +504,20 @@ macro_rules! guard_result {
 
 impl<F> Guard<F> {
     #[doc(hidden)]
-    pub fn new(getter: F) -> Self {
+    pub fn new<C, R>(getter: F) -> Self
+    where
+        F: for<'a> Fn(&'a State<C>) -> &'a R,
+        C: Component,
+    {
+        Self { getter }
+    }
+
+    #[doc(hidden)]
+    pub fn new_owned<C, R>(getter: F) -> Self
+    where
+        F: Fn(&State<C>) -> R,
+        C: Component,
+    {
         Self { getter }
     }
 }

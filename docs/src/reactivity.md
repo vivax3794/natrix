@@ -159,9 +159,9 @@ They use `ctx.watch` internally, and gives you a way to access the value without
 #     fn render() -> impl Element<Self> {
 e::div()
     .child(|ctx: R<Self>| {
-        if let Some(guard) = guard_option!(ctx.option) {
+        if let Some(guard) = guard_option!(|ctx| ctx.option.as_ref()) {
             e::h1()
-                .text(move |ctx: R<Self>| ctx.get(&guard))
+                .text(move |ctx: R<Self>| *ctx.get(&guard))
                 .into_box()
         } else {
             "None".into_box()
@@ -170,6 +170,7 @@ e::div()
 #      }
 # }
 ```
+This will work exactly the same as the previous example, but hides the `.unwrap()` from the user.
 
 > [!WARNING]
 > Similarly to [`DeferredRef`](state::DeferredRef) you should not hold this across a yield point.

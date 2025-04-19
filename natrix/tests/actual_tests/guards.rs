@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![deny(clippy::unwrap_used, clippy::expect_used)]
 
 use natrix::prelude::*;
 use proptest::proptest;
@@ -29,8 +30,8 @@ impl Component for GuardTester {
                     }),
             )
             .child(|ctx: R<Self>| {
-                if let Some(value_guard) = guard_option!(ctx.value) {
-                    e::div().text(move |ctx: R<Self>| ctx.get(&value_guard))
+                if let Some(value_guard) = guard_option!(@owned |ctx| ctx.value) {
+                    e::div().text(move |ctx: R<Self>| ctx.get_owned(&value_guard))
                 } else {
                     e::div().text("NO VALUE")
                 }
@@ -82,9 +83,13 @@ impl Component for GuardTesterResult {
                     }),
             )
             .child(|ctx: R<Self>| {
-                match guard_result!(ctx.value) {
-                    Ok(value_guard) => e::div().text(move |ctx: R<Self>| ctx.get(&value_guard)),
-                    Err(error_guard) => e::div().text(move |ctx: R<Self>| ctx.get(&error_guard)),
+                match guard_result!(@owned |ctx| ctx.value) {
+                    Ok(value_guard) => {
+                        e::div().text(move |ctx: R<Self>| ctx.get_owned(&value_guard))
+                    }
+                    Err(error_guard) => {
+                        e::div().text(move |ctx: R<Self>| ctx.get_owned(&error_guard))
+                    }
                 }
                 .id(TEXT)
             })
@@ -132,12 +137,14 @@ impl Component for GuardTesterNested {
                     }),
             )
             .child(|ctx: R<Self>| {
-                if let Some(value_guard) = guard_option!(ctx.value) {
+                if let Some(value_guard) = guard_option!(@owned |ctx| ctx.value) {
                     e::div().text(move |ctx: R<Self>| {
-                        if let Some(inner_guard) = guard_option!(ctx.get(&value_guard)) {
+                        if let Some(inner_guard) =
+                            guard_option!(@owned |ctx| ctx.get_owned(&value_guard))
+                        {
                             e::div()
                                 .id(TEXT)
-                                .text(move |ctx: R<Self>| ctx.get(&inner_guard))
+                                .text(move |ctx: R<Self>| ctx.get_owned(&inner_guard))
                         } else {
                             e::div().text("NO VALUE INNER").id(TEXT)
                         }
@@ -196,11 +203,13 @@ impl Component for GuardSwitchProp {
                     }),
             )
             .child(|ctx: R<Self>| {
-                if let Some(value_guard) = guard_option!(ctx.value) {
+                if let Some(value_guard) = guard_option!(@owned |ctx| ctx.value) {
                     e::div().text(move |ctx: R<Self>| {
-                        if let Some(inner_guard) = guard_option!(ctx.get(&value_guard)) {
+                        if let Some(inner_guard) =
+                            guard_option!(@owned |ctx| ctx.get_owned(&value_guard))
+                        {
                             e::div().id(TEXT).text(move |ctx: R<Self>| {
-                                if ctx.get(&inner_guard) {
+                                if ctx.get_owned(&inner_guard) {
                                     "hello"
                                 } else {
                                     "world"
@@ -226,4 +235,55 @@ proptest! {
         let button = crate::get(BUTTON);
         button.click();
     }
+}
+
+struct NonCopy;
+
+impl NonCopy {
+    fn use_ref(&self) -> &'static str {
+        "hello"
+    }
+}
+
+#[derive(Component)]
+struct NonCopyComponent {
+    value: Option<NonCopy>,
+}
+
+impl Component for NonCopyComponent {
+    type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
+    fn render() -> impl Element<Self> {
+        e::div()
+            .child(
+                e::button()
+                    .id(BUTTON)
+                    .on::<events::Click>(|ctx: E<Self>, _| {
+                        *ctx.value = Some(NonCopy);
+                    }),
+            )
+            .child(|ctx: R<Self>| {
+                if let Some(value_guard) = guard_option!(|ctx| ctx.value.as_ref()) {
+                    e::div()
+                        .text(move |ctx: R<Self>| ctx.get(&value_guard).use_ref())
+                        .id(TEXT)
+                } else {
+                    e::div().text("NO VALUE").id(TEXT)
+                }
+            })
+    }
+}
+
+#[wasm_bindgen_test]
+fn guard_non_copy() {
+    crate::mount_test(NonCopyComponent { value: None });
+
+    let button = crate::get(BUTTON);
+
+    let text = crate::get(TEXT);
+    assert_eq!(text.text_content(), Some("NO VALUE".to_owned()));
+
+    button.click();
+    let text = crate::get(TEXT);
+    assert_eq!(text.text_content(), Some("hello".to_owned()));
 }
