@@ -7,6 +7,7 @@ use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 wasm_bindgen_test_configure!(run_in_browser);
 
 const ROOT: &str = "ROOT";
+const BUTTON: &str = "BUTTON";
 
 #[derive(Component, Default)]
 struct Generic<T>(T);
@@ -120,12 +121,22 @@ impl Component for Toggle {
     type EmitMessage = NoMessages;
     type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
-        e::button()
-            .id(ROOT)
-            .attr("abc", |ctx: R<Self>| *ctx.value)
-            .on::<events::Click>(|ctx: E<Self>, _| {
-                *ctx.value = !*ctx.value;
-            })
+        e::div()
+            .child(
+                e::button()
+                    .id(ROOT)
+                    .attr("abc", |ctx: R<Self>| *ctx.value)
+                    .on::<events::Click>(|ctx: E<Self>, _| {
+                        *ctx.value = !*ctx.value;
+                    }),
+            )
+            .child(
+                e::button()
+                    .id(BUTTON)
+                    .on::<events::Click>(|ctx: E<Self>, _| {
+                        *ctx.value = false;
+                    }),
+            )
     }
 }
 
@@ -141,5 +152,24 @@ fn reactive_bool() {
     assert_eq!(button.get_attribute("abc"), Some("".to_owned()));
 
     button.click();
+    assert_eq!(button.get_attribute("abc"), None);
+}
+
+#[wasm_bindgen_test]
+fn reactive_change_set_but_no_change() {
+    crate::mount_test(Toggle::default());
+
+    let button = crate::get(ROOT);
+    let button2 = crate::get(BUTTON);
+
+    assert_eq!(button.get_attribute("abc"), None);
+
+    button.click();
+    assert_eq!(button.get_attribute("abc"), Some("".to_owned()));
+
+    button2.click();
+    assert_eq!(button.get_attribute("abc"), None);
+
+    button2.click();
     assert_eq!(button.get_attribute("abc"), None);
 }
