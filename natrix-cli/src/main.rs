@@ -320,8 +320,7 @@ fn generate_main_rs(root: &Path, name: &str, nightly: bool) -> Result<(), anyhow
 use natrix::prelude::*;
 
 mod css {{
-    use natrix::prelude::scoped_css;
-    scoped_css!("
+    natrix::scoped_css!("
         .hello_world {{
             font-size: 6rem;
             color: red;
@@ -340,7 +339,7 @@ impl Component for HelloWorld {{
 }}
 
 fn main() {{
-    mount(HelloWorld);
+    natrix::mount(HelloWorld);
 }}
 
 #[cfg(test)]

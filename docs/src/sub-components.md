@@ -1,6 +1,6 @@
 # Sub Components
 
-Components wouldnt be very useful if we could not compose them. Due to trait limitations we cant use components as [`Element`](element::Element)s directly. But there is a simple [`C`](component::C) wrapper to facilitate this.
+Components wouldnt be very useful if we could not compose them. Due to trait limitations we cant use components as [`Element`](element::Element)s directly. But there is a simple [`C`](component::SubComponent) wrapper to facilitate this.
 
 ```rust
 # extern crate natrix;
@@ -26,7 +26,7 @@ struct MyParent {
 impl Component for MyParent {
     fn render() -> impl Element<Self> {
         e::div()
-            .child(C::new(MyChild {
+            .child(SubComponent::new(MyChild {
                 /* Initial Child State */
             }))
     }
@@ -39,7 +39,7 @@ A common requirement is communication between components. This is where the [`Em
 
 ### Child to Parent
 
-Define the `EmitMessage` type to the type of the message you will be emitting and then use [`ctx.emit`](state::State::emit), you can then use [`.on`](component::C::on) to listen for the message in the parent component.
+Define the `EmitMessage` type to the type of the message you will be emitting and then use [`ctx.emit`](state::State::emit), you can then use [`.on`](component::SubComponent::on) to listen for the message in the parent component.
 
 ```rust
 # extern crate natrix;
@@ -67,7 +67,7 @@ struct MyParent {
 impl Component for MyParent {
     fn render() -> impl Element<Self> {
         e::div()
-            .child(C::new(MyChild).on(|ctx: E<Self>, msg| {
+            .child(SubComponent::new(MyChild).on(|ctx: E<Self>, msg| {
                 ctx.state += msg;
             }))
     }
@@ -76,7 +76,7 @@ impl Component for MyParent {
 
 ### Parent to Child
 
-Similaryly you can use [`ReceiveMessage`](component::Component::ReceiveMessage) to listen for messages from the parent component. You overwrite the default [`handle_message`](component::Component::handle_message) method to handle the message. In the parent you use [`.sender`](component::C::sender) to get a sender for the child component.
+Similaryly you can use [`ReceiveMessage`](component::Component::ReceiveMessage) to listen for messages from the parent component. You overwrite the default [`handle_message`](component::Component::handle_message) method to handle the message. In the parent you use [`.sender`](component::SubComponent::sender) to get a sender for the child component.
 
 ```rust
 # extern crate natrix;
@@ -104,7 +104,7 @@ struct MyParent;
 
 impl Component for MyParent {
     fn render() -> impl Element<Self> {
-        let (child, sender) = C::new(MyChild::default()).sender();
+        let (child, sender) = SubComponent::new(MyChild::default()).sender();
         e::div()
             .child(child)
             // We use `move` to move ownership of the sender into the closure

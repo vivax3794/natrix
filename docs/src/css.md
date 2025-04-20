@@ -15,8 +15,7 @@ Global css is emitted using the `global_css!` macro, which takes a string litera
 
 ```rust
 # extern crate natrix;
-# use natrix::prelude::*;
-global_css!("
+natrix::global_css!("
     body {
         background-color: red;
     }
@@ -29,8 +28,7 @@ global_css!("
 >
 > ```rust
 > # extern crate natrix;
-> # use natrix::prelude::*;
-> global_css!("
+> natrix::global_css!("
 >     @keep dynamically_generated_class;
 >     .dynamically_generated_class {
 >         background-color: red;
@@ -47,8 +45,7 @@ Scoped css is emitted using the `scoped_css!` macro, which takes a string litera
 
 ```rust
 # extern crate natrix;
-# use natrix::prelude::*;
-scoped_css!("
+natrix::scoped_css!("
     .my-class {
         background-color: red;
     }
@@ -78,8 +75,7 @@ Which can then be used in a [`.class`](html_elements::HtmlElement::class) call.
 # extern crate natrix;
 # use natrix::prelude::*;
 mod css {
-    use natrix::prelude::scoped_css;
-scoped_css!("
+natrix::scoped_css!("
         .my-class {
             background-color: red;
         }
@@ -107,7 +103,7 @@ impl Component for HelloWorld {
     fn render() -> impl Element<Self> {
         e::h1()
             .text("Hello World")
-            .class(style!("font-size: 4rem"))
+            .class(natrix::style!("font-size: 4rem"))
     }
 }
 ```

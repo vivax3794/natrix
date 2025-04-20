@@ -1,4 +1,5 @@
 use natrix::prelude::*;
+use natrix::{global_css, scoped_css};
 
 global_css!("
     h1 {

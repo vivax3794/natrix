@@ -27,7 +27,7 @@ impl Component for HelloWorld {
 }
 #
 # fn main() {
-#     mount(HelloWorld);
+#     natrix::mount(HelloWorld);
 # }
 ```
 
@@ -58,7 +58,7 @@ impl Component for HelloWorld {
 }
 
 fn main() {
-    mount(HelloWorld { counter: 0 });
+    natrix::mount(HelloWorld { counter: 0 });
 }
 ```
 
@@ -87,7 +87,7 @@ impl Component for HelloWorld {
 }
 #
 # fn main() {
-#     mount(HelloWorld { counter: 0 });
+#     natrix::mount(HelloWorld { counter: 0 });
 # }
 ```
 
@@ -119,7 +119,7 @@ impl Component for HelloWorld {
 }
 #
 # fn main() {
-#     mount(HelloWorld { counter: 0 });
+#     natrix::mount(HelloWorld { counter: 0 });
 # }
 ```
 
@@ -151,7 +151,7 @@ impl MyComponent {
 # }
 #
 fn main() {
-    mount(MyComponent::new(0));
+    natrix::mount(MyComponent::new(0));
 }
 ```
 

@@ -26,7 +26,7 @@ impl Component for Counter {
 }
 #
 # fn main() {
-#    mount(Counter(0));
+#    natrix::mount(Counter(0));
 # }
 ```
 

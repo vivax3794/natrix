@@ -8,6 +8,7 @@
 )]
 
 use natrix::prelude::*;
+use natrix::{global_css, scoped_css, style};
 
 global_css!(
     "
@@ -105,5 +106,5 @@ impl Component for HelloWorld {
 }
 
 fn main() {
-    mount(HelloWorld);
+    natrix::component::mount(HelloWorld);
 }

@@ -43,7 +43,7 @@ impl Component for RootOne {
     type EmitMessage = NoMessages;
     type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
-        let (child, sender) = C::new(Counter { value: 0 }).sender();
+        let (child, sender) = SubComponent::new(Counter { value: 0 }).sender();
         e::div()
             .child(child.on(|ctx: E<Self>, amount| {
                 *ctx.double = amount * 2;

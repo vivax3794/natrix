@@ -151,6 +151,8 @@ They use `ctx.watch` internally, and gives you a way to access the value without
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
+use natrix::guard_option;
+
 # #[derive(Component)]
 # struct HelloWorld {
 #     option: Option<u8>,

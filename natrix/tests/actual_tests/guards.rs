@@ -2,6 +2,7 @@
 #![deny(clippy::unwrap_used, clippy::expect_used)]
 
 use natrix::prelude::*;
+use natrix::{guard_option, guard_result};
 use proptest::proptest;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 

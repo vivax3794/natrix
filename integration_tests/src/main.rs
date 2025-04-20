@@ -1,6 +1,7 @@
 use std::hint::black_box;
 
 use natrix::prelude::*;
+use natrix::{global_css, scoped_css, style};
 mod reload_tests;
 
 const HELLO_TEXT: &str = "HELLO WORLD, TEST TEST!";
@@ -63,7 +64,7 @@ impl Component for HelloWorld {
                     .class(format!("dyn{}", black_box("amic")))
                     .class(style!("margin: 1px 2px 3px 4px")),
             )
-            .child(C::new(integration_tests_dependency::DepComp))
+            .child(SubComponent::new(integration_tests_dependency::DepComp))
             .child(
                 e::button()
                     .id(PANIC_ID)
@@ -84,7 +85,7 @@ impl Component for HelloWorld {
 }
 
 fn main() {
-    mount(HelloWorld { counter: 0 });
+    natrix::component::mount(HelloWorld { counter: 0 });
 }
 
 #[cfg(test)]

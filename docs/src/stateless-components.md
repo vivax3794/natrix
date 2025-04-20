@@ -111,6 +111,8 @@ Natrix provides the [`EventHandler`](callbacks::EventHandler) trait which makes 
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
+use natrix::callbacks::EventHandler;
+
 fn fancy_button<C: Component>(
     on_click: impl EventHandler<C, events::Click>,
 ) -> impl Element<C> {
@@ -125,6 +127,7 @@ This can be used like this:
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
+# use natrix::callbacks::EventHandler;
 # fn fancy_button<C: Component>(
 #     on_click: impl EventHandler<C, events::Click>,
 # ) -> impl Element<C> {

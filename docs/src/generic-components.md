@@ -67,7 +67,7 @@ impl<T: Element<()> + Clone> Component for MyComponent<T> {
 }
 #
 # fn main() {
-#     mount(MyComponent("Hello World".to_string()));
+#     natrix::mount(MyComponent("Hello World".to_string()));
 # }
 ```
 

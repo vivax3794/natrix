@@ -186,7 +186,7 @@ impl<M> MaybeRecv<M> for UnboundedReceiver<M> {
 ///
 /// This exists because of type system limitations.
 #[must_use = "This is useless if not mounted"]
-pub struct C<I: Component, Im, Ir> {
+pub struct SubComponent<I: Component, Im, Ir> {
     /// The component data
     data: I,
     /// Message handler
@@ -195,23 +195,23 @@ pub struct C<I: Component, Im, Ir> {
     receiver: Ir,
 }
 
-impl<I: Component> C<I, (), ()> {
+impl<I: Component> SubComponent<I, (), ()> {
     /// Create a new sub component wrapper
     pub fn new(data: I) -> Self {
-        C {
+        SubComponent {
             data,
             message_handler: (),
             receiver: (),
         }
     }
 }
-impl<I: Component, Ir> C<I, (), Ir> {
+impl<I: Component, Ir> SubComponent<I, (), Ir> {
     /// Handle messages from the component
     pub fn on<P: Component>(
         self,
         handler: impl Fn(E<P>, I::EmitMessage) + 'static,
-    ) -> C<I, MessageHandler<P, I::EmitMessage>, Ir> {
-        C {
+    ) -> SubComponent<I, MessageHandler<P, I::EmitMessage>, Ir> {
+        SubComponent {
             data: self.data,
             message_handler: Box::new(handler),
             receiver: self.receiver,
@@ -234,16 +234,16 @@ impl<M> Sender<M> {
     }
 }
 
-impl<I: Component, Im> C<I, Im, ()> {
+impl<I: Component, Im> SubComponent<I, Im, ()> {
     /// Get a sender to allow sending messages to the component
     pub fn sender(
         self,
     ) -> (
-        C<I, Im, UnboundedReceiver<I::ReceiveMessage>>,
+        SubComponent<I, Im, UnboundedReceiver<I::ReceiveMessage>>,
         Sender<I::ReceiveMessage>,
     ) {
         let (tx, rx) = futures_channel::mpsc::unbounded();
-        let comp = C {
+        let comp = SubComponent {
             data: self.data,
             message_handler: self.message_handler,
             receiver: rx,
@@ -253,7 +253,7 @@ impl<I: Component, Im> C<I, Im, ()> {
     }
 }
 
-impl<I, P, H, R> Element<P> for C<I, H, R>
+impl<I, P, H, R> Element<P> for SubComponent<I, H, R>
 where
     I: Component,
     P: Component,

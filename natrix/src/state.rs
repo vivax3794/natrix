@@ -409,6 +409,7 @@ pub struct Guard<F> {
 /// This is where guards come into play:
 /// ```rust
 /// # use natrix::prelude::*;
+/// # use natrix::guard_option;
 /// # #[derive(Component)]
 /// # struct MyComponent {value: Option<u32>}
 /// # impl Component for MyComponent {
@@ -434,6 +435,7 @@ pub struct Guard<F> {
 /// value you can use the `@owned` version:
 /// ```rust
 /// # use natrix::prelude::*;
+/// # use natrix::guard_option;
 /// # #[derive(Component)]
 /// # struct MyComponent {value: Option<u32>}
 /// # impl Component for MyComponent {

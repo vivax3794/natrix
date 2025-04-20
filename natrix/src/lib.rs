@@ -150,19 +150,23 @@ pub(crate) use return_if_panic;
 
 /// Public export of everything.
 pub mod prelude {
+    pub use natrix_macros::Component;
 
-    #[cfg(feature = "scoped_css")]
-    pub use natrix_macros::scoped_css;
-    #[cfg(feature = "inline_css")]
-    pub use natrix_macros::style;
-    pub use natrix_macros::{Component, global_css};
-
-    pub use super::callbacks::EventHandler;
-    pub use super::component::{C, Component, NoMessages, mount};
+    pub use super::component::{Component, NoMessages, SubComponent};
     pub use super::element::Element;
     pub use super::state::{E, R};
-    pub use super::{events, guard_option, guard_result, html_elements as e};
+    pub use super::{events, html_elements as e};
 }
+pub use component::{Component, NoMessages, SubComponent, mount};
+pub use element::Element;
+pub use list::List;
+pub use natrix_macros;
+#[cfg(feature = "scoped_css")]
+pub use natrix_macros::scoped_css;
+#[cfg(feature = "inline_css")]
+pub use natrix_macros::style;
+pub use natrix_macros::{Component, global_css};
+pub use state::{RenderCtx, State};
 
 /// Public exports of internal data structures for `natrix_macros` to use in generated code.
 #[doc(hidden)]
