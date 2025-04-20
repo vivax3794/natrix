@@ -149,6 +149,65 @@ impl<C: Component, T: ToAttribute<C>, E: ToAttribute<C>> ToAttribute<C> for Resu
     }
 }
 
+/// A trait for converting a value to a class name
+pub trait ToClass<C: Component> {
+    /// Convert the value to a class name
+    fn apply_class(
+        self: Box<Self>,
+        ctx: &mut State<C>,
+        rendering_state: &mut RenderingState,
+        node: &web_sys::Element,
+    ) -> Option<Cow<'static, str>>;
+}
+
+/// Generate a `ToClass` implementation for a string type
+macro_rules! class_string {
+    ($type:ty, $cow:expr) => {
+        impl<C: Component> ToClass<C> for $type {
+            fn apply_class(
+                self: Box<Self>,
+                _ctx: &mut State<C>,
+                _rendering_state: &mut RenderingState,
+                node: &web_sys::Element,
+            ) -> Option<Cow<'static, str>> {
+                let class_list = node.class_list();
+                debug_expect!(class_list.add_1(&self), "Failed to add class {self}");
+                Some(($cow)(*self))
+            }
+        }
+    };
+}
+type_macros::strings_cow!(class_string);
+
+impl<C: Component, T: ToClass<C>> ToClass<C> for Option<T> {
+    fn apply_class(
+        self: Box<Self>,
+        ctx: &mut State<C>,
+        rendering_state: &mut RenderingState,
+        node: &web_sys::Element,
+    ) -> Option<Cow<'static, str>> {
+        if let Some(inner) = *self {
+            Box::new(inner).apply_class(ctx, rendering_state, node)
+        } else {
+            None
+        }
+    }
+}
+
+impl<C: Component, T: ToClass<C>, E: ToClass<C>> ToClass<C> for Result<T, E> {
+    fn apply_class(
+        self: Box<Self>,
+        ctx: &mut State<C>,
+        rendering_state: &mut RenderingState,
+        node: &web_sys::Element,
+    ) -> Option<Cow<'static, str>> {
+        match *self {
+            Ok(inner) => Box::new(inner).apply_class(ctx, rendering_state, node),
+            Err(inner) => Box::new(inner).apply_class(ctx, rendering_state, node),
+        }
+    }
+}
+
 /// A Generic html node with a given name.
 #[must_use = "Web elements are useless if not rendered"]
 pub struct HtmlElement<C: Component, T = ()> {
@@ -161,7 +220,7 @@ pub struct HtmlElement<C: Component, T = ()> {
     /// Potentially dynamic attributes to apply
     attributes: Vec<(&'static str, Box<dyn ToAttribute<C>>)>,
     /// Css classes to apply
-    classes: Vec<Cow<'static, str>>,
+    classes: Vec<Box<dyn ToClass<C>>>,
     /// Phantom data to allow for genericity
     phantom: std::marker::PhantomData<T>,
 }
@@ -255,17 +314,16 @@ impl<C: Component, T> HtmlElement<C, T> {
     }
 
     /// Add a class to the element.
-    pub fn class(mut self, class: impl Into<Cow<'static, str>>) -> Self {
-        self.classes.push(class.into());
+    pub fn class(mut self, class: impl ToClass<C> + 'static) -> Self {
+        self.classes.push(Box::new(class));
         self
     }
 
     /// Add multiple classes to the element.
-    pub fn classes(
-        mut self,
-        classes: impl IntoIterator<Item = impl Into<Cow<'static, str>>>,
-    ) -> Self {
-        self.classes.extend(classes.into_iter().map(Into::into));
+    pub fn classes(mut self, classes: impl IntoIterator<Item = &'static str>) -> Self {
+        for class in classes {
+            self.classes.push(Box::new(class));
+        }
         self
     }
 }
@@ -310,10 +368,7 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
             value.apply_attribute(intern(key), &element, ctx, render_state);
         }
         for class in classes {
-            debug_expect!(
-                element.class_list().add_1(&class),
-                "Failed to add class {class}"
-            );
+            class.apply_class(ctx, render_state, &element);
         }
 
         element.into()

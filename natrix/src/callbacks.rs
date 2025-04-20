@@ -1,10 +1,12 @@
 //! Implementations of various traits for closures.
 
+use std::borrow::Cow;
+
 use crate::component::Component;
 use crate::element::Element;
 use crate::events::Event;
-use crate::html_elements::ToAttribute;
-use crate::render_callbacks::{ReactiveAttribute, ReactiveNode, SimpleReactive};
+use crate::html_elements::{ToAttribute, ToClass};
+use crate::render_callbacks::{ReactiveAttribute, ReactiveClass, ReactiveNode, SimpleReactive};
 use crate::signal::RenderingState;
 use crate::state::{RenderCtx, State};
 
@@ -47,6 +49,28 @@ where
             ctx,
         );
         rendering_state.hooks.push(hook);
+    }
+}
+
+impl<F, C, R> ToClass<C> for F
+where
+    F: Fn(&mut RenderCtx<C>) -> R + 'static,
+    R: ToClass<C> + 'static,
+    C: Component,
+{
+    fn apply_class(
+        self: Box<Self>,
+        ctx: &mut State<C>,
+        rendering_state: &mut RenderingState,
+        node: &web_sys::Element,
+    ) -> Option<Cow<'static, str>> {
+        let hook = SimpleReactive::init_new(
+            Box::new(move |ctx| ReactiveClass { data: self(ctx) }),
+            node.clone(),
+            ctx,
+        );
+        rendering_state.hooks.push(hook);
+        None
     }
 }
 

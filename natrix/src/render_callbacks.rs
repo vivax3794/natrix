@@ -1,8 +1,10 @@
 //! Implements the reactive hooks for updating the dom in response to signal changessz.
 
+use std::borrow::Cow;
+
 use crate::component::Component;
 use crate::element::{Element, generate_fallback_node};
-use crate::html_elements::ToAttribute;
+use crate::html_elements::{ToAttribute, ToClass};
 use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
 use crate::state::{HookKey, KeepAlive, RenderCtx, State};
 use crate::utils::debug_expect;
@@ -193,12 +195,21 @@ type_macros::numerics!(node_specialize_int);
 /// A trait to allow `SimpleReactive` to deduplicate common reactive logic for attributes, classes,
 /// styles, etc
 pub(crate) trait ReactiveValue<C: Component> {
+    /// Any potential state needed to apply the change
+    type State: Default;
+
     /// Actually apply the change
-    fn apply(self, ctx: &mut State<C>, render_state: &mut RenderingState, node: &web_sys::Element);
+    fn apply(
+        self,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+        node: &web_sys::Element,
+        state: &mut Self::State,
+    );
 }
 
 /// A common wrapper for simple reactive operations to deduplicate dependency tracking code
-pub(crate) struct SimpleReactive<C: Component, K> {
+pub(crate) struct SimpleReactive<C: Component, K: ReactiveValue<C>> {
     /// The callback to call, takes state and returns the needed data for the reactive
     /// transformation
     callback: Box<dyn Fn(&mut RenderCtx<C>) -> K>,
@@ -208,6 +219,8 @@ pub(crate) struct SimpleReactive<C: Component, K> {
     keep_alive: Vec<KeepAlive>,
     /// Hooks to use
     hooks: Vec<HookKey>,
+    /// The state needed to apply the transformation
+    state: K::State,
 }
 
 impl<C: Component, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K> {
@@ -216,6 +229,8 @@ impl<C: Component, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K>
     }
 
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
+        let hooks = std::mem::take(&mut self.hooks);
+
         ctx.clear();
         self.keep_alive.clear();
         let value = (self.callback)(&mut RenderCtx {
@@ -236,8 +251,9 @@ impl<C: Component, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K>
                 parent_dep: you,
             },
             &self.node,
+            &mut self.state,
         );
-        UpdateResult::Nothing
+        UpdateResult::DropHooks(hooks)
     }
 }
 
@@ -256,6 +272,7 @@ impl<C: Component, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
             node,
             keep_alive: Vec::new(),
             hooks: Vec::new(),
+            state: K::State::default(),
         };
         this.update(ctx, me);
 
@@ -274,7 +291,45 @@ pub(crate) struct ReactiveAttribute<T> {
 }
 
 impl<C: Component, T: ToAttribute<C>> ReactiveValue<C> for ReactiveAttribute<T> {
-    fn apply(self, ctx: &mut State<C>, render_state: &mut RenderingState, node: &web_sys::Element) {
+    type State = ();
+
+    fn apply(
+        self,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+        node: &web_sys::Element,
+        _state: &mut Self::State,
+    ) {
         Box::new(self.data).apply_attribute(self.name, node, ctx, render_state);
+    }
+}
+
+/// Reactively set a element class
+pub(crate) struct ReactiveClass<T> {
+    /// The class value to apply
+    pub(crate) data: T,
+}
+
+impl<C: Component, T: ToClass<C>> ReactiveValue<C> for ReactiveClass<T> {
+    type State = Option<Cow<'static, str>>;
+
+    fn apply(
+        self,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+        node: &web_sys::Element,
+        state: &mut Self::State,
+    ) {
+        let class_list = node.class_list();
+
+        if let Some(prev) = state.take() {
+            debug_expect!(
+                class_list.remove_1(&prev),
+                "Failed to remove class from element"
+            );
+        }
+
+        let new = Box::new(self.data).apply_class(ctx, render_state, node);
+        *state = new;
     }
 }

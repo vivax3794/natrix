@@ -12,6 +12,26 @@ macro_rules! strings {
     };
 }
 
+/// Call the given macro with every string type, but converted to a `Cow`
+macro_rules! strings_cow {
+    ($macro:ident) => {
+        $macro!(&'static str, |this| ::std::borrow::Cow::Borrowed(this));
+        $macro!(::std::string::String, |this| ::std::borrow::Cow::Owned(
+            this
+        ));
+        $macro!(::std::borrow::Cow<'static, str>, |this| this);
+        $macro!(::std::rc::Rc<str>, |this: ::std::rc::Rc<str>| {
+            ::std::borrow::Cow::from(this.to_string())
+        });
+        $macro!(::std::sync::Arc<str>, |this: ::std::sync::Arc<str>| {
+            ::std::borrow::Cow::from(this.to_string())
+        });
+        $macro!(::std::boxed::Box<str>, |this: ::std::boxed::Box<str>| {
+            ::std::borrow::Cow::Owned(this.into_string())
+        });
+    };
+}
+
 /// Call the given macro with every numeric type
 macro_rules! numerics {
     ($macro:ident) => {
@@ -32,4 +52,4 @@ macro_rules! numerics {
     };
 }
 
-pub(crate) use {numerics, strings};
+pub(crate) use {numerics, strings, strings_cow};

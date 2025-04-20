@@ -154,3 +154,35 @@ e::div()
     .class("baz")
 # ;
 ```
+
+Classes can also be reactive as closures implement the [`ToClass`](html_elements::ToClass) trait.
+
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+#
+# #[derive(Component)]
+# struct MyComponent {
+#     pub is_active: bool,
+# }
+#
+# impl Component for MyComponent {
+#     fn render() -> impl Element<Self> {
+e::div()
+    .class("my-component")
+    .class(|ctx: R<Self>| {
+        if *ctx.is_active {
+            Some("active")
+        } else {
+            None
+        }
+    })
+    .child(e::button()
+        .text("Click me!")
+        .on::<events::Click>(|ctx: E<Self>, _| {
+            *ctx.is_active = !*ctx.is_active;
+        })
+    )
+# }
+# }
+```
