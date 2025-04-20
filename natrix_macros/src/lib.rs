@@ -51,6 +51,31 @@ pub fn component_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
     result.into()
 }
 
+/// Convert a struct name to its data variant.
+/// This is to allow you to implement methods on `ctx` without having to relay on implementation
+/// details
+/// ```ignore
+/// #[derive(Component)]
+/// struct HelloWorld {
+///    value: u8,
+/// };
+///
+/// impl natrix::data!(HelloWorld) {
+///   fn double(&mut self) {
+///     self.value *= 2;
+///   }
+/// }
+/// ```
+#[proc_macro]
+pub fn data(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let name = syn::parse_macro_input!(input as syn::Ident);
+    let name = format_ident!("_{name}Data");
+    let name = quote! {
+        #name
+    };
+    name.into()
+}
+
 /// Actual implementation of the macro, split out to make dealing with the different `TokenStream`
 /// types easier
 fn component_derive_implementation(item: ItemStruct) -> TokenStream {

@@ -165,7 +165,7 @@ pub use natrix_macros;
 pub use natrix_macros::scoped_css;
 #[cfg(feature = "inline_css")]
 pub use natrix_macros::style;
-pub use natrix_macros::{Component, global_css};
+pub use natrix_macros::{Component, data, global_css};
 pub use state::{RenderCtx, State};
 
 /// Public exports of internal data structures for `natrix_macros` to use in generated code.

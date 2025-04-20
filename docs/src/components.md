@@ -158,6 +158,19 @@ fn main() {
 ### Methods for `ctx`
 
 The above wont let you define methods that work on `ctx`, this is because `ctx` is actually a different type constructed by the derive macro.
+This type can be gotten using the `natrix::data` macro, like the following:
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
 
-> [!FAILURE]
-> This feature isnt implemented yet
+#[derive(Component)]
+struct HelloWorld {
+    counter: u8,
+}
+
+impl natrix::data!(HelloWorld) {
+    pub fn increment(&mut self) {
+        self.counter += 1;
+    }
+}
+```
