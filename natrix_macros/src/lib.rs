@@ -69,11 +69,16 @@ pub fn component_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
 #[proc_macro]
 pub fn data(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let name = syn::parse_macro_input!(input as syn::Ident);
-    let name = format_ident!("_{name}Data");
+    let name = create_data_struct_name(&name);
     let name = quote! {
         #name
     };
     name.into()
+}
+
+/// Create the name for the data struct of a struct
+fn create_data_struct_name(name: &syn::Ident) -> syn::Ident {
+    format_ident!("_{name}Data")
 }
 
 /// Actual implementation of the macro, split out to make dealing with the different `TokenStream`
@@ -84,7 +89,7 @@ fn component_derive_implementation(item: ItemStruct) -> TokenStream {
     let (fields, is_named) = get_fields(item.fields);
 
     let field_count = proc_macro2::Literal::usize_unsuffixed(fields.len());
-    let data_name = format_ident!("_{name}Data");
+    let data_name = create_data_struct_name(&name);
     let signal_state_name = format_ident!("_{name}SignalState");
 
     let mut generics = item.generics;

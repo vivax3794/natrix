@@ -20,6 +20,7 @@
 
 use std::borrow::Cow;
 use std::collections::HashSet;
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::io::{BufRead, BufReader, Read};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
@@ -69,6 +70,9 @@ struct BuildConfigArgs {
     /// Location to output build files
     #[arg(short, long)]
     dist: Option<PathBuf>,
+    /// Cache busting option
+    #[arg(short, long, value_enum)]
+    cache_bust: Option<CacheBustOption>,
 }
 
 /// Settings for building the server
@@ -82,6 +86,8 @@ struct BuildConfig {
     /// Do live reload
     /// The Some value is the port to use
     live_reload: Option<u16>,
+    /// Cache bust option
+    cache_bust: CacheBustOption,
 }
 
 impl BuildConfigArgs {
@@ -93,6 +99,7 @@ impl BuildConfigArgs {
             dist: self.dist.unwrap_or_else(|| PathBuf::from("./dist")),
             temp_dir: find_target_natrix(profile)?,
             live_reload: None,
+            cache_bust: self.cache_bust.unwrap_or(CacheBustOption::Content),
         })
     }
 
@@ -124,6 +131,7 @@ impl BuildConfigArgs {
             dist,
             temp_dir: target,
             live_reload,
+            cache_bust: self.cache_bust.unwrap_or(CacheBustOption::Timestamp),
         })
     }
 }
@@ -161,6 +169,17 @@ impl BuildProfile {
             Self::Dev => "debug",
         }
     }
+}
+
+/// Cache busting options
+#[derive(Clone, Copy, ValueEnum, PartialEq, Eq)]
+enum CacheBustOption {
+    /// No cache busting
+    None,
+    /// Crate a hash based on the content
+    Content,
+    /// Create a hash based on the timestamp
+    Timestamp,
 }
 
 fn main() -> Result<()> {
@@ -524,8 +543,14 @@ fn build(config: &BuildConfig) -> Result<()> {
     if config.profile == BuildProfile::Release {
         optimize_wasm(&wasm_file)?;
     }
-    collect_macro_output(config, &wasm_file)?;
-    generate_html(config, &js_file)?;
+
+    let wasm_file = cache_bust_file(config, wasm_file)?;
+    let js_file = cache_bust_file(config, js_file)?;
+
+    let css_file = collect_macro_output(config, &wasm_file)?;
+    let css_file = cache_bust_file(config, css_file)?;
+
+    generate_html(config, &wasm_file, &js_file, &css_file)?;
 
     println!(
         "📦 {} {}",
@@ -537,13 +562,17 @@ fn build(config: &BuildConfig) -> Result<()> {
 }
 
 /// Generate the html file to be used
-fn generate_html(config: &BuildConfig, js_file: &Path) -> Result<()> {
+fn generate_html(
+    config: &BuildConfig,
+    wasm_file: &Path,
+    js_file: &Path,
+    css_file: &Path,
+) -> Result<()> {
     let html_file = config.dist.join("index.html");
 
-    let js_file = js_file
-        .file_name()
-        .ok_or(anyhow!("Js File name not found"))?
-        .to_string_lossy();
+    let js_file = get_filename(js_file)?;
+    let wasm_file = get_filename(wasm_file)?;
+    let css_file = get_filename(css_file)?;
 
     let js_reload = if let Some(port) = config.live_reload {
         format!(
@@ -563,13 +592,13 @@ fn generate_html(config: &BuildConfig, js_file: &Path) -> Result<()> {
 <!doctype html>
 <html>
     <head>
-        <link rel="stylesheet" href="{CSS_OUTPUT_NAME}"/>
+        <link rel="stylesheet" href="{css_file}"/>
     </head>
     <body>
         <div id="{}"></div>
         <script type="module">
             import init from "./{js_file}";
-            init();
+            init("{wasm_file}");
             {js_reload}
         </script>
     </body>
@@ -583,6 +612,15 @@ fn generate_html(config: &BuildConfig, js_file: &Path) -> Result<()> {
     Ok(())
 }
 
+/// get the filename of a path
+fn get_filename(file: &Path) -> Result<Cow<'_, str>> {
+    let file_name = file
+        .file_name()
+        .ok_or(anyhow!("File name not found"))?
+        .to_string_lossy();
+    Ok(file_name)
+}
+
 /// Run wasmbindgen to generate the clue
 fn wasm_bindgen(config: &BuildConfig, wasm_file: &PathBuf) -> Result<(PathBuf, PathBuf)> {
     let mut command = process::Command::new("wasm-bindgen");
@@ -591,7 +629,8 @@ fn wasm_bindgen(config: &BuildConfig, wasm_file: &PathBuf) -> Result<(PathBuf, P
         .args(["--out-dir", &path_str(&config.dist)])
         .args(["--target", "web"])
         .args(["--out-name", BINDGEN_OUTPUT_NAME])
-        .arg("--no-typescript");
+        .arg("--no-typescript")
+        .arg("--omit-default-module-path");
     if config.profile == BuildProfile::Dev {
         command.arg("--debug").arg("--keep-debug");
     } else {
@@ -778,13 +817,13 @@ fn create_spinner(msg: &str) -> Result<ProgressBar> {
 }
 
 /// Collect the outputs of the macros
-fn collect_macro_output(config: &BuildConfig, wasm_file: &Path) -> Result<()> {
-    collect_css(config, wasm_file)?;
-    Ok(())
+fn collect_macro_output(config: &BuildConfig, wasm_file: &Path) -> Result<PathBuf> {
+    let css_file = collect_css(config, wasm_file)?;
+    Ok(css_file)
 }
 
 /// Collect css from the macro files
-fn collect_css(config: &BuildConfig, wasm_file: &Path) -> Result<()> {
+fn collect_css(config: &BuildConfig, wasm_file: &Path) -> Result<PathBuf> {
     let spinner = create_spinner("🎨 Bundling css")?;
 
     let mut css_content = String::new();
@@ -796,10 +835,11 @@ fn collect_css(config: &BuildConfig, wasm_file: &Path) -> Result<()> {
         css_content = optimize_css(&css_content, wasm_file)?;
     }
 
-    fs::write(config.dist.join(CSS_OUTPUT_NAME), css_content)?;
+    let output_path = config.dist.join(CSS_OUTPUT_NAME);
+    fs::write(&output_path, css_content)?;
 
     spinner.finish();
-    Ok(())
+    Ok(output_path)
 }
 
 /// Optimize the given css string
@@ -1060,4 +1100,39 @@ fn find_target() -> Result<PathBuf> {
     let target = metadata.target_directory;
     let target = PathBuf::from(target);
     Ok(target)
+}
+
+/// Moves the given file to a new location in accordane with cache busting options
+/// Returns the new file location
+fn cache_bust_file(config: &BuildConfig, original_file: PathBuf) -> Result<PathBuf> {
+    let Some(original_filename) = original_file.file_name() else {
+        return Ok(original_file);
+    };
+    let original_filename = original_filename.to_string_lossy();
+
+    let new_filename = match config.cache_bust {
+        CacheBustOption::None => original_filename.into_owned(),
+        CacheBustOption::Timestamp => {
+            let current_time = std::time::SystemTime::now();
+            let since_epoch = current_time.duration_since(std::time::UNIX_EPOCH)?;
+            let unix_time_stamp = since_epoch.as_secs();
+            let encoded_timestamp =
+                data_encoding::BASE64URL_NOPAD.encode(&unix_time_stamp.to_le_bytes());
+            format!("{encoded_timestamp}-{original_filename}")
+        }
+        CacheBustOption::Content => {
+            let content = fs::read(&original_file)?;
+            let mut hasher = DefaultHasher::default();
+            content.hash(&mut hasher);
+            let hash = hasher.finish();
+
+            let encoded_hash = data_encoding::BASE64URL_NOPAD.encode(&hash.to_le_bytes());
+            format!("{encoded_hash}-{original_filename}")
+        }
+    };
+
+    let new_file = original_file.with_file_name(new_filename);
+
+    fs::rename(original_file, &new_file)?;
+    Ok(new_file)
 }

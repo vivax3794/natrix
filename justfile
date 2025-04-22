@@ -92,10 +92,10 @@ integration_tests: install_cli
 [working-directory: "./integration_tests"]
 test_css_tree_shaking: install_cli
     natrix build -p dev
-    grep "I_amNotUsed" dist/styles.css
+    grep "I_amNotUsed" dist/*.css
 
     natrix build -p release
-    ! grep "I_amNotUsed" dist/styles.css
+    ! grep "I_amNotUsed" dist/*.css
 
 
 

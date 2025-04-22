@@ -20,6 +20,7 @@ wasmparser = "0.228"
 rustc_version = "0.4.1"
 cargo_metadata = "0.19.2"
 tungstenite = { version = "0.26.2" }
+data-encoding = {version="2.9.0", default-features = false, features = ["alloc"]}
 
 [[bin]]
 name = "natrix"

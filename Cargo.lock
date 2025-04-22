@@ -1161,6 +1161,7 @@ dependencies = [
  "anyhow",
  "cargo_metadata",
  "clap",
+ "data-encoding",
  "indicatif",
  "lightningcss",
  "natrix_shared",
