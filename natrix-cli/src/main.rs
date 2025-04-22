@@ -737,7 +737,7 @@ fn is_feature_enabled(feature: &str, is_default: bool) -> Result<bool> {
         }
     } else {
         println!("{}", "⚠️ Natrix not found in dependencies".yellow().bold());
-        false
+        is_default
     })
 }
 
