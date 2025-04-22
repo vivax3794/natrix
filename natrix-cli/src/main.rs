@@ -43,36 +43,6 @@ const BINDGEN_OUTPUT_NAME: &str = "code";
 /// Name of the collected css
 const CSS_OUTPUT_NAME: &str = "styles.css";
 
-/// Find the target folder
-fn find_target() -> Result<PathBuf> {
-    let metadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
-    let target = metadata.target_directory;
-    let target = PathBuf::from(target);
-    Ok(target)
-}
-
-/// Find the natrix target folder
-fn find_target_natrix(mode: BuildProfile) -> Result<PathBuf> {
-    let target = find_target()?;
-    let project = get_project_name()?;
-    Ok(target.join(format!("natrix-{project}-{}", mode.readable())))
-}
-
-/// Get the current target project name
-fn get_project_name() -> Result<String> {
-    let metadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
-    let packages = metadata.workspace_default_packages();
-    let package = packages.first().ok_or(anyhow!("No package found"))?;
-
-    if packages.len() > 1 {
-        return Err(anyhow!(
-            "Multiple packages found, please specify the package name"
-        ));
-    }
-
-    Ok(package.name.clone())
-}
-
 /// Natrix CLI
 #[derive(Parser)]
 enum Cli {
@@ -722,25 +692,6 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
     find_wasm(config).context("Finding wasm file")
 }
 
-/// Find if the specified feature is enabled for natrix
-fn is_feature_enabled(feature: &str, is_default: bool) -> Result<bool> {
-    let metadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
-    let packages = metadata.workspace_default_packages();
-    let package = packages.first().ok_or(anyhow!("No package found"))?;
-    let natrix = package.dependencies.iter().find(|x| x.name == "natrix");
-
-    Ok(if let Some(natrix) = natrix {
-        if natrix.features.iter().any(|feat| feat == feature) {
-            true
-        } else {
-            is_default && natrix.uses_default_features
-        }
-    } else {
-        println!("{}", "⚠️ Natrix not found in dependencies".yellow().bold());
-        is_default
-    })
-}
-
 /// Return the path to the first wasm file in the folder
 fn find_wasm(config: &BuildConfig) -> Result<PathBuf> {
     let target = find_target()?;
@@ -824,46 +775,6 @@ fn create_spinner(msg: &str) -> Result<ProgressBar> {
     );
     spinner.enable_steady_tick(Duration::from_millis(100));
     Ok(spinner)
-}
-
-/// Convert a path to a `&str` in a lossy way
-fn path_str(path: &Path) -> Cow<'_, str> {
-    path.as_os_str().to_string_lossy()
-}
-
-/// Run the given command displaying the given spinner below it
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "The spinner isnt usable after this"
-)]
-fn run_with_spinner(mut command: process::Command, spinner: ProgressBar) -> Result<()> {
-    command
-        .stdout(process::Stdio::null())
-        .stderr(process::Stdio::piped());
-
-    let mut child = command.spawn()?;
-
-    let stderr = child.stderr.take().ok_or(anyhow!("Stderr gone"))?;
-    let stderr = BufReader::new(stderr);
-
-    let mut full_output = String::new();
-    for line in stderr.lines().map_while(Result::ok) {
-        full_output.push_str(&line);
-        full_output.push('\n');
-
-        spinner.set_message(line);
-    }
-
-    let status = child.wait()?;
-
-    if status.success() {
-        spinner.finish_with_message("");
-        Ok(())
-    } else {
-        spinner.finish_with_message("ERROR".red().to_string());
-        println!("{full_output}");
-        Err(anyhow!("Command exited with non zero status"))
-    }
 }
 
 /// Collect the outputs of the macros
@@ -1060,4 +971,93 @@ fn get_wasm_strings(wasm_file: &Path) -> Result<Vec<String>> {
     }
 
     Ok(strings)
+}
+
+/// Run the given command displaying the given spinner below it
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "The spinner isnt usable after this"
+)]
+fn run_with_spinner(mut command: process::Command, spinner: ProgressBar) -> Result<()> {
+    command
+        .stdout(process::Stdio::null())
+        .stderr(process::Stdio::piped());
+
+    let mut child = command.spawn()?;
+
+    let stderr = child.stderr.take().ok_or(anyhow!("Stderr gone"))?;
+    let stderr = BufReader::new(stderr);
+
+    let mut full_output = String::new();
+    for line in stderr.lines().map_while(Result::ok) {
+        full_output.push_str(&line);
+        full_output.push('\n');
+
+        spinner.set_message(line);
+    }
+
+    let status = child.wait()?;
+
+    if status.success() {
+        spinner.finish_with_message("");
+        Ok(())
+    } else {
+        spinner.finish_with_message("ERROR".red().to_string());
+        println!("{full_output}");
+        Err(anyhow!("Command exited with non zero status"))
+    }
+}
+
+/// Convert a path to a `&str` in a lossy way
+fn path_str(path: &Path) -> Cow<'_, str> {
+    path.as_os_str().to_string_lossy()
+}
+
+/// Find if the specified feature is enabled for natrix
+fn is_feature_enabled(feature: &str, is_default: bool) -> Result<bool> {
+    let metadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
+    let packages = metadata.workspace_default_packages();
+    let package = packages.first().ok_or(anyhow!("No package found"))?;
+    let natrix = package.dependencies.iter().find(|x| x.name == "natrix");
+
+    Ok(if let Some(natrix) = natrix {
+        if natrix.features.iter().any(|feat| feat == feature) {
+            true
+        } else {
+            is_default && natrix.uses_default_features
+        }
+    } else {
+        println!("{}", "⚠️ Natrix not found in dependencies".yellow().bold());
+        is_default
+    })
+}
+
+/// Find the natrix target folder
+fn find_target_natrix(mode: BuildProfile) -> Result<PathBuf> {
+    let target = find_target()?;
+    let project = get_project_name()?;
+    Ok(target.join(format!("natrix-{project}-{}", mode.readable())))
+}
+
+/// Get the current target project name
+fn get_project_name() -> Result<String> {
+    let metadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
+    let packages = metadata.workspace_default_packages();
+    let package = packages.first().ok_or(anyhow!("No package found"))?;
+
+    if packages.len() > 1 {
+        return Err(anyhow!(
+            "Multiple packages found, please specify the package name"
+        ));
+    }
+
+    Ok(package.name.clone())
+}
+
+/// Find the target folder
+fn find_target() -> Result<PathBuf> {
+    let metadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
+    let target = metadata.target_directory;
+    let target = PathBuf::from(target);
+    Ok(target)
 }

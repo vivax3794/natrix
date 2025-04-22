@@ -240,6 +240,27 @@ impl<T: Component> State<T> {
             }
         });
     }
+
+    /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
+    /// framework assumptions.
+    pub fn deferred_borrow(&mut self) -> DeferredCtx<T> {
+        DeferredCtx { inner: self.weak() }
+    }
+
+    /// Spawn a async task in the local event loop, which will run on the next possible moment.
+    // This is `&mut` to make sure it cant be called in render callbacks.
+    pub fn use_async<C, F>(&mut self, func: C)
+    where
+        C: FnOnce(DeferredCtx<T>) -> F,
+        F: Future<Output = Option<()>> + 'static,
+    {
+        let deferred = self.deferred_borrow();
+        let future = func(deferred);
+
+        wasm_bindgen_futures::spawn_local(async {
+            let _ = future.await;
+        });
+    }
 }
 
 /// Drop all children of the hook
@@ -349,15 +370,6 @@ where
     fn drop_us(self: Box<Self>) -> Vec<HookKey> {
         Vec::new()
     }
-}
-
-/// This guard ensures that when it is in scope the data it was created for is `Some`
-#[cfg_attr(feature = "nightly", must_not_suspend)]
-#[derive(Clone, Copy)]
-#[must_use]
-pub struct Guard<F> {
-    /// The closure for getting the value from a ctx
-    getter: F,
 }
 
 /// Get a guard handle that can be used to retrieve the `Some` variant of a option without having to
@@ -499,6 +511,14 @@ macro_rules! guard_result {
         }
     };
 }
+/// This guard ensures that when it is in scope the data it was created for is `Some`
+#[cfg_attr(feature = "nightly", must_not_suspend)]
+#[derive(Clone, Copy)]
+#[must_use]
+pub struct Guard<F> {
+    /// The closure for getting the value from a ctx
+    getter: F,
+}
 
 impl<F> Guard<F> {
     #[doc(hidden)]
@@ -625,29 +645,6 @@ impl<T: Component> Drop for DeferredRef<'_, T> {
     fn drop(&mut self) {
         self.0.with_reference_mut(|ctx| {
             ctx.update();
-        });
-    }
-}
-
-impl<T: Component> State<T> {
-    /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
-    /// framework assumptions.
-    pub fn deferred_borrow(&mut self) -> DeferredCtx<T> {
-        DeferredCtx { inner: self.weak() }
-    }
-
-    /// Spawn a async task in the local event loop, which will run on the next possible moment.
-    // This is `&mut` to make sure it cant be called in render callbacks.
-    pub fn use_async<C, F>(&mut self, func: C)
-    where
-        C: FnOnce(DeferredCtx<T>) -> F,
-        F: Future<Output = Option<()>> + 'static,
-    {
-        let deferred = self.deferred_borrow();
-        let future = func(deferred);
-
-        wasm_bindgen_futures::spawn_local(async {
-            let _ = future.await;
         });
     }
 }
