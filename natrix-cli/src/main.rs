@@ -73,6 +73,9 @@ struct BuildConfigArgs {
     /// Cache busting option
     #[arg(short, long, value_enum)]
     cache_bust: Option<CacheBustOption>,
+    /// Invalidate the asset caches
+    #[arg(long)]
+    invalidate_cache: bool,
 }
 
 /// Settings for building the server
@@ -88,6 +91,8 @@ struct BuildConfig {
     live_reload: Option<u16>,
     /// Cache bust option
     cache_bust: CacheBustOption,
+    /// Invalidate the asset caches
+    invalidate_cache: bool,
 }
 
 impl BuildConfigArgs {
@@ -100,6 +105,7 @@ impl BuildConfigArgs {
             temp_dir: find_target_natrix(profile)?,
             live_reload: None,
             cache_bust: self.cache_bust.unwrap_or(CacheBustOption::Content),
+            invalidate_cache: self.invalidate_cache,
         })
     }
 
@@ -132,6 +138,7 @@ impl BuildConfigArgs {
             temp_dir: target,
             live_reload,
             cache_bust: self.cache_bust.unwrap_or(CacheBustOption::Timestamp),
+            invalidate_cache: self.invalidate_cache,
         })
     }
 }
@@ -703,6 +710,17 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
             natrix_shared::MACRO_OUTPUT_ENV,
             config.temp_dir.join(MACRO_OUTPUT_DIR),
         );
+
+    if config.invalidate_cache {
+        let time = std::time::SystemTime::now();
+        let eleapsed_time = time.duration_since(std::time::UNIX_EPOCH)?;
+        let unix_timestamp = eleapsed_time.as_secs();
+        command.env(
+            natrix_shared::MACRO_INVALIDATE_ENV,
+            unix_timestamp.to_string(),
+        );
+    }
+
     if config.profile == BuildProfile::Release {
         let mut rustc_flags =
             String::from("-C target-feature=+bulk-memory -C target-feature=+reference-types ");

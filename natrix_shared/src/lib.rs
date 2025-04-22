@@ -27,3 +27,6 @@ pub const MOUNT_POINT: &str = "NATRIX_MOUNT";
 
 /// The env var to use to pass the output dir to macros.
 pub const MACRO_OUTPUT_ENV: &str = "NATRIX_MACRO_OUTPUT";
+
+/// The env var used to invalidate the macro outputs.
+pub const MACRO_INVALIDATE_ENV: &str = "NATRIX_MACRO_INVALIDATE";

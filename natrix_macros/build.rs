@@ -3,4 +3,8 @@ fn main() {
         "cargo:rerun-if-env-changed={}",
         natrix_shared::MACRO_OUTPUT_ENV
     );
+    println!(
+        "cargo:rerun-if-env-changed={}",
+        natrix_shared::MACRO_INVALIDATE_ENV
+    );
 }
