@@ -9,6 +9,7 @@ const HELLO_ID: &str = "HELLO";
 const PANIC_ID: &str = "PANIC";
 const BUTTON_ID: &str = "BUTTON";
 const RELOAD_ID: &str = "RELOAD";
+const IMG_ID: &str = "IMG_ID";
 
 global_css!("
     h1 {
@@ -81,6 +82,11 @@ impl Component for HelloWorld {
                     .text(|ctx: R<Self>| *ctx.counter),
             )
             .child(e::div().id(RELOAD_ID).text(reload_tests::VALUE))
+            .child(
+                e::img()
+                    .src(natrix::asset!("../assets/logo.png"))
+                    .id(IMG_ID),
+            )
     }
 }
 
@@ -95,7 +101,7 @@ mod tests {
     use thirtyfour::{By, ChromiumLikeCapabilities, DesiredCapabilities, WebDriver};
     use tokio::time::sleep;
 
-    use crate::{BUTTON_ID, HELLO_ID, HELLO_TEXT, PANIC_ID, RELOAD_ID, reload_tests};
+    use crate::{BUTTON_ID, HELLO_ID, HELLO_TEXT, IMG_ID, PANIC_ID, RELOAD_ID, reload_tests};
 
     async fn create_client() -> WebDriver {
         let mut caps = DesiredCapabilities::chrome();
@@ -227,6 +233,16 @@ mod tests {
         let element = client.find(By::Id(HELLO_ID)).await.unwrap();
         let text = element.css_value("padding").await.unwrap();
         assert_eq!(text, "100px");
+    }
+
+    #[tokio::test]
+    async fn assets() {
+        let client = create_client().await;
+        let element = client.find(By::Id(IMG_ID)).await.unwrap();
+        let rect = element.rect().await.unwrap();
+        let width = rect.width;
+
+        assert!(width >= 100.0, "Img width too small {width}");
     }
 
     #[tokio::test]

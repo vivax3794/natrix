@@ -16,6 +16,7 @@
   - [Async](async-components.md)
 - [Html](html.md)
 - [Css](css.md)
+- [Assets](assets.md)
 - [Reactivity](reactivity.md)
 - [Testing](testing.md)
 - [Deployment](deployment.md)

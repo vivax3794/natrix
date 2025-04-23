@@ -10,6 +10,7 @@ keywords = ["frontend", "framework", "web", "wasm"]
 categories = ["gui", "wasm", "web-programming"]
 
 readme = "../README.md"
+exclude = ["tests"]
 
 [dependencies]
 natrix_macros = {path = "../natrix_macros", version="1.0.0"}
@@ -33,9 +34,10 @@ either = { version = "1.0.0", optional = true, default-features = false }
 paste = "1.0.15"
 
 [features]
-default = ["panic_hook", "scoped_css", "inline_css"]
+default = ["panic_hook", "scoped_css", "inline_css", "assets"]
 scoped_css = ["natrix_macros/scoped_css"]
 inline_css = ["natrix_macros/inline_css"]
+assets = ["natrix_macros/assets"]
 panic_hook = ["web-sys/console"]
 
 nightly = []

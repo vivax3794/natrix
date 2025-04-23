@@ -28,3 +28,4 @@ template-quote = "0.4.0"
 [features]
 scoped_css = ["dep:lightningcss", "dep:convert_case"]
 inline_css = ["dep:data-encoding"]
+assets = ["dep:data-encoding", "natrix_shared/assets"]

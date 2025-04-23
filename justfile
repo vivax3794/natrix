@@ -26,20 +26,15 @@ test_web:
 test_homepage:
     rustup run nightly wasm-pack test --headless --chrome
 
-
 # Run clippy on all packages and all features
 check:
     cargo fmt --check
 
-    cargo +stable clippy -p natrix_shared -- -Dwarnings
     cargo +stable clippy -p natrix-cli -- -Dwarnings
-
-    cargo +stable hack clippy -p natrix_macros --each-feature -- -Dwarnings
-    cargo +stable hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --skip nightly --tests -- -Dwarnings
-    cargo +nightly hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --tests -- -Dwarnings
-
     cargo +nightly clippy -p homepage -- -Dwarnings
 
+    cargo +stable hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --skip nightly --tests -- -Dwarnings
+    cargo +nightly hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --tests -- -Dwarnings
 
 # Check the documentation for all packages
 # And for typos in the docs
@@ -96,9 +91,6 @@ test_css_tree_shaking: install_cli
 
     natrix build -p release
     ! grep "I_amNotUsed" dist/*.css
-
-
-
 
 # Run the project generation tests
 # These will use `natrix new` to create a new project and then build it

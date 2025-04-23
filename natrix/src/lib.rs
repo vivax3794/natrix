@@ -161,6 +161,8 @@ pub use component::{Component, NoMessages, SubComponent, mount};
 pub use element::Element;
 pub use list::List;
 pub use natrix_macros;
+#[cfg(feature = "assets")]
+pub use natrix_macros::asset;
 #[cfg(feature = "scoped_css")]
 pub use natrix_macros::scoped_css;
 #[cfg(feature = "inline_css")]

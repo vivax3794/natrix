@@ -92,6 +92,9 @@ As such disabling this feature will result in faster compile times.
 ### `inline_css`
 This enables [Inline Css](css.md#inline-css). This doesnt have the same compile time impact as `scoped_css` as it only pulls in `data-encoding` in the proc-macro, but it will still impact compile times.
 
+### `assets`
+Enables the `asset` macro for bundling arbitrary assets.
+
 ### `panic_hook`
 
 This feature enables a panic hook that is auto installed when using [`mount`](component::mount) (or can be set manually with [`natrix::set_panic_hook`](set_panic_hook)), this panic hook will prevent any further rust code from running if a panic happens, which prevents undefined behaviour.

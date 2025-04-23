@@ -19,7 +19,7 @@
 )]
 
 use std::borrow::Cow;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::io::{BufRead, BufReader, Read};
 use std::net::TcpListener;
@@ -604,8 +604,8 @@ fn generate_html(
     <body>
         <div id="{}"></div>
         <script type="module">
-            import init from "./{js_file}";
-            init("{wasm_file}");
+            import init from "/{js_file}";
+            init("/{wasm_file}");
             {js_reload}
         </script>
     </body>
@@ -824,7 +824,7 @@ fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-/// Create a spinner with the given msg and finished emoji
+/// Create a spinner with the given msg
 fn create_spinner(msg: &str) -> Result<ProgressBar> {
     let spinner = ProgressBar::new_spinner().with_style(
         ProgressStyle::with_template(&format!("{{spinner:.red}} {} {{msg}}", msg.bright_blue()))?
@@ -834,18 +834,72 @@ fn create_spinner(msg: &str) -> Result<ProgressBar> {
     Ok(spinner)
 }
 
+/// Describes the translation from asset paths to wanted url
+struct AssetManifest {
+    /// The actual mapping
+    mapping: HashMap<String, PathBuf>,
+}
+
 /// Collect the outputs of the macros
 fn collect_macro_output(config: &BuildConfig, wasm_file: &Path) -> Result<PathBuf> {
-    let css_file = collect_css(config, wasm_file)?;
+    let mut css_files = Vec::new();
+    let mut asset_files = Vec::new();
+
+    for file in get_macro_output_files(config)? {
+        let extension = file.extension().map(|ext| ext.to_string_lossy());
+        match extension.as_ref().map(AsRef::as_ref) {
+            Some("css") => css_files.push(file),
+            Some("asset") => asset_files.push(file),
+            _ => return Err(anyhow!("Invalid file extension found in macro output")),
+        }
+    }
+
+    let css_file = collect_css(config, css_files, wasm_file)?;
+    let manifest = collect_asset_manifest(asset_files)?;
+    copy_assets_to_dist(config, &manifest)?;
+
     Ok(css_file)
 }
 
+/// Copy asset manifest to dist
+fn copy_assets_to_dist(config: &BuildConfig, manifest: &AssetManifest) -> Result<()> {
+    let spinner = create_spinner("📂 Copying Assets")?;
+    for (wanted_url, file) in &manifest.mapping {
+        let target_file = config.dist.join(wanted_url);
+        if let Err(err) = fs::copy(file, target_file) {
+            spinner.finish();
+            return Err(err.into());
+        }
+    }
+
+    spinner.finish();
+    Ok(())
+}
+
+/// Collect the `.asset` files into a asset manifest
+fn collect_asset_manifest(asset_files: Vec<PathBuf>) -> Result<AssetManifest> {
+    let spinner = create_spinner("📋 Parsing Asset Manifest")?;
+
+    let mut mapping = HashMap::with_capacity(asset_files.len());
+    for file in asset_files {
+        let mut file_reader = fs::File::open(file)?;
+        let asset: natrix_shared::Asset = natrix_shared::bincode::decode_from_std_read(
+            &mut file_reader,
+            natrix_shared::bincode_config(),
+        )?;
+        mapping.insert(asset.emitted_path, asset.path);
+    }
+
+    spinner.finish();
+    Ok(AssetManifest { mapping })
+}
+
 /// Collect css from the macro files
-fn collect_css(config: &BuildConfig, wasm_file: &Path) -> Result<PathBuf> {
+fn collect_css(config: &BuildConfig, css_files: Vec<PathBuf>, wasm_file: &Path) -> Result<PathBuf> {
     let spinner = create_spinner("🎨 Bundling css")?;
 
     let mut css_content = String::new();
-    for file in get_macro_output_files(config).context("Reading macro output")? {
+    for file in css_files {
         fs::File::open(file)?.read_to_string(&mut css_content)?;
     }
 

@@ -30,3 +30,23 @@ pub const MACRO_OUTPUT_ENV: &str = "NATRIX_MACRO_OUTPUT";
 
 /// The env var used to invalidate the macro outputs.
 pub const MACRO_INVALIDATE_ENV: &str = "NATRIX_MACRO_INVALIDATE";
+
+/// The asset format
+#[cfg(feature = "assets")]
+#[derive(bincode::Decode, bincode::Encode)]
+pub struct Asset {
+    /// The file path to the asset
+    pub path: std::path::PathBuf,
+    /// The emitted name for the asset
+    pub emitted_path: String,
+}
+
+#[cfg(feature = "assets")]
+pub use bincode;
+
+/// the  bincode config to use
+#[cfg(feature = "assets")]
+#[must_use]
+pub fn bincode_config() -> impl bincode::config::Config {
+    bincode::config::standard()
+}

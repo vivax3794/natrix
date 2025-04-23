@@ -235,11 +235,11 @@ pub fn global_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
     let css = syn::parse_macro_input!(css_input as syn::LitStr);
     let css = css.value();
 
-    emit_css(css).into()
+    emit_file(css, "css").into()
 }
 
 /// Emit the css to the target directory
-fn emit_css(css: String) -> TokenStream {
+fn emit_file(content: impl AsRef<[u8]>, extension: &str) -> TokenStream {
     let first_use = FIRST_USE_IN_CRATE.fetch_and(false, Ordering::AcqRel);
 
     let caller_name =
@@ -269,9 +269,9 @@ fn emit_css(css: String) -> TokenStream {
     }
 
     let name = FILE_COUNTER.fetch_add(1, Ordering::AcqRel);
-    let output_file = output_directory.join(format!("{name}.css"));
+    let output_file = output_directory.join(format!("{name}.{extension}"));
 
-    if let Err(err) = fs::write(output_file, css) {
+    if let Err(err) = fs::write(output_file, content) {
         let err = err.to_string();
         quote!(compile_error!(#err))
     } else {
@@ -404,7 +404,7 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
         });
     }
 
-    let emit_css_result = emit_css(css_result.code);
+    let emit_css_result = emit_file(css_result.code, "css");
     quote! {
         #(for const_ in consts) {
             #const_
@@ -426,7 +426,6 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
 #[cfg(feature = "inline_css")]
 pub fn style(css: proc_macro::TokenStream) -> proc_macro::TokenStream {
     use std::hash::{DefaultHasher, Hash, Hasher};
-
     let css = syn::parse_macro_input!(css as syn::LitStr);
     let css = css.value();
 
@@ -438,7 +437,74 @@ pub fn style(css: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let class_name = format!("inline-{hash}");
 
     let css = format!(".{class_name} {{ {css} }}");
-    emit_css(css);
+    emit_file(css, "css");
 
     quote!(#class_name).into()
+}
+
+/// Inform the bundling system to include the given asset
+/// Will return the url needed to fetch said asset at runtime.
+///
+/// ```ignore
+/// e::img()
+///     .src(asset!("./my_cool_img.png"))
+/// ```
+#[cfg(feature = "assets")]
+#[proc_macro]
+#[expect(
+    clippy::missing_panics_doc,
+    reason = "This can only panic if its not called from cargo"
+)]
+pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    use std::hash::{DefaultHasher, Hash, Hasher};
+    let file_path = syn::parse_macro_input!(file_path as syn::LitStr);
+    let file_path = file_path.value();
+
+    #[expect(
+        clippy::expect_used,
+        reason = "This only fails if not called from cargo"
+    )]
+    let package_directory =
+        std::env::var("CARGO_MANIFEST_DIR").expect("Proc macro not called from cargo");
+    let package_directory = PathBuf::from(package_directory);
+    let file_path = package_directory.join(file_path);
+
+    let mut hasher = DefaultHasher::default();
+
+    #[cfg(debug_assertions)]
+    file_path.hash(&mut hasher);
+    #[cfg(not(debug_assertions))]
+    if let Ok(content) = fs::read(&file_path) {
+        content.hash(&mut hasher);
+    } else {
+        file_path.hash(&mut hasher);
+    }
+
+    let hash = hasher.finish();
+    let hash_base64 = data_encoding::BASE64URL_NOPAD.encode(&hash.to_le_bytes());
+
+    let target = if let Some(file_name) = file_path.file_name() {
+        let file_name = file_name.to_string_lossy();
+        format!("{hash_base64}-{file_name}")
+    } else {
+        hash_base64
+    };
+
+    let url = format!("/{target}");
+    let result = quote!(#url).into();
+    let asset = natrix_shared::Asset {
+        path: file_path,
+        emitted_path: target,
+    };
+
+    #[expect(
+        clippy::expect_used,
+        reason = "We dont have any of the types that could cause errors"
+    )]
+    let asset_encoded =
+        natrix_shared::bincode::encode_to_vec(asset, natrix_shared::bincode_config())
+            .expect("Failed to encode asset information");
+
+    emit_file(asset_encoded, "asset");
+    result
 }
