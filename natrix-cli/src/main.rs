@@ -143,6 +143,13 @@ impl BuildConfigArgs {
     }
 }
 
+impl BuildConfig {
+    /// Should dev sever do direct serving
+    fn should_direct_serve_files(&self) -> bool {
+        self.profile == BuildProfile::Dev && self.live_reload.is_some()
+    }
+}
+
 /// Build profile
 #[derive(Clone, Copy, ValueEnum, PartialEq, Eq)]
 enum BuildProfile {
@@ -195,7 +202,10 @@ fn main() -> Result<()> {
     match cli {
         Cli::New { name, stable } => generate_project(&name, stable),
         Cli::Dev(config) => do_dev(config),
-        Cli::Build(config) => build(&config.fill_build_defaults()?).context("Building application"),
+        Cli::Build(config) => {
+            build(&config.fill_build_defaults()?).context("Building application")?;
+            Ok(())
+        }
     }
 }
 
@@ -384,12 +394,23 @@ fn do_dev(config: BuildConfigArgs) -> Result<()> {
     let mut watcher = notify::recommended_watcher(tx_notify)?;
     watcher.watch(&PathBuf::from("."), notify::RecursiveMode::Recursive)?;
 
-    if let Err(err) = build(&config) {
-        println!("{}", err.red());
+    let asset_manifest_mutex = Arc::new(Mutex::new(AssetManifest::default()));
+
+    match build(&config) {
+        Err(err) => {
+            println!("{}", err.red());
+        }
+        Ok(manifest) => {
+            let mut lock = asset_manifest_mutex
+                .lock()
+                .map_err(|_| anyhow!("Failed to lock mutex"))?;
+            *lock = manifest;
+        }
     }
 
     let dist = config.dist.clone();
-    thread::spawn(|| spawn_server(dist));
+    let mutex_clone = Arc::clone(&asset_manifest_mutex);
+    thread::spawn(move || spawn_server(dist, mutex_clone));
 
     if let Some(port) = config.live_reload {
         thread::spawn(move || spawn_websocket(port, rx_reload));
@@ -399,10 +420,17 @@ fn do_dev(config: BuildConfigArgs) -> Result<()> {
         let event = rx_notify.recv()??;
 
         if event.kind.is_modify() {
-            if let Err(err) = build(&config) {
-                println!("{}", err.red());
-            } else {
-                tx_reload.send(())?;
+            match build(&config) {
+                Err(err) => {
+                    println!("{}", err.red());
+                }
+                Ok(manifest) => {
+                    let mut lock = asset_manifest_mutex
+                        .lock()
+                        .map_err(|_| anyhow!("Failed to lock mutex"))?;
+                    *lock = manifest;
+                    tx_reload.send(())?;
+                }
             }
             while rx_notify.try_recv().is_ok() {}
         }
@@ -460,7 +488,7 @@ fn get_free_port(mut preferred: u16) -> Result<u16, &'static str> {
     clippy::needless_pass_by_value,
     reason = "This is running in a thread"
 )]
-fn spawn_server(folder: PathBuf) {
+fn spawn_server(folder: PathBuf, asset_manifest: Arc<Mutex<AssetManifest>>) {
     let server = Server::http((
         "127.0.0.1",
         get_free_port(8000).expect("Failed to find free port for server"),
@@ -478,24 +506,31 @@ fn spawn_server(folder: PathBuf) {
     );
 
     for request in server.incoming_requests() {
+        let asset_manifest = asset_manifest.lock().expect("Failed to lock mutex");
+
         let url = request.url();
-        let path = if url == "/" {
+        let url = url.strip_prefix("/").unwrap_or(url);
+
+        let path = if url.is_empty() {
             folder.join("index.html")
+        } else if let Some(path) = asset_manifest.mapping.get(url) {
+            path.clone()
         } else {
-            folder.join(url.strip_prefix("/").unwrap_or(url))
+            if url.contains("..") {
+                let response =
+                    Response::from_string("PATH TRAVERSAL DETECTED").with_status_code(404);
+                let _ = request.respond(response);
+                println!(
+                    "{}",
+                    "Path traversal detected in URL, terminating server for security."
+                        .bold()
+                        .red()
+                        .on_black()
+                );
+                return;
+            }
+            folder.join(url)
         };
-        if url.contains("..") {
-            let response = Response::from_string("PATH TRAVERSAL DETECTED").with_status_code(404);
-            let _ = request.respond(response);
-            println!(
-                "{}",
-                "Path traversal detected in URL, terminating server for security."
-                    .bold()
-                    .red()
-                    .on_black()
-            );
-            return;
-        }
 
         let response = if path.exists() && path.is_file() {
             let content_type: &[u8] = match path.extension().and_then(|x| x.to_str()) {
@@ -525,7 +560,7 @@ fn spawn_server(folder: PathBuf) {
 }
 
 /// Build a project
-fn build(config: &BuildConfig) -> Result<()> {
+fn build(config: &BuildConfig) -> Result<AssetManifest> {
     println!("🧹 {}", "Cleaning dist".bright_black(),);
     let _ = fs::remove_dir_all(&config.dist);
 
@@ -554,7 +589,7 @@ fn build(config: &BuildConfig) -> Result<()> {
     let wasm_file = cache_bust_file(config, wasm_file)?;
     let js_file = cache_bust_file(config, js_file)?;
 
-    let css_file = collect_macro_output(config, &wasm_file)?;
+    let (css_file, asset_manifest) = collect_macro_output(config, &wasm_file)?;
     let css_file = cache_bust_file(config, css_file)?;
 
     generate_html(config, &wasm_file, &js_file, &css_file)?;
@@ -565,7 +600,7 @@ fn build(config: &BuildConfig) -> Result<()> {
         path_str(&config.dist).cyan()
     );
 
-    Ok(())
+    Ok(asset_manifest)
 }
 
 /// Generate the html file to be used
@@ -835,13 +870,17 @@ fn create_spinner(msg: &str) -> Result<ProgressBar> {
 }
 
 /// Describes the translation from asset paths to wanted url
+#[derive(Default)]
 struct AssetManifest {
     /// The actual mapping
     mapping: HashMap<String, PathBuf>,
 }
 
 /// Collect the outputs of the macros
-fn collect_macro_output(config: &BuildConfig, wasm_file: &Path) -> Result<PathBuf> {
+fn collect_macro_output(
+    config: &BuildConfig,
+    wasm_file: &Path,
+) -> Result<(PathBuf, AssetManifest)> {
     let mut css_files = Vec::new();
     let mut asset_files = Vec::new();
 
@@ -856,9 +895,12 @@ fn collect_macro_output(config: &BuildConfig, wasm_file: &Path) -> Result<PathBu
 
     let css_file = collect_css(config, css_files, wasm_file)?;
     let manifest = collect_asset_manifest(asset_files)?;
-    copy_assets_to_dist(config, &manifest)?;
 
-    Ok(css_file)
+    if !config.should_direct_serve_files() {
+        copy_assets_to_dist(config, &manifest)?;
+    }
+
+    Ok((css_file, manifest))
 }
 
 /// Copy asset manifest to dist
