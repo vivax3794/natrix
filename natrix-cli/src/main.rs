@@ -384,6 +384,20 @@ mod tests {{
     Ok(())
 }
 
+/// Find the closest gitignore
+fn find_gitignore() -> Result<ignore::gitignore::Gitignore> {
+    let mut current_dir = std::env::current_dir()?.canonicalize()?;
+    while !current_dir.join(".gitignore").exists() {
+        if let Some(parent) = current_dir.parent() {
+            current_dir = parent.to_owned();
+        } else {
+            return Ok(ignore::gitignore::Gitignore::empty());
+        }
+    }
+    let (matcher, _) = ignore::gitignore::Gitignore::new(current_dir.join(".gitignore"));
+    Ok(matcher)
+}
+
 /// Do the dev server
 fn do_dev(config: BuildConfigArgs) -> Result<()> {
     let config = config.fill_dev_defaults()?;
@@ -391,7 +405,20 @@ fn do_dev(config: BuildConfigArgs) -> Result<()> {
     let (tx_notify, rx_notify) = mpsc::channel();
     let (tx_reload, rx_reload) = mpsc::channel();
 
-    let mut watcher = notify::recommended_watcher(tx_notify)?;
+    let matcher = find_gitignore()?;
+    let mut watcher = notify::recommended_watcher(move |event: Result<notify::Event, _>| {
+        if let Ok(event) = event {
+            if (event.kind.is_modify() || event.kind.is_create() || event.kind.is_remove())
+                && event.paths.iter().any(|path| {
+                    !matcher
+                        .matched_path_or_any_parents(path, path.is_dir())
+                        .is_ignore()
+                })
+            {
+                let _ = tx_notify.send(event);
+            }
+        }
+    })?;
     watcher.watch(&PathBuf::from("."), notify::RecursiveMode::Recursive)?;
 
     let asset_manifest_mutex = Arc::new(Mutex::new(AssetManifest::default()));
@@ -417,22 +444,21 @@ fn do_dev(config: BuildConfigArgs) -> Result<()> {
     }
 
     loop {
-        let event = rx_notify.recv()??;
+        rx_notify.recv()?;
+        std::thread::sleep(Duration::from_millis(100));
+        while rx_notify.try_recv().is_ok() {}
 
-        if event.kind.is_modify() {
-            match build(&config) {
-                Err(err) => {
-                    println!("{}", err.red());
-                }
-                Ok(manifest) => {
-                    let mut lock = asset_manifest_mutex
-                        .lock()
-                        .map_err(|_| anyhow!("Failed to lock mutex"))?;
-                    *lock = manifest;
-                    tx_reload.send(())?;
-                }
+        match build(&config) {
+            Err(err) => {
+                println!("{}", err.red());
             }
-            while rx_notify.try_recv().is_ok() {}
+            Ok(manifest) => {
+                let mut lock = asset_manifest_mutex
+                    .lock()
+                    .map_err(|_| anyhow!("Failed to lock mutex"))?;
+                *lock = manifest;
+                tx_reload.send(())?;
+            }
         }
     }
 }
