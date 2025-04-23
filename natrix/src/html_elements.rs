@@ -447,7 +447,7 @@ macro_rules! attr_helpers {
     };
 }
 
-/// Generate a `ToAttribute` implementation for the global attributes
+/// Generate a `attr` helpers implementation for the global attributes
 macro_rules! global_attrs {
     ($($attr:ident),*) => {
         impl<C: Component, T> HtmlElement<C, T> {
@@ -456,6 +456,22 @@ macro_rules! global_attrs {
                 pub fn $attr(self, value: impl ToAttribute<C>) -> Self {
                     self.attr(stringify!($attr), value)
                 }
+            )*
+        }
+    };
+}
+
+/// Generate a `attr` helpers implementation for the aria attributes
+macro_rules! aria_attrs {
+    ($($attr:ident),*) => {
+        impl<C: Component, T> HtmlElement<C, T> {
+            $(
+            paste::paste! {
+                #[doc = concat!("Set the `", stringify!($attr), "` attribute")]
+                pub fn [<aria_$attr>](self, value: impl ToAttribute<C>) -> Self {
+                    self.attr(concat!("aria-", stringify!($attr)), value)
+                }
+            }
             )*
         }
     };
@@ -515,4 +531,30 @@ attr_helpers! {
 global_attrs! {
     autocapitalize, autofocus, enterkeyhint, inert, inputmode, nonce, role, writingsuggestions,
     accesskey, contenteditable, contextmenu, dir, draggable, dropzone, hidden, id, lang, spellcheck, style, tabindex, title, translate
+}
+aria_attrs! {
+autocomplete,
+checked,
+disabled,
+errormessage,
+expanded,
+haspopup,
+hidden,
+invalid,
+label,
+level,
+modal,
+multiline,
+multiselectable,
+orientation,
+placeholder,
+pressed,
+readonly,
+required,
+selected,
+sort,
+valuemax,
+valuemin,
+valuenow,
+valuetext
 }
