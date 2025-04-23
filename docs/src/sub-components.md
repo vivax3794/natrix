@@ -1,6 +1,6 @@
 # Sub Components
 
-Components wouldnt be very useful if we could not compose them. Due to trait limitations we cant use components as [`Element`](element::Element)s directly. But there is a simple [`C`](component::SubComponent) wrapper to facilitate this.
+Components wouldnt be very useful if we could not compose them. Due to trait limitations we cant use components as [`Element`](element::Element)s directly. But there is a simple [`SubComponent`](component::SubComponent) wrapper to facilitate this.
 
 ```rust
 # extern crate natrix;
