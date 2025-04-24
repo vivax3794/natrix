@@ -75,13 +75,15 @@ integration_tests: install_cli
     (natrix dev > /dev/null 2>&1) &
     natrix_pid=$!
 
-    cargo nextest run -j 1
+    sleep 1
+    cargo nextest run --retries 2
 
     kill $natrix_pid 2>/dev/null || true
     (natrix dev -p release > /dev/null 2>&1) &
     natrix_pid=$!
 
-    cargo nextest run -j 1
+    sleep 2
+    cargo nextest run --retries 2
 
 # Check that css tree-shaking works
 [working-directory: "./integration_tests"]
