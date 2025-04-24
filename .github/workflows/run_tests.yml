@@ -29,8 +29,8 @@ jobs:
       - name: Install rust-analyzer
         run: rustup component add rust-analyzer
 
-      - name: Install rust-analyzer
-        run: rustup component add rust-analyzer
+      - name: Install rust-src
+        run: rustup component add rust-src
 
       - name: Install wasm-opt
         run: | 
