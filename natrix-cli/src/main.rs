@@ -862,26 +862,13 @@ fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         .arg(wasm_file)
         .arg("--enable-bulk-memory")
         .arg("--enable-reference-types")
+        .arg("--strip-debug")
+        .arg("--strip-dwarf")
         .arg("--strip-producers");
     if !is_feature_enabled("panic_hook", true)? {
         command.arg("--traps-never-happen");
     }
-    command.args([
-        "-O4",
-        "--flatten",
-        "--generate-global-effects",
-        "--rereloop",
-        "-Oz",
-        "-Oz",
-        "-O3",
-        "--monomorphize",
-        "-O3",
-        "--generate-global-effects",
-        "--gufa",
-        "--generate-global-effects",
-        "--converge",
-        "-Oz",
-    ]);
+    command.args(["-O3", "--converge", "-Oz"]);
 
     let result = command.status()?.success();
 
