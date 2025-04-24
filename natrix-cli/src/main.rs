@@ -372,11 +372,18 @@ mod tests {{
 
     let channel = if nightly { "nightly" } else { "stable" };
 
+    let components = if nightly {
+        r#"components = ["rust-src"]"#
+    } else {
+        ""
+    };
+
     let toolchain_toml = format!(
         r#"
-        [toolchain]
-        channel = "{channel}"
-        targets = ["wasm32-unknown-unknown"]
+[toolchain]
+channel = "{channel}"
+targets = ["wasm32-unknown-unknown"]
+{components}
         "#
     );
     fs::write(root.join("rust-toolchain.toml"), toolchain_toml)?;
