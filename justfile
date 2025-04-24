@@ -68,19 +68,19 @@ integration_tests: install_cli
     trap cleanup EXIT
 
     natrix build
-    natrix build -p dev
+    natrix build --profile dev
 
     chromedriver --port=9999 &
     chrome_pid=$!
 
-    (natrix dev > /dev/null 2>&1) &
+    (natrix dev --port 8000 > /dev/null 2>&1) &
     natrix_pid=$!
 
     sleep 1
     cargo nextest run --retries 2
 
     kill $natrix_pid 2>/dev/null || true
-    (natrix dev -p release > /dev/null 2>&1) &
+    (natrix dev --profile release --port 8000 > /dev/null 2>&1) &
     natrix_pid=$!
 
     sleep 2
@@ -89,10 +89,10 @@ integration_tests: install_cli
 # Check that css tree-shaking works
 [working-directory: "./integration_tests"]
 test_css_tree_shaking: install_cli
-    natrix build -p dev
+    natrix build --profile dev
     grep "I_amNotUsed" dist/*.css
 
-    natrix build -p release
+    natrix build --profile release
     ! grep "I_amNotUsed" dist/*.css
 
 # Run the project generation tests

@@ -44,6 +44,28 @@ const BINDGEN_OUTPUT_NAME: &str = "code";
 /// Name of the collected css
 const CSS_OUTPUT_NAME: &str = "styles.css";
 
+/// Arguments for the dev subcommand
+#[derive(Parser)]
+struct DevArguments {
+    /// Port to use for dev server
+    #[arg(short, long)]
+    port: Option<u16>,
+    /// The shared arguments
+    #[command(flatten)]
+    shared: SharedArguments,
+}
+
+/// Arguments for the build subcommand
+#[derive(Parser)]
+struct BuildArguments {
+    /// The target dist folder
+    #[arg(short, long)]
+    dist: Option<PathBuf>,
+    /// The shared arguments
+    #[command(flatten)]
+    shared: SharedArguments,
+}
+
 /// Natrix CLI
 #[derive(Parser)]
 enum Cli {
@@ -56,23 +78,17 @@ enum Cli {
         stable: bool,
     },
     /// Spawn a dev server
-    Dev(BuildConfigArgs),
+    Dev(DevArguments),
     /// Build the project
-    Build(BuildConfigArgs),
+    Build(BuildArguments),
 }
 
 /// Settings for building the server
 #[derive(Parser)]
-struct BuildConfigArgs {
+struct SharedArguments {
     /// Build profile to use
-    #[arg(short, long, value_enum)]
+    #[arg(long, value_enum)]
     profile: Option<BuildProfile>,
-    /// Location to output build files
-    #[arg(short, long)]
-    dist: Option<PathBuf>,
-    /// Cache busting option
-    #[arg(short, long, value_enum)]
-    cache_bust: Option<CacheBustOption>,
     /// Invalidate the asset caches
     #[arg(long)]
     invalidate_cache: bool,
@@ -95,31 +111,15 @@ struct BuildConfig {
     invalidate_cache: bool,
 }
 
-impl BuildConfigArgs {
-    /// Replace optional arguments (that have defaults) with the defaults for the `dev` subcommand
-    fn fill_build_defaults(self) -> Result<BuildConfig> {
-        let profile = self.profile.unwrap_or(BuildProfile::Release);
-        Ok(BuildConfig {
-            profile,
-            dist: self.dist.unwrap_or_else(|| PathBuf::from("./dist")),
-            temp_dir: find_target_natrix(profile)?,
-            live_reload: None,
-            cache_bust: self.cache_bust.unwrap_or(CacheBustOption::Content),
-            invalidate_cache: self.invalidate_cache,
-        })
-    }
-
-    /// Replace optional arguments (that have defaults) with the defaults for the `build` subcommand
-    fn fill_dev_defaults(self) -> Result<BuildConfig> {
-        let profile = self.profile.unwrap_or(BuildProfile::Dev);
+impl DevArguments {
+    /// Create a `BuildConfig` from `DevArguments` with appropriate defaults
+    fn get_build_config(&self) -> Result<BuildConfig> {
+        let profile = self.shared.profile.unwrap_or(BuildProfile::Dev);
         let target = find_target_natrix(profile)?;
 
-        let dist = if let Some(dist) = self.dist {
-            dist
-        } else {
-            target.join("dist")
-        };
+        let dist = target.join("dist");
 
+        // Always try to use port 9000 for live reload WebSocket
         let live_reload = if let Ok(port) = get_free_port(9000) {
             Some(port)
         } else {
@@ -137,8 +137,23 @@ impl BuildConfigArgs {
             dist,
             temp_dir: target,
             live_reload,
-            cache_bust: self.cache_bust.unwrap_or(CacheBustOption::Timestamp),
-            invalidate_cache: self.invalidate_cache,
+            cache_bust: CacheBustOption::Timestamp,
+            invalidate_cache: self.shared.invalidate_cache,
+        })
+    }
+}
+
+impl BuildArguments {
+    /// Convert `BuildArguments` to `BuildConfig` with appropriate defaults
+    fn into_build_config(self) -> Result<BuildConfig> {
+        let profile = self.shared.profile.unwrap_or(BuildProfile::Release);
+        Ok(BuildConfig {
+            profile,
+            dist: self.dist.unwrap_or_else(|| PathBuf::from("./dist")),
+            temp_dir: find_target_natrix(profile)?,
+            live_reload: None,
+            cache_bust: CacheBustOption::Content,
+            invalidate_cache: self.shared.invalidate_cache,
         })
     }
 }
@@ -201,9 +216,9 @@ fn main() -> Result<()> {
 
     match cli {
         Cli::New { name, stable } => generate_project(&name, stable),
-        Cli::Dev(config) => do_dev(config),
-        Cli::Build(config) => {
-            build(&config.fill_build_defaults()?).context("Building application")?;
+        Cli::Dev(args) => do_dev(&args),
+        Cli::Build(args) => {
+            build(&args.into_build_config()?).context("Building application")?;
             Ok(())
         }
     }
@@ -406,8 +421,8 @@ fn find_gitignore() -> Result<ignore::gitignore::Gitignore> {
 }
 
 /// Do the dev server
-fn do_dev(config: BuildConfigArgs) -> Result<()> {
-    let config = config.fill_dev_defaults()?;
+fn do_dev(args: &DevArguments) -> Result<()> {
+    let config = args.get_build_config()?;
 
     let (tx_notify, rx_notify) = mpsc::channel();
     let (tx_reload, rx_reload) = mpsc::channel();
@@ -444,7 +459,8 @@ fn do_dev(config: BuildConfigArgs) -> Result<()> {
 
     let dist = config.dist.clone();
     let mutex_clone = Arc::clone(&asset_manifest_mutex);
-    thread::spawn(move || spawn_server(dist, mutex_clone));
+    let server_port = args.port; // Pass the user-specified port to spawn_server
+    thread::spawn(move || spawn_server(dist, mutex_clone, server_port));
 
     if let Some(port) = config.live_reload {
         thread::spawn(move || spawn_websocket(port, rx_reload));
@@ -521,12 +537,18 @@ fn get_free_port(mut preferred: u16) -> Result<u16, &'static str> {
     clippy::needless_pass_by_value,
     reason = "This is running in a thread"
 )]
-fn spawn_server(folder: PathBuf, asset_manifest: Arc<Mutex<AssetManifest>>) {
-    let server = Server::http((
-        "127.0.0.1",
-        get_free_port(8000).expect("Failed to find free port for server"),
-    ))
-    .expect("Failed to start server");
+fn spawn_server(
+    folder: PathBuf,
+    asset_manifest: Arc<Mutex<AssetManifest>>,
+    preferred_port: Option<u16>,
+) {
+    // Use the specified port if provided, otherwise start at 8000
+    let port = match preferred_port {
+        Some(port) => port,
+        None => get_free_port(8000).expect("Failed to find free port for server"),
+    };
+
+    let server = Server::http(("127.0.0.1", port)).expect("Failed to start server");
     let port = server
         .server_addr()
         .to_ip()
