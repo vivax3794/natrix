@@ -38,10 +38,11 @@ check:
 
 # Check the documentation for all packages
 # And for typos in the docs
-check_docs:
+check_docs: && check_book
     typos
     cargo test --doc --all-features --workspace 
 
+check_book:
     cd docs && mdbook build
     rm -r target/debug/deps/*natrix*
     rm -r target/debug/deps/*wasm_bindgen_test*
@@ -123,22 +124,26 @@ homepage: install_cli
 
 # Install the book dependencies
 book_deps:
-    command -v mdbook || cargo binstall mdbook
-    command -v mdbook-callouts || cargo binstall mdbook-callouts
+    command -v mdbook || cargo binstall -y mdbook
+    command -v mdbook-callouts || cargo binstall -y mdbook-callouts
     command -v mdbook-rustdoc-link || cargo install mdbookkit --features rustdoc-link
 
 # Install all dev tool dependencies
 dev_deps: book_deps
-    command -v typos || cargo binstall typos-cli
-    command -v cargo-hack || cargo binstall cargo-hack
-    command -v cargo-nextest || cargo binstall cargo-nextest
-    command -v wasm-pack || cargo binstall wasm-pack
+    command -v typos || cargo binstall -y typos-cli
+    command -v cargo-hack || cargo binstall -y cargo-hack
+    command -v cargo-nextest || cargo binstall -y cargo-nextest
+    command -v wasm-pack || cargo binstall -y wasm-pack
+    command -v wasm-bindgen || cargo binstall -y wasm-bindgen-cli
 
 # Check for the presence of all required system dependencies
 # That there is no cross-platform way to install
 health_check:
     command -v chromedriver || (echo "chromedriver not found, required for integration tests" && exit 1)
     command -v wasm-opt || (echo "wasm-opt not found, required for integration tests" && exit 1)
+    command -v cargo || (echo "Cargo not found, required for everything" && exit 1)
+    command -v cargo-clippy || (echo "Clippy not found, required for linting" && exit 1)
+    command -v rust-analyzer || (echo "Rust-Analyzer not found, required for book" && exit 1)
 
     # These do have cross-platform ways to install
     # But we check for them here to make sure they are installed

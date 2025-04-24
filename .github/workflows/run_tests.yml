@@ -1,0 +1,44 @@
+name: Run Checks
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - master
+
+jobs:
+  full_test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up rust nighly
+        run: rustup override set nightly
+      
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.12.3
+
+      - name: Install just
+        run: cargo binstall -y just
+
+      - name: Install deps
+        run: just dev_deps
+
+      - name: Install rust-analyzer
+        run: rustup component add rust-analyzer
+
+      - name: Install rust-analyzer
+        run: rustup component add rust-analyzer
+
+      - name: Install wasm-opt
+        run: | 
+          sudo apt-get update
+          sudo apt-get install -y binaryen
+
+      - name: Health Check Deps
+        run: just health_check
+
+      - name: run tests
+        run: just full

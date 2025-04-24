@@ -1,7 +1,11 @@
 name: Publish mdBook
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - "docs"
 
 jobs:
   build:
@@ -17,16 +21,11 @@ jobs:
       - name: Install rust-analyzer
         run: rustup component add rust-analyzer
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: "true"
-          cache-all-crates: "true"
-
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.12.3
 
       - name: Install just
-        run: cargo binstall just
+        run: cargo binstall -y just
 
       - name: Install mdBook
         run: just book_deps
