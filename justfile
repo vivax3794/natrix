@@ -169,6 +169,7 @@ health_check:
     command -v cargo || (echo "Cargo not found, required for everything" && exit 1)
     command -v cargo-clippy || (echo "Clippy not found, required for linting" && exit 1)
     command -v rust-analyzer || (echo "Rust-Analyzer not found, required for book" && exit 1)
+    command -v python3 || (echo "Python3 not found, required for integration tests" && exit 1)
 
     # These do have cross-platform ways to install
     # But we check for them here to make sure they are installed
