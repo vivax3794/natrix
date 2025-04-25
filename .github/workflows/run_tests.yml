@@ -2,19 +2,40 @@ name: Run Checks
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches:
-  #     - master
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
-  full_test:
+  native_tests:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up rust nighly
+      - name: Set up rust nightly
+        run: rustup override set nightly
+      
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.12.3
+
+      - name: Install just
+        run: cargo binstall -y just
+        
+      - name: Install cargo-nextest
+        run: cargo binstall -y cargo-nextest
+
+      - name: Run native tests
+        run: just test_native
+
+  web_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up rust nightly
         run: rustup override set nightly
       
       - name: Install cargo-binstall
@@ -23,22 +44,194 @@ jobs:
       - name: Install just
         run: cargo binstall -y just
 
-      - name: Install deps
-        run: just dev_deps
+      - name: Install wasm-pack
+        run: cargo binstall -y wasm-pack
+        
+      # - name: Install wasm-bindgen
+      #   run: cargo binstall -y wasm-bindgen-cli
+      #
+      # - name: Install wasm-opt
+      #   run: | 
+      #     sudo apt-get update
+      #     sudo apt-get install -y binaryen
 
-      - name: Install rust-analyzer
-        run: rustup component add rust-analyzer
+      - name: Run web tests
+        run: just test_web
+
+  integration_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up rust nightly
+        run: rustup override set nightly
 
       - name: Install rust-src
         run: rustup component add rust-src
+      
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.12.3
+
+      - name: Install just
+        run: cargo binstall -y just
+
+      - name: Install cargo-nextest
+        run: cargo binstall -y cargo-nextest
+        
+      - name: Install wasm-bindgen
+        run: cargo binstall -y wasm-bindgen-cli
 
       - name: Install wasm-opt
         run: | 
           sudo apt-get update
           sudo apt-get install -y binaryen
 
-      - name: Health Check Deps
-        run: just health_check
+      - name: Run integration tests
+        run: |
+          just integration_tests_dev
+          just integration_tests_build
 
-      - name: run tests
-        run: just full
+  project_gen_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up rust nightly
+        run: rustup override set nightly
+
+      - name: Install rust-src
+        run: rustup component add rust-src
+      
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.12.3
+
+      - name: Install just
+        run: cargo binstall -y just
+        
+      - name: Install wasm-pack
+        run: cargo binstall -y wasm-pack
+        
+      - name: Install wasm-bindgen
+        run: cargo binstall -y wasm-bindgen-cli
+
+      - name: Install wasm-opt
+        run: | 
+          sudo apt-get update
+          sudo apt-get install -y binaryen
+
+      - name: Run project generation tests
+        run: just project_gen_test
+
+  homepage_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up rust nightly
+        run: rustup override set nightly
+      
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.12.3
+
+      - name: Install just
+        run: cargo binstall -y just
+        
+      - name: Install wasm-pack
+        run: cargo binstall -y wasm-pack
+        
+      - name: Install wasm-bindgen
+        run: cargo binstall -y wasm-bindgen-cli
+
+      - name: Install wasm-opt
+        run: | 
+          sudo apt-get update
+          sudo apt-get install -y binaryen
+
+      - name: Run homepage tests
+        run: just test_homepage
+
+  css_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up rust nightly
+        run: rustup override set nightly
+      
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.12.3
+
+      - name: Install rust-src
+        run: rustup component add rust-src
+
+      - name: Install just
+        run: cargo binstall -y just
+        
+      - name: Install wasm-bindgen
+        run: cargo binstall -y wasm-bindgen-cli
+
+      - name: Install wasm-opt
+        run: | 
+          sudo apt-get update
+          sudo apt-get install -y binaryen
+
+      - name: Run CSS tree-shaking tests
+        run: just test_css_tree_shaking
+
+  linting:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up rust nightly
+        run: rustup override set nightly
+      
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.12.3
+
+      - name: Install just
+        run: cargo binstall -y just
+        
+      - name: Install cargo-hack
+        run: cargo binstall -y cargo-hack
+
+      - name: Run checks
+        run: just check
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up rust nightly
+        run: rustup override set nightly
+      
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.12.3
+
+      - name: Install just
+        run: cargo binstall -y just
+        
+      - name: Install rust-analyzer
+        run: rustup component add rust-analyzer
+
+      - name: Install rust-src
+        run: rustup component add rust-src
+        
+      - name: Install typos
+        run: cargo binstall -y typos-cli
+        
+      - name: Install mdbook and plugins
+        run: |
+          cargo binstall -y mdbook
+          cargo binstall -y mdbook-callouts
+          cargo install mdbookkit --features rustdoc-link
+
+      - name: Check docs
+        run: just check_docs
