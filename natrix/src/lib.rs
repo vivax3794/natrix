@@ -1,31 +1,4 @@
 #![doc = include_str!(concat!("../", std::env!("CARGO_PKG_README")))]
-#![forbid(
-    clippy::todo,
-    clippy::unreachable,
-    clippy::unwrap_used,
-    clippy::unreachable,
-    clippy::indexing_slicing,
-    unsafe_code
-)]
-#![deny(
-    clippy::dbg_macro,
-    clippy::expect_used,
-    clippy::allow_attributes,
-    clippy::allow_attributes_without_reason,
-    clippy::arithmetic_side_effects
-)]
-#![warn(
-    missing_docs,
-    clippy::missing_docs_in_private_items,
-    clippy::pedantic,
-    unfulfilled_lint_expectations
-)]
-#![allow(clippy::type_complexity, reason = "Fn trait objects get complex.")]
-#![allow(
-    private_interfaces,
-    private_bounds,
-    reason = "Our api design does this on purpose"
-)]
 #![cfg_attr(feature = "nightly", feature(must_not_suspend))]
 #![cfg_attr(feature = "nightly", warn(must_not_suspend))]
 #![cfg_attr(feature = "nightly", feature(associated_type_defaults))]

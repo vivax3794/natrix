@@ -12,6 +12,9 @@ categories = ["gui", "wasm", "web-programming"]
 readme = "../README.md"
 exclude = ["tests"]
 
+[lints]
+workspace = true
+
 [dependencies]
 natrix_macros = {path = "../natrix_macros", version="1.0.0"}
 natrix_shared = {path = "../natrix_shared", version="1.0.0"}

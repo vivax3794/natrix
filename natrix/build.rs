@@ -1,8 +1,12 @@
+//! Sets nightly cfg and emits panic warnings
+
+/// On nightly rust emit `cfg(nightly)`
 #[rustversion::nightly]
 fn nightly() {
     println!("cargo::rustc-cfg=nightly");
 }
 
+/// On nightly rust emit `cfg(nightly)`
 #[rustversion::not(nightly)]
 fn nightly() {}
 

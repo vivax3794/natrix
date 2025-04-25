@@ -1,25 +1,4 @@
 //! Derive macros for [Natrix](https://github.com/vivax3794/natrix)
-#![forbid(
-    unsafe_code,
-    clippy::todo,
-    clippy::unreachable,
-    clippy::unwrap_used,
-    clippy::unreachable,
-    clippy::indexing_slicing
-)]
-#![deny(
-    clippy::dbg_macro,
-    clippy::expect_used,
-    clippy::allow_attributes,
-    clippy::allow_attributes_without_reason,
-    clippy::arithmetic_side_effects
-)]
-#![warn(
-    missing_docs,
-    clippy::missing_docs_in_private_items,
-    clippy::pedantic,
-    unfulfilled_lint_expectations
-)]
 
 extern crate proc_macro;
 

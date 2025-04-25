@@ -1,22 +1,4 @@
 //! Build system and project generator for natrix
-#![forbid(unsafe_code)]
-#![deny(
-    clippy::todo,
-    clippy::unreachable,
-    clippy::unwrap_used,
-    clippy::indexing_slicing,
-    clippy::dbg_macro,
-    clippy::expect_used,
-    clippy::allow_attributes,
-    clippy::allow_attributes_without_reason,
-    clippy::arithmetic_side_effects
-)]
-#![warn(
-    missing_docs,
-    clippy::missing_docs_in_private_items,
-    clippy::pedantic,
-    unfulfilled_lint_expectations
-)]
 
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};

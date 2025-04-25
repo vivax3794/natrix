@@ -7,6 +7,9 @@ description = "Macros for natrix"
 license = "MIT"
 repository = "https://github.com/vivax3794/natrix"
 
+[lints]
+workspace = true
+
 [lib]
 proc-macro = true
 

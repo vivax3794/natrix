@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use natrix::component::NonReactive;
 use natrix::html_elements::ToAttribute;
 use natrix::prelude::*;

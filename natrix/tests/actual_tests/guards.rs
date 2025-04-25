@@ -1,6 +1,3 @@
-#![allow(dead_code)]
-#![deny(clippy::unwrap_used, clippy::expect_used)]
-
 use natrix::prelude::*;
 use natrix::{guard_option, guard_result};
 use proptest::proptest;

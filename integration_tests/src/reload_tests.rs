@@ -1,1 +1,1 @@
-pub const VALUE: &str = "HELLO WORLDE";
+pub const VALUE: &str = "HELLO WORLDEE";

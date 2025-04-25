@@ -5,6 +5,9 @@ edition = "2024"
 description = "Natrix CLI tool."
 license = "MIT"
 
+[lints]
+workspace = true
+
 [dependencies]
 natrix_shared = {path = "../natrix_shared", version="1.0.0", features=["assets"]}
 

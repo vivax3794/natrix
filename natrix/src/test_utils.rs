@@ -60,6 +60,7 @@ pub fn setup() {
 /// # Panics
 /// If js is in a invalid state or the element isnt found
 #[must_use]
+#[expect(clippy::panic, reason = "tests only")]
 pub fn get(id: &'static str) -> HtmlElement {
     let document = get_document();
 
