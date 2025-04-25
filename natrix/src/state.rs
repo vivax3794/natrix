@@ -238,7 +238,9 @@ impl<T: Component> State<T> {
     /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
     /// framework assumptions.
     pub fn deferred_borrow(&mut self) -> DeferredCtx<T> {
-        DeferredCtx { inner: self.weak() }
+        DeferredCtx {
+            inner: self.this.clone(),
+        }
     }
 
     /// Spawn a async task in the local event loop, which will run on the next possible moment.
