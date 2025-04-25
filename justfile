@@ -44,7 +44,7 @@ check_docs: && check_book
 
 check_book:
     cd docs && mdbook build
-    rm -r target/debug/* || true
+    rm -r target/debug
     cargo build -p natrix --all-features --tests
     CARGO_PKG_NAME="mdbook_example" cd docs && mdbook test -L ../target/debug/deps
 
