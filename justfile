@@ -39,12 +39,11 @@ check:
 # Check the documentation for all packages
 # And for typos in the docs
 check_docs: && check_book
-    # typos
-    # cargo test --doc --all-features --workspace 
+    typos
+    cargo test --doc --all-features --workspace 
 
 check_book:
     cd docs && mdbook build
-    cargo build -p natrix --all-features --tests
     rm -rv target/debug/deps/*natrix*
     rm -rv target/debug/deps/*wasm_bindgen_test*
     rustup run nightly cargo build -p natrix --all-features --tests

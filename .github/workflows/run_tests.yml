@@ -230,7 +230,37 @@ jobs:
       - name: Run checks
         run: just check
 
-  docs:
+  type_checking:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up rust nightly
+        run: rustup override set nightly
+      
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@v1.12.3
+
+      - name: Install typos
+        run: cargo binstall -y typos-cli
+
+      - name: Run typos check
+        run: typos
+
+  cargo_doc_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up rust nightly
+        run: rustup override set nightly
+
+      - name: Run cargo doc tests
+        run: cargo test --doc --all-features --workspace
+
+  mdbook_tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -247,9 +277,6 @@ jobs:
         
       - name: Install rust-analyzer
         run: rustup component add rust-analyzer
-
-      - name: Install typos
-        run: cargo binstall -y typos-cli
         
       - name: Install mdbook and plugins
         run: |
@@ -257,5 +284,5 @@ jobs:
           cargo binstall -y mdbook-callouts
           cargo install mdbookkit --features rustdoc-link
 
-      - name: Check docs
-        run: just check_docs
+      - name: Check mdbook
+        run: just check_book
