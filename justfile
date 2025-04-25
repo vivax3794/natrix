@@ -135,7 +135,7 @@ project_gen_test: install_cli
 # Install the CLI for use in tests
 # This installs it in debug mode and should *not* be used for actually installing
 install_cli:
-    cargo install --path natrix-cli --profile dev --frozen
+    cargo install --path natrix-cli --profile dev
 
 # Open the guide book with a auto reloading server
 [working-directory: './docs']
