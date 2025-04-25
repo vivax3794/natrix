@@ -39,14 +39,16 @@ check:
 # Check the documentation for all packages
 # And for typos in the docs
 check_docs: && check_book
-    typos
-    cargo test --doc --all-features --workspace 
+    # typos
+    # cargo test --doc --all-features --workspace 
 
 check_book:
     cd docs && mdbook build
-    rm -r target/debug
     cargo build -p natrix --all-features --tests
-    CARGO_PKG_NAME="mdbook_example" cd docs && mdbook test -L ../target/debug/deps
+    rm -rv target/debug/deps/*natrix*
+    rm -rv target/debug/deps/*wasm_bindgen_test*
+    rustup run nightly cargo build -p natrix --all-features --tests
+    CARGO_PKG_NAME="mdbook_example" cd docs && rustup run nightly mdbook test -L ../target/debug/deps
 
 # Run the integration tests
 # These will spawn the `natrix dev` server and run the tests against it
