@@ -9,7 +9,7 @@ default: test_native test_web
 full: test check check_docs
 
 # Run the full set of tests
-test: test_native test_web integration_tests_dev integration_tests_build test_css_tree_shaking project_gen_test test_homepage
+test: test_native test_web integration_tests_dev integration_tests_build test_css_tree_shaking project_gen_test
 
 # Run tests that are not dependent on the web
 test_native:
@@ -21,17 +21,12 @@ test_web:
     rustup run stable wasm-pack test --headless --chrome --features test_utils
     rustup run nightly wasm-pack test --headless --chrome --all-features
 
-# Run the homepage tests
-[working-directory: './homepage']
-test_homepage:
-    rustup run nightly wasm-pack test --headless --chrome
 
 # Run clippy on all packages and all features
 check:
     cargo fmt --check
 
     cargo +stable clippy -p natrix-cli -- -Dwarnings
-    cargo +nightly clippy -p homepage -- -Dwarnings
 
     cargo +stable hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --skip nightly --tests -- -Dwarnings
     cargo +nightly hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --tests -- -Dwarnings
@@ -44,8 +39,8 @@ check_docs: && check_book
 
 check_book:
     cd docs && mdbook build
-    rm -rv target/debug/deps/*natrix*
-    rm -rv target/debug/deps/*wasm_bindgen_test*
+    rm -r target/debug/deps/*natrix*
+    rm -r target/debug/deps/*wasm_bindgen_test*
     rustup run nightly cargo build -p natrix --all-features --tests
     CARGO_PKG_NAME="mdbook_example" cd docs && rustup run nightly mdbook test -L ../target/debug/deps
 
@@ -143,11 +138,6 @@ install_cli:
 [working-directory: './docs']
 book: 
     mdbook serve --open
-
-# Serve the natrix home page with a auto reloading server
-[working-directory: './homepage']
-homepage: install_cli
-    natrix dev
 
 # Install the book dependencies
 book_deps:
