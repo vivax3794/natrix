@@ -210,6 +210,9 @@ jobs:
 
       - name: Install rustfmt
         run: rustup component add rustfmt
+
+      - name: Install clippy
+        run: rustup component add clippy
       
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.12.3
