@@ -77,14 +77,16 @@ integration_tests_dev: install_cli
     natrix_pid=$!
 
     sleep 1
-    cargo nextest run --retries 1
+    cargo nextest run -E "not (test(reload))"
+    cargo nextest run reload
 
     kill $natrix_pid 2>/dev/null || true
     (natrix dev --profile release --port 8000 > /dev/null 2>&1) &
     natrix_pid=$!
 
     sleep 2
-    cargo nextest run --retries 1
+    cargo nextest run -E "not (test(reload))"
+    cargo nextest run reload
 
 [working-directory: "./integration_tests"]
 integration_tests_build: install_cli
