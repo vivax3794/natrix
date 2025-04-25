@@ -69,6 +69,9 @@ jobs:
 
       - name: Install rust-src
         run: rustup component add rust-src
+
+      - name: Install wasm32
+        run: rustup target add wasm32-unknown-unknown
       
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.12.3
@@ -103,6 +106,9 @@ jobs:
 
       - name: Install rust-src
         run: rustup component add rust-src
+
+      - name: Install wasm32
+        run: rustup target add wasm32-unknown-unknown
       
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.12.3
@@ -132,6 +138,9 @@ jobs:
 
       - name: Set up rust nightly
         run: rustup override set nightly
+
+      - name: Install wasm32
+        run: rustup target add wasm32-unknown-unknown
       
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.12.3
@@ -168,6 +177,9 @@ jobs:
       - name: Install rust-src
         run: rustup component add rust-src
 
+      - name: Install wasm32
+        run: rustup target add wasm32-unknown-unknown
+
       - name: Install just
         run: cargo binstall -y just
         
@@ -190,6 +202,11 @@ jobs:
 
       - name: Set up rust nightly
         run: rustup override set nightly
+
+      - name: Install wasm32
+        run: |
+          rustup +nightly target add wasm32-unknown-unknown
+          rustup +stable target add wasm32-unknown-unknown
 
       - name: Install rustfmt
         run: rustup component add rustfmt
