@@ -35,6 +35,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 use lightningcss::visitor::Visit;
 use notify::Watcher;
 use owo_colors::OwoColorize;
+use serde::Deserialize;
 use tiny_http::{Header, Response, Server};
 
 /// The directory to store macro outputs
@@ -43,6 +44,68 @@ const MACRO_OUTPUT_DIR: &str = "macro";
 const BINDGEN_OUTPUT_NAME: &str = "code";
 /// Name of the collected css
 const CSS_OUTPUT_NAME: &str = "styles.css";
+
+/// The toml config
+#[derive(Deserialize)]
+#[serde(default)]
+#[serde(deny_unknown_fields)]
+struct NatrixConfig {
+    /// The cache busting strategy
+    cache_bust: CacheBustOption,
+    /// The base url to use
+    base_path: Box<str>,
+}
+
+impl Default for NatrixConfig {
+    fn default() -> Self {
+        Self {
+            cache_bust: CacheBustOption::Content,
+            base_path: Box::from(""),
+        }
+    }
+}
+
+/// Metadata section
+#[derive(Deserialize)]
+struct PackageMetadata {
+    /// The natrix config
+    natrix: Option<NatrixConfig>,
+}
+
+impl NatrixConfig {
+    /// Read the natrix config from cargo.toml metadata
+    fn read_config() -> Result<Self> {
+        let metadata = cargo_metadata::MetadataCommand::default()
+            .no_deps()
+            .exec()?;
+        let packages = metadata.workspace_default_packages();
+        let package = packages.first().ok_or(anyhow!("No package found"))?;
+
+        if package.metadata.is_null() {
+            return Ok(Self::default());
+        }
+        let metadata: PackageMetadata = serde_json::from_value(package.metadata.clone())?;
+
+        Ok(metadata.natrix.unwrap_or_default())
+    }
+}
+
+/// Natrix CLI
+#[derive(Parser)]
+enum Cli {
+    /// Create a new project
+    New {
+        /// The name of the project
+        name: String,
+        /// Use Stable rust
+        #[arg(short, long)]
+        stable: bool,
+    },
+    /// Spawn a dev server
+    Dev(DevArguments),
+    /// Build the project
+    Build(BuildArguments),
+}
 
 /// Arguments for the dev subcommand
 #[derive(Parser)]
@@ -64,23 +127,6 @@ struct BuildArguments {
     /// The shared arguments
     #[command(flatten)]
     shared: SharedArguments,
-}
-
-/// Natrix CLI
-#[derive(Parser)]
-enum Cli {
-    /// Create a new project
-    New {
-        /// The name of the project
-        name: String,
-        /// Use Stable rust
-        #[arg(short, long)]
-        stable: bool,
-    },
-    /// Spawn a dev server
-    Dev(DevArguments),
-    /// Build the project
-    Build(BuildArguments),
 }
 
 /// Settings for building the server
@@ -107,6 +153,8 @@ struct BuildConfig {
     live_reload: Option<u16>,
     /// Cache bust option
     cache_bust: CacheBustOption,
+    /// The base url to use
+    base_path: Box<str>,
     /// Invalidate the asset caches
     invalidate_cache: bool,
 }
@@ -137,7 +185,8 @@ impl DevArguments {
             dist,
             temp_dir: target,
             live_reload,
-            cache_bust: CacheBustOption::Timestamp,
+            cache_bust: CacheBustOption::None,
+            base_path: Box::from(""),
             invalidate_cache: self.shared.invalidate_cache,
         })
     }
@@ -146,13 +195,16 @@ impl DevArguments {
 impl BuildArguments {
     /// Convert `BuildArguments` to `BuildConfig` with appropriate defaults
     fn into_build_config(self) -> Result<BuildConfig> {
+        let config = NatrixConfig::read_config()?;
+
         let profile = self.shared.profile.unwrap_or(BuildProfile::Release);
         Ok(BuildConfig {
             profile,
             dist: self.dist.unwrap_or_else(|| PathBuf::from("./dist")),
             temp_dir: find_target_natrix(profile)?,
             live_reload: None,
-            cache_bust: CacheBustOption::Content,
+            cache_bust: config.cache_bust,
+            base_path: config.base_path,
             invalidate_cache: self.shared.invalidate_cache,
         })
     }
@@ -201,7 +253,8 @@ impl BuildProfile {
 }
 
 /// Cache busting options
-#[derive(Clone, Copy, ValueEnum, PartialEq, Eq)]
+#[derive(Clone, Copy, ValueEnum, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
 enum CacheBustOption {
     /// No cache busting
     None,
@@ -684,24 +737,25 @@ fn generate_html(
         String::new()
     };
 
+    let base_path = &config.base_path;
     let content = format!(
         r#"
 <!doctype html>
 <html>
     <head>
-        <link rel="stylesheet" href="{css_file}"/>
+        <link rel="stylesheet" href="{base_path}/{css_file}"/>
     </head>
     <body>
         <div id="{}"></div>
         <script type="module">
-            import init from "/{js_file}";
-            init("/{wasm_file}");
+            import init from "{base_path}/{js_file}";
+            init("{base_path}/{wasm_file}");
             {js_reload}
         </script>
     </body>
 </html>
     "#,
-        natrix_shared::MOUNT_POINT
+        natrix_shared::MOUNT_POINT,
     );
 
     std::fs::write(html_file, content.trim())?;
@@ -799,6 +853,10 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
         .env(
             natrix_shared::MACRO_OUTPUT_ENV,
             config.temp_dir.join(MACRO_OUTPUT_DIR),
+        )
+        .env(
+            natrix_shared::MACRO_BASE_PATH_ENV,
+            config.base_path.as_ref(),
         );
 
     if config.invalidate_cache {

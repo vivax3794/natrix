@@ -112,7 +112,13 @@ mod tests {
 
         let start = Instant::now();
         loop {
-            let res = driver.get("http://localhost:8000").await;
+            let url = if option_env!("TEST_KIND_BUILD").is_some() {
+                "http://localhost:8000/dist/"
+            } else {
+                "http://localhost:8000"
+            };
+
+            let res = driver.get(url).await;
             sleep(Duration::from_millis(100)).await;
             if res.is_ok() {
                 break;
@@ -247,6 +253,10 @@ mod tests {
 
     #[tokio::test]
     async fn reload() {
+        if option_env!("TEST_KIND_BUILD").is_some() {
+            return;
+        }
+
         let client = create_client().await;
         let element = client.find(By::Id(RELOAD_ID)).await.unwrap();
 

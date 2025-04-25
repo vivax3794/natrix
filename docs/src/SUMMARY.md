@@ -19,6 +19,7 @@
 - [Assets](assets.md)
 - [Reactivity](reactivity.md)
 - [Testing](testing.md)
+- [CLI and Configuration](cli-and-config.md)
 - [Deployment](deployment.md)
   - [Library](deployment-library.md)
   - [Usage in other frameworks](deployment-other.md)

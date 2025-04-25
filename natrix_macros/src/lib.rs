@@ -490,7 +490,9 @@ pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
         hash_base64
     };
 
-    let url = format!("/{target}");
+    let base_path = std::env::var(natrix_shared::MACRO_BASE_PATH_ENV).unwrap_or_default();
+    let url = format!("{base_path}/{target}");
+
     let result = quote!(#url).into();
     let asset = natrix_shared::Asset {
         path: file_path,

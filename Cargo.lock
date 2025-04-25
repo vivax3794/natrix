@@ -1255,6 +1255,8 @@ dependencies = [
  "owo-colors",
  "oxc",
  "rustc_version",
+ "serde",
+ "serde_json",
  "tiny_http",
  "tungstenite",
  "wasmparser",

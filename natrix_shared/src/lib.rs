@@ -31,6 +31,9 @@ pub const MACRO_OUTPUT_ENV: &str = "NATRIX_MACRO_OUTPUT";
 /// The env var used to invalidate the macro outputs.
 pub const MACRO_INVALIDATE_ENV: &str = "NATRIX_MACRO_INVALIDATE";
 
+/// The env var used to indicate the base url to the macros
+pub const MACRO_BASE_PATH_ENV: &str = "NATRIX_BASE_PATH";
+
 /// The asset format
 #[cfg(feature = "assets")]
 #[derive(bincode::Decode, bincode::Encode)]

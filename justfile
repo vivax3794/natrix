@@ -9,7 +9,7 @@ default: test_native test_web
 full: test check check_docs
 
 # Run the full set of tests
-test: test_native test_web integration_tests test_css_tree_shaking project_gen_test test_homepage
+test: test_native test_web integration_tests_dev integration_tests_build test_css_tree_shaking project_gen_test test_homepage
 
 # Run tests that are not dependent on the web
 test_native:
@@ -52,7 +52,7 @@ check_book:
 # Run the integration tests
 # These will spawn the `natrix dev` server and run the tests against it
 [working-directory: "./integration_tests"]
-integration_tests: install_cli
+integration_tests_dev: install_cli
     #!/usr/bin/bash
     set -e
 
@@ -77,14 +77,39 @@ integration_tests: install_cli
     natrix_pid=$!
 
     sleep 1
-    cargo nextest run --retries 2
+    cargo nextest run --retries 1
 
     kill $natrix_pid 2>/dev/null || true
     (natrix dev --profile release --port 8000 > /dev/null 2>&1) &
     natrix_pid=$!
 
     sleep 2
-    cargo nextest run --retries 2
+    cargo nextest run --retries 1
+
+[working-directory: "./integration_tests"]
+integration_tests_build: install_cli
+    #!/usr/bin/bash
+    set -e
+
+    cleanup() {
+        echo "Cleaning up..."
+        if [ -n "$python_pid" ]; then
+            kill "$python_pid" 2>/dev/null || true
+        fi
+        if [ -n "$chrome_pid" ]; then
+            kill "$chrome_pid" 2>/dev/null || true
+        fi
+    }
+    trap cleanup EXIT
+
+    chromedriver --port=9999 &
+    chrome_pid=$!
+
+    natrix build
+    (python3 -m http.server > /dev/null 2>&1) & # Yes we are not serving the dist dir, this is to test the BASE_PATH option
+    python_pid=$!
+
+    TEST_KIND_BUILD="1" cargo nextest run
 
 # Check that css tree-shaking works
 [working-directory: "./integration_tests"]
