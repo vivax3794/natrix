@@ -43,7 +43,7 @@ pub struct State<T: Component> {
     pub(crate) data: T::Data,
     /// A weak reference to ourself, so that event handlers can easially get a weak reference
     /// without having to pass it around in every api
-    this: Option<Weak<RefCell<Self>>>,
+    pub(crate) this: Weak<RefCell<Self>>,
     /// Reactive hooks
     hooks: SlotMap<HookKey, (Box<dyn ReactiveHook<T>>, u64)>,
     /// The next value to use in the insertion order map
@@ -79,22 +79,16 @@ impl<T: Component> State<T> {
     pub(crate) fn new(data: T::Data) -> Rc<RefCell<Self>> {
         let this = Self {
             data,
-            this: None,
+            this: Weak::new(),
             hooks: SlotMap::default(),
             next_insertion_order_value: 0,
             send_to_parent: None,
         };
         let this = Rc::new(RefCell::new(this));
 
-        this.borrow_mut().this = Some(Rc::downgrade(&this));
+        this.borrow_mut().this = Rc::downgrade(&this);
 
         this
-    }
-
-    /// Get a weak reference to this state
-    #[expect(clippy::expect_used, reason = "This is always set in the `new` method")]
-    fn weak(&self) -> Weak<RefCell<Self>> {
-        self.this.as_ref().expect("Weak not set").clone()
     }
 
     /// Clear all signals
