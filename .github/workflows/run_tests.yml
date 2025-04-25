@@ -190,6 +190,9 @@ jobs:
 
       - name: Set up rust nightly
         run: rustup override set nightly
+
+      - name: Install rustfmt
+        run: rustup component add rustfmt
       
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.12.3
