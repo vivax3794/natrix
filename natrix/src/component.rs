@@ -7,7 +7,7 @@ use futures_channel::mpsc::{UnboundedReceiver, UnboundedSender};
 
 use crate::element::Element;
 use crate::get_document;
-use crate::html_elements::ToAttribute;
+use crate::html_elements::{ToAttribute, ToClass};
 use crate::signal::{RenderingState, SignalMethods};
 use crate::state::{ComponentData, E, HookKey, State};
 use crate::utils::SmallAny;
@@ -466,5 +466,18 @@ impl<A: ToAttribute<()>, C: Component> ToAttribute<C> for NonReactive<A> {
         let state = State::new(());
         let mut state = state.borrow_mut();
         Box::new(self.0).apply_attribute(name, node, &mut state, rendering_state);
+    }
+}
+
+impl<A: ToClass<()>, C: Component> ToClass<C> for NonReactive<A> {
+    fn apply_class(
+        self: Box<Self>,
+        _ctx: &mut State<C>,
+        rendering_state: &mut RenderingState,
+        node: &web_sys::Element,
+    ) -> Option<std::borrow::Cow<'static, str>> {
+        let state = State::new(());
+        let mut state = state.borrow_mut();
+        Box::new(self.0).apply_class(&mut state, rendering_state, node)
     }
 }
