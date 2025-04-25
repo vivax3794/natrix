@@ -270,9 +270,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up rust nightly
-        run: rustup override set nightly
-      
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.12.3
 
