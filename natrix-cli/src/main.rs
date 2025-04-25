@@ -940,8 +940,7 @@ fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         .arg(wasm_file)
         .arg("-o")
         .arg(wasm_file)
-        .arg("--enable-bulk-memory")
-        .arg("--enable-reference-types")
+        .arg("--all-features")
         .arg("--strip-debug")
         .arg("--strip-dwarf")
         .arg("--strip-producers");

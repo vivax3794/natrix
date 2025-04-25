@@ -108,7 +108,9 @@ jobs:
         run: rustup component add rust-src
 
       - name: Install wasm32
-        run: rustup target add wasm32-unknown-unknown
+        run: |
+          rustup +stable target add wasm32-unknown-unknown
+          rustup +nightly target add wasm32-unknown-unknown
       
       - name: Install cargo-binstall
         uses: cargo-bins/cargo-binstall@v1.12.3
@@ -178,7 +180,9 @@ jobs:
         run: rustup component add rust-src
 
       - name: Install wasm32
-        run: rustup target add wasm32-unknown-unknown
+        run: |
+          rustup +stable target add wasm32-unknown-unknown
+          rustup +nightly target add wasm32-unknown-unknown
 
       - name: Install just
         run: cargo binstall -y just
