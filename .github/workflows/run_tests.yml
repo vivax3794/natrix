@@ -22,9 +22,13 @@ jobs:
 
       - name: Install just
         run: cargo binstall -y just
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         
       - name: Install cargo-nextest
         run: cargo binstall -y cargo-nextest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Run native tests
         run: just test_native
@@ -43,9 +47,13 @@ jobs:
 
       - name: Install just
         run: cargo binstall -y just
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Install wasm-pack
         run: cargo binstall -y wasm-pack
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         
       # - name: Install wasm-bindgen
       #   run: cargo binstall -y wasm-bindgen-cli
@@ -78,12 +86,18 @@ jobs:
 
       - name: Install just
         run: cargo binstall -y just
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Install cargo-nextest
         run: cargo binstall -y cargo-nextest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         
       - name: Install wasm-bindgen
         run: cargo binstall -y wasm-bindgen-cli
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Install wasm-opt
         run: | 
@@ -117,12 +131,18 @@ jobs:
 
       - name: Install just
         run: cargo binstall -y just
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         
       - name: Install wasm-pack
         run: cargo binstall -y wasm-pack
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         
       - name: Install wasm-bindgen
         run: cargo binstall -y wasm-bindgen-cli
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Install wasm-opt
         run: | 
@@ -149,12 +169,18 @@ jobs:
 
       - name: Install just
         run: cargo binstall -y just
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         
       - name: Install wasm-pack
         run: cargo binstall -y wasm-pack
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         
       - name: Install wasm-bindgen
         run: cargo binstall -y wasm-bindgen-cli
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Install wasm-opt
         run: | 
@@ -186,9 +212,13 @@ jobs:
 
       - name: Install just
         run: cargo binstall -y just
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         
       - name: Install wasm-bindgen
         run: cargo binstall -y wasm-bindgen-cli
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Install wasm-opt
         run: | 
@@ -223,9 +253,13 @@ jobs:
 
       - name: Install just
         run: cargo binstall -y just
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         
       - name: Install cargo-hack
         run: cargo binstall -y cargo-hack
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Run checks
         run: just check
@@ -244,6 +278,8 @@ jobs:
 
       - name: Install typos
         run: cargo binstall -y typos-cli
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Run typos check
         run: typos
@@ -274,6 +310,8 @@ jobs:
 
       - name: Install just
         run: cargo binstall -y just
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         
       - name: Install rust-analyzer
         run: rustup component add rust-analyzer
@@ -283,6 +321,8 @@ jobs:
           cargo binstall -y mdbook
           cargo binstall -y mdbook-callouts
           cargo install mdbookkit --features rustdoc-link
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Check mdbook
         run: just check_book
