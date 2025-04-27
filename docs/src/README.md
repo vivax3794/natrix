@@ -34,6 +34,7 @@ impl Component for Counter {
 * ✅ **No macro DSL** – Macro-based DSLs break formatting & Rust Analyzer support. Natrix avoids them completely for a smoother dev experience.
 * ✅ **Derive macros for reactive state** – No need for `useSignal` everywhere, define a struct, thats it.
 * ✅ **Callbacks use references to state** – Instead of closures capturing state setters, Natrix callbacks take a reference to the state, which better aligns with Rust’s ownership model.
+* ✅ **JS style bundling solution** – Natrix has a compile time css and asset bundling solution that works with dependencies out of the box.
 
 # Design Goals
 * **Developer experience first** – Natrix is designed to feel natural for Rust developers.
