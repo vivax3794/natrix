@@ -472,12 +472,12 @@ impl<A: ToAttribute<()>, C: Component> ToAttribute<C> for NonReactive<A> {
 impl<A: ToClass<()>, C: Component> ToClass<C> for NonReactive<A> {
     fn apply_class(
         self: Box<Self>,
+        node: &web_sys::Element,
         _ctx: &mut State<C>,
         rendering_state: &mut RenderingState,
-        node: &web_sys::Element,
     ) -> Option<std::borrow::Cow<'static, str>> {
         let state = State::new(());
         let mut state = state.borrow_mut();
-        Box::new(self.0).apply_class(&mut state, rendering_state, node)
+        Box::new(self.0).apply_class(node, &mut state, rendering_state)
     }
 }

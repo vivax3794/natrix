@@ -329,7 +329,7 @@ impl<C: Component, T: ToClass<C>> ReactiveValue<C> for ReactiveClass<T> {
             );
         }
 
-        let new = Box::new(self.data).apply_class(ctx, render_state, node);
+        let new = Box::new(self.data).apply_class(node, ctx, render_state);
         *state = new;
     }
 }

@@ -60,9 +60,9 @@ where
 {
     fn apply_class(
         self: Box<Self>,
+        node: &web_sys::Element,
         ctx: &mut State<C>,
         rendering_state: &mut RenderingState,
-        node: &web_sys::Element,
     ) -> Option<Cow<'static, str>> {
         let hook = SimpleReactive::init_new(
             Box::new(move |ctx| ReactiveClass { data: self(ctx) }),

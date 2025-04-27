@@ -154,9 +154,9 @@ pub trait ToClass<C: Component> {
     /// Convert the value to a class name
     fn apply_class(
         self: Box<Self>,
+        node: &web_sys::Element,
         ctx: &mut State<C>,
         rendering_state: &mut RenderingState,
-        node: &web_sys::Element,
     ) -> Option<Cow<'static, str>>;
 }
 
@@ -166,9 +166,9 @@ macro_rules! class_string {
         impl<C: Component> ToClass<C> for $type {
             fn apply_class(
                 self: Box<Self>,
+                node: &web_sys::Element,
                 _ctx: &mut State<C>,
                 _rendering_state: &mut RenderingState,
-                node: &web_sys::Element,
             ) -> Option<Cow<'static, str>> {
                 let class_list = node.class_list();
                 debug_expect!(class_list.add_1(&self), "Failed to add class {self}");
@@ -182,12 +182,12 @@ type_macros::strings_cow!(class_string);
 impl<C: Component, T: ToClass<C>> ToClass<C> for Option<T> {
     fn apply_class(
         self: Box<Self>,
+        node: &web_sys::Element,
         ctx: &mut State<C>,
         rendering_state: &mut RenderingState,
-        node: &web_sys::Element,
     ) -> Option<Cow<'static, str>> {
         if let Some(inner) = *self {
-            Box::new(inner).apply_class(ctx, rendering_state, node)
+            Box::new(inner).apply_class(node, ctx, rendering_state)
         } else {
             None
         }
@@ -197,13 +197,13 @@ impl<C: Component, T: ToClass<C>> ToClass<C> for Option<T> {
 impl<C: Component, T: ToClass<C>, E: ToClass<C>> ToClass<C> for Result<T, E> {
     fn apply_class(
         self: Box<Self>,
+        node: &web_sys::Element,
         ctx: &mut State<C>,
         rendering_state: &mut RenderingState,
-        node: &web_sys::Element,
     ) -> Option<Cow<'static, str>> {
         match *self {
-            Ok(inner) => Box::new(inner).apply_class(ctx, rendering_state, node),
-            Err(inner) => Box::new(inner).apply_class(ctx, rendering_state, node),
+            Ok(inner) => Box::new(inner).apply_class(node, ctx, rendering_state),
+            Err(inner) => Box::new(inner).apply_class(node, ctx, rendering_state),
         }
     }
 }
@@ -368,7 +368,7 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
             value.apply_attribute(intern(key), &element, ctx, render_state);
         }
         for class in classes {
-            class.apply_class(ctx, render_state, &element);
+            class.apply_class(&element, ctx, render_state);
         }
 
         element.into()
