@@ -36,6 +36,12 @@ jobs:
       - name: Install rust-src
         run: rustup component add rust-src
 
+      - name: Install rust-fmt
+        run: rustup component add rustfmt
+
+      - name: Install clippy
+        run: rustup component add clippy
+
       - name: Install wasm-opt
         run: | 
           sudo apt-get update
