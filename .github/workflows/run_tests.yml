@@ -5,41 +5,16 @@ on:
   push:
     branches:
       - master
-  pull_request:
 
 jobs:
-  native_tests:
+  full_test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up rust nightly
-        run: rustup override set nightly
-      
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.12.3
-
-      - name: Install just
-        run: cargo binstall -y just
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        
-      - name: Install cargo-nextest
-        run: cargo binstall -y cargo-nextest
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Run native tests
-        run: just test_native
-
-  web_tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up rust nightly
+      - name: Set up rust nighly
         run: rustup override set nightly
       
       - name: Install cargo-binstall
@@ -50,276 +25,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Install wasm-pack
-        run: cargo binstall -y wasm-pack
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        
-      # - name: Install wasm-bindgen
-      #   run: cargo binstall -y wasm-bindgen-cli
-      #
-      # - name: Install wasm-opt
-      #   run: | 
-      #     sudo apt-get update
-      #     sudo apt-get install -y binaryen
-
-      - name: Run web tests
-        run: just test_web
-
-  integration_tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up rust nightly
-        run: rustup override set nightly
-
-      - name: Install rust-src
-        run: rustup component add rust-src
-
-      - name: Install wasm32
-        run: rustup target add wasm32-unknown-unknown
-      
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.12.3
-
-      - name: Install just
-        run: cargo binstall -y just
+      - name: Install deps
+        run: just dev_deps
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Install cargo-nextest
-        run: cargo binstall -y cargo-nextest
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        
-      - name: Install wasm-bindgen
-        run: cargo binstall -y wasm-bindgen-cli
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Install wasm-opt
-        run: | 
-          sudo apt-get update
-          sudo apt-get install -y binaryen
-
-      - name: Run integration tests
-        run: |
-          just integration_tests_dev
-          just integration_tests_build
-
-  project_gen_tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up rust nightly
-        run: rustup override set nightly
-
-      - name: Install rust-src
-        run: rustup component add rust-src
-
-      - name: Install wasm32
-        run: |
-          rustup +stable target add wasm32-unknown-unknown
-          rustup +nightly target add wasm32-unknown-unknown
-      
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.12.3
-
-      - name: Install just
-        run: cargo binstall -y just
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        
-      - name: Install wasm-pack
-        run: cargo binstall -y wasm-pack
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        
-      - name: Install wasm-bindgen
-        run: cargo binstall -y wasm-bindgen-cli
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Install wasm-opt
-        run: | 
-          sudo apt-get update
-          sudo apt-get install -y binaryen
-
-      - name: Run project generation tests
-        run: just project_gen_test
-
-  homepage_tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up rust nightly
-        run: rustup override set nightly
-
-      - name: Install wasm32
-        run: rustup target add wasm32-unknown-unknown
-      
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.12.3
-
-      - name: Install just
-        run: cargo binstall -y just
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        
-      - name: Install wasm-pack
-        run: cargo binstall -y wasm-pack
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        
-      - name: Install wasm-bindgen
-        run: cargo binstall -y wasm-bindgen-cli
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Install wasm-opt
-        run: | 
-          sudo apt-get update
-          sudo apt-get install -y binaryen
-
-      - name: Run homepage tests
-        run: just test_homepage
-
-  css_tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up rust nightly
-        run: rustup override set nightly
-      
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.12.3
-
-      - name: Install rust-src
-        run: rustup component add rust-src
-
-      - name: Install wasm32
-        run: |
-          rustup +stable target add wasm32-unknown-unknown
-          rustup +nightly target add wasm32-unknown-unknown
-
-      - name: Install just
-        run: cargo binstall -y just
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        
-      - name: Install wasm-bindgen
-        run: cargo binstall -y wasm-bindgen-cli
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Install wasm-opt
-        run: | 
-          sudo apt-get update
-          sudo apt-get install -y binaryen
-
-      - name: Run CSS tree-shaking tests
-        run: just test_css_tree_shaking
-
-  linting:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up rust nightly
-        run: rustup override set nightly
-
-      - name: Install wasm32
-        run: |
-          rustup +nightly target add wasm32-unknown-unknown
-          rustup +stable target add wasm32-unknown-unknown
-
-      - name: Install rustfmt
-        run: rustup component add rustfmt
-
-      - name: Install clippy
-        run: rustup component add clippy
-      
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.12.3
-
-      - name: Install just
-        run: cargo binstall -y just
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        
-      - name: Install cargo-hack
-        run: cargo binstall -y cargo-hack
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Run checks
-        run: just check
-
-  type_checking:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.12.3
-
-      - name: Install typos
-        run: cargo binstall -y typos-cli
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-      - name: Run typos check
-        run: typos
-
-  cargo_doc_tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up rust nightly
-        run: rustup override set nightly
-
-      - name: Run cargo doc tests
-        run: cargo test --doc --all-features --workspace
-
-  mdbook_tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up rust nightly
-        run: rustup override set nightly
-      
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.12.3
-
-      - name: Install just
-        run: cargo binstall -y just
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        
       - name: Install rust-analyzer
         run: rustup component add rust-analyzer
-        
-      - name: Install mdbook and plugins
-        run: |
-          cargo binstall -y mdbook
-          cargo binstall -y mdbook-callouts
-          cargo install mdbookkit --features rustdoc-link
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Check mdbook
-        run: just check_book
+      - name: Install rust-src
+        run: rustup component add rust-src
+
+      - name: Install wasm-opt
+        run: | 
+          sudo apt-get update
+          sudo apt-get install -y binaryen
+
+      - name: Health Check Deps
+        run: just health_check
+
+      - name: run tests
+        run: just full

@@ -185,4 +185,4 @@ clean:
     rm -rv integration_tests/dist || true
 
 gh_action:
-    act -P ubuntu-latest=catthehacker/ubuntu:full-latest -W ./.github/workflows/run_test.yml
+    act -P ubuntu-latest=catthehacker/ubuntu:full-latest -W .github/workflows/run_tests.yml
