@@ -467,7 +467,7 @@ macro_rules! aria_attrs {
         impl<C: Component, T> HtmlElement<C, T> {
             $(
             paste::paste! {
-                #[doc = concat!("Set the `", stringify!($attr), "` attribute")]
+                #[doc = concat!("Set the `aria-", stringify!($attr), "` attribute")]
                 pub fn [<aria_$attr>](self, value: impl ToAttribute<C>) -> Self {
                     self.attr(concat!("aria-", stringify!($attr)), value)
                 }
