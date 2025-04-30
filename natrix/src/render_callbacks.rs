@@ -7,7 +7,7 @@ use crate::element::{Element, generate_fallback_node};
 use crate::html_elements::{ToAttribute, ToClass};
 use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
 use crate::state::{HookKey, KeepAlive, RenderCtx, State};
-use crate::utils::debug_expect;
+use crate::utils::{debug_expect, debug_panic};
 use crate::{get_document, type_macros};
 
 /// A noop hook used to fill the `Rc<RefCell<...>>` while the initial render pass runs so that that
@@ -70,7 +70,7 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
         let me = ctx.insert_hook(Box::new(DummyHook));
 
         let Some(dummy_node) = get_document().body() else {
-            debug_assert!(false, "Document body not found");
+            debug_panic!("Document body not found");
             return (me, generate_fallback_node());
         };
         let dummy_node = dummy_node.into();
@@ -94,7 +94,7 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
         let new_node = self.render(ctx, you);
 
         let Some(parent) = self.target_node.parent_node() else {
-            debug_assert!(false, "Parent node of target node not found.");
+            debug_panic!("Parent node of target node not found.");
             return UpdateResult::DropHooks(hooks);
         };
 
@@ -146,7 +146,7 @@ impl<C: Component> ReactiveHook<C> for ReactiveNode<C, String> {
         if let Some(target_node) = self.target_node.dyn_ref::<web_sys::Text>() {
             target_node.set_text_content(Some(&element));
         } else {
-            debug_assert!(false, "`String` Node wasnt a text node");
+            debug_panic!("`String` Node wasnt a text node");
         }
 
         UpdateResult::DropHooks(hooks)
@@ -181,7 +181,7 @@ macro_rules! node_specialize_int {
                 if let Some(target_node) = self.target_node.dyn_ref::<web_sys::Text>() {
                     target_node.set_text_content(Some(result));
                 } else {
-                    debug_assert!(false, "Numeric Node wasnt a text node");
+                    debug_panic!("Numeric Node wasnt a text node");
                 }
 
                 UpdateResult::DropHooks(hooks)

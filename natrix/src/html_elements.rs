@@ -26,6 +26,7 @@ use crate::events::Event;
 use crate::signal::RenderingState;
 use crate::state::{DeferredCtx, State};
 use crate::utils::debug_expect;
+use crate::utils::{debug_expect, debug_panic};
 use crate::{get_document, type_macros};
 
 /// A trait for using a arbitrary type as a attribute value.
@@ -267,7 +268,7 @@ impl<C: Component, T> HtmlElement<C, T> {
                 if let Ok(event) = event.dyn_into::<E::JsEvent>() {
                     function(ctx, event);
                 } else {
-                    debug_assert!(false, "Mismatched event types");
+                    debug_panic!("Mismatched event types");
                 }
             }),
         ));
@@ -345,7 +346,7 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
 
         let document = get_document();
         let Ok(element) = document.create_element(intern(name)) else {
-            debug_assert!(false, "Failed to create element {name}");
+            debug_panic!("Failed to create element {name}");
             return generate_fallback_node();
         };
 

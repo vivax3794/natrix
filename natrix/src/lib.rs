@@ -3,6 +3,7 @@
 #![cfg_attr(feature = "nightly", warn(must_not_suspend))]
 #![cfg_attr(feature = "nightly", feature(associated_type_defaults))]
 #![cfg_attr(nightly, feature(min_specialization))]
+#![cfg_attr(nightly, feature(cold_path))]
 
 pub mod async_utils;
 pub mod callbacks;

@@ -8,6 +8,16 @@ use futures_util::stream::StreamExt;
 pub(crate) trait SmallAny {}
 impl<T> SmallAny for T {}
 
+#[cfg(nightly)]
+pub(crate) use std::hint::cold_path;
+
+/// Stable version of `cold_path`
+/// Likely does less optimization I think?
+/// But better than nothing.
+#[cfg(not(nightly))]
+#[cold]
+pub(crate) fn cold_path() {}
+
 /// Panic in debug mode.
 macro_rules! debug_expect {
     ($expr:expr, or($or:expr), $($msg:expr), *) => {
@@ -16,7 +26,7 @@ macro_rules! debug_expect {
             match res {
                 Some(value) => value,
                 None => {
-                    debug_assert!(false, $($msg),*);
+                    crate::utils::debug_panic!($($msg),*);
                     $or
                 }
             }
@@ -24,10 +34,26 @@ macro_rules! debug_expect {
     };
     ($expr:expr, $($msg:expr), *) => {
         let res = $expr;
-        debug_assert!(res.is_ok(), $($msg),*);
+        match res {
+            Ok(_) => {},
+            Err(_) => {
+                crate::utils::cold_path();
+            }
+        }
     };
 }
-pub(crate) use debug_expect;
+
+/// Panic on debug builds only
+macro_rules! debug_panic {
+    ($($msg:expr),*) => {
+        crate::utils::cold_path();
+        if cfg!(debug_assertions) {
+            panic!($($msg),*);
+        }
+    };
+}
+
+pub(crate) use {debug_expect, debug_panic};
 
 /// Wait for at least one mesassge on the channel
 /// And then return all of the available messages

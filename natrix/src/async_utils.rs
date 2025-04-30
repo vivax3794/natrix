@@ -4,15 +4,14 @@ use std::time::Duration;
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 
-use crate::utils::debug_expect;
+use crate::utils::{debug_expect, debug_panic};
 
 /// Sleeps for the given duration using js `setTimeout`.
 pub async fn sleep(time: Duration) {
     let milis = if let Ok(milis) = i32::try_from(time.as_millis()) {
         milis
     } else {
-        debug_assert!(
-            false,
+        debug_panic!(
             "Sleep duration {}ms overflows `i32` (will use `i32::MAX` in release mode.)",
             time.as_millis()
         );

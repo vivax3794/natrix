@@ -4,6 +4,7 @@ use crate::component::Component;
 use crate::signal::RenderingState;
 use crate::state::State;
 use crate::type_macros;
+use crate::utils::debug_panic;
 
 /// An `Element` is anything that can produce a DOM node.
 /// The most common examples include `HtmlElement` and types like `String`.
@@ -93,7 +94,7 @@ impl<C: Component> Element<C> for Comment {
         _render_state: &mut RenderingState,
     ) -> web_sys::Node {
         let Ok(node) = web_sys::Comment::new() else {
-            debug_assert!(false, "Failed to create comment node");
+            debug_panic!("Failed to create comment node");
             return generate_fallback_node();
         };
 
