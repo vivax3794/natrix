@@ -186,3 +186,39 @@ e::div()
 # }
 # }
 ```
+
+## Inline Css
+> [!NOTE]
+> For constant inline styles use the `style` macro instead, This section is meant for runtime / parent configurable css.
+
+Similarly to `.attr` there is [`.css_value`](html_elements::HtmlElement::css_value) which sets a inline style, this should primerly be used for reactive values. 
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+use natrix::css_values::Color;
+#
+# #[derive(Component)]
+# struct MyComponent {
+#     pub is_active: bool,
+# }
+#
+# impl Component for MyComponent {
+#     fn render() -> impl Element<Self> {
+e::div()
+    .class("my-component")
+    .css_value("background-color", |ctx: R<Self>| {
+        if *ctx.is_active {
+            Color::rgb(0, 255, 0)
+        } else {
+            Color::rgb(255, 0, 0)
+        }
+    })
+    .child(e::button()
+        .text("Click me!")
+        .on::<events::Click>(|ctx: E<Self>, _| {
+            *ctx.is_active = !*ctx.is_active;
+        })
+    )
+# }
+# }
+```

@@ -7,7 +7,7 @@ use crate::element::Element;
 use crate::render_callbacks::DummyHook;
 use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
 use crate::state::{HookKey, R as Ra, RenderCtx, State};
-use crate::utils::{SmallAny, debug_expect};
+use crate::utils::{SmallAny, debug_expect, debug_panic};
 
 /// List lets you efficiently render a list of items
 /// It takes a function that returns a vector of items and a render function
@@ -145,7 +145,7 @@ where
                     if let Some(node) = state.node.parent_node() {
                         debug_expect!(node.remove_child(&state.node), "Failed to remove node");
                     } else {
-                        debug_assert!(false, "Parent node not found");
+                        debug_panic!("Parent node not found");
                     }
                 }
                 UpdateResult::DropHooks(to_drop)
@@ -184,7 +184,7 @@ where
                             "Failed to insert node"
                         );
                     } else {
-                        debug_assert!(false, "Parent node not found");
+                        debug_panic!("Parent node not found");
                     }
 
                     let item_state = ListItemState {

@@ -2,9 +2,11 @@
 
 use std::borrow::Cow;
 
+use wasm_bindgen::JsCast;
+
 use crate::component::Component;
 use crate::element::{Element, generate_fallback_node};
-use crate::html_elements::{ToAttribute, ToClass};
+use crate::html_elements::{ToAttribute, ToClass, ToCssValue};
 use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
 use crate::state::{HookKey, KeepAlive, RenderCtx, State};
 use crate::utils::{debug_expect, debug_panic};
@@ -331,5 +333,31 @@ impl<C: Component, T: ToClass<C>> ReactiveValue<C> for ReactiveClass<T> {
 
         let new = Box::new(self.data).apply_class(node, ctx, render_state);
         *state = new;
+    }
+}
+
+/// Reacitve set a element css value
+pub(crate) struct ReactiveCss<T> {
+    /// The css property to set
+    pub(crate) property: &'static str,
+    /// The css value to set  
+    pub(crate) data: T,
+}
+
+impl<C: Component, T: ToCssValue<C>> ReactiveValue<C> for ReactiveCss<T> {
+    type State = ();
+
+    fn apply(
+        self,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+        node: &web_sys::Element,
+        _state: &mut Self::State,
+    ) {
+        let Some(node) = node.dyn_ref() else {
+            debug_panic!("`ReactiveCss was given a non html element");
+            return;
+        };
+        Box::new(self.data).apply_css(self.property, node, ctx, render_state);
     }
 }

@@ -25,7 +25,6 @@ use crate::element::{Element, generate_fallback_node};
 use crate::events::Event;
 use crate::signal::RenderingState;
 use crate::state::{DeferredCtx, State};
-use crate::utils::debug_expect;
 use crate::utils::{debug_expect, debug_panic};
 use crate::{get_document, type_macros};
 
@@ -209,6 +208,18 @@ impl<C: Component, T: ToClass<C>, E: ToClass<C>> ToClass<C> for Result<T, E> {
     }
 }
 
+/// A trait for converting a value to a CSS var value.
+pub trait ToCssValue<C: Component> {
+    /// Apply the css value
+    fn apply_css(
+        self: Box<Self>,
+        name: &'static str,
+        node: &web_sys::HtmlElement,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+    );
+}
+
 /// A Generic html node with a given name.
 #[must_use = "Web elements are useless if not rendered"]
 pub struct HtmlElement<C: Component, T = ()> {
@@ -222,6 +233,8 @@ pub struct HtmlElement<C: Component, T = ()> {
     attributes: Vec<(&'static str, Box<dyn ToAttribute<C>>)>,
     /// Css classes to apply
     classes: Vec<Box<dyn ToClass<C>>>,
+    /// Css variables
+    css: Vec<(&'static str, Box<dyn ToCssValue<C>>)>,
     /// Phantom data to allow for genericity
     phantom: std::marker::PhantomData<T>,
 }
@@ -237,6 +250,7 @@ impl<C: Component, T> HtmlElement<C, T> {
             children: Vec::new(),
             attributes: Vec::new(),
             classes: Vec::new(),
+            css: Vec::new(),
             phantom: std::marker::PhantomData,
         }
     }
@@ -327,6 +341,14 @@ impl<C: Component, T> HtmlElement<C, T> {
         }
         self
     }
+
+    /// Add a css variable to the node.
+    ///
+    /// This uses the `style` api and hence is similar to setting the `style` attribute
+    pub fn css_value(mut self, key: &'static str, value: impl ToCssValue<C> + 'static) -> Self {
+        self.css.push((key, Box::new(value)));
+        self
+    }
 }
 
 impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
@@ -341,6 +363,7 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
             children,
             attributes,
             classes,
+            css,
             phantom: _,
         } = *self;
 
@@ -370,6 +393,14 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
         }
         for class in classes {
             class.apply_class(&element, ctx, render_state);
+        }
+
+        if let Some(element) = element.dyn_ref() {
+            for (css_name, css) in css {
+                css.apply_css(css_name, element, ctx, render_state);
+            }
+        } else {
+            debug_panic!("Generated Element wasnt a HtmlElement");
         }
 
         element.into()

@@ -68,6 +68,7 @@ features = [
     "HtmlElement",
     "DomTokenList",
     "DocumentFragment",
+    "CssStyleDeclaration",
 
     # Events
     "Event",

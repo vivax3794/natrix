@@ -1,5 +1,6 @@
 use std::hint::black_box;
 
+use natrix::css_values::Numeric;
 use natrix::prelude::*;
 use natrix::{global_css, scoped_css, style};
 mod reload_tests;
@@ -29,6 +30,7 @@ global_css!("
 scoped_css!("
     .hello {
         height: 300px;
+        font-size: var(--size);
     }
     .I_amNotUsed {
         height: 400px;
@@ -63,7 +65,8 @@ impl Component for HelloWorld {
                     .class("hello_world")
                     .class(HELLO)
                     .class(format!("dyn{}", black_box("amic")))
-                    .class(style!("margin: 1px 2px 3px 4px")),
+                    .class(style!("margin: 1px 2px 3px 4px"))
+                    .css_value(SIZE, Numeric::px(10)),
             )
             .child(SubComponent::new(integration_tests_dependency::DepComp))
             .child(
@@ -79,7 +82,8 @@ impl Component for HelloWorld {
                     .on::<events::Click>(|ctx: E<Self>, _| {
                         *ctx.counter += 1;
                     })
-                    .text(|ctx: R<Self>| *ctx.counter),
+                    .text(|ctx: R<Self>| *ctx.counter)
+                    .class(HELLO),
             )
             .child(e::div().id(RELOAD_ID).text(reload_tests::VALUE))
             .child(
@@ -249,6 +253,15 @@ mod tests {
         let width = rect.width;
 
         assert!(width >= 100.0, "Img width too small {width}");
+    }
+
+    #[tokio::test]
+    async fn dynamic_css_var() {
+        let client = create_client().await;
+        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+
+        let font_size = element.css_value("font-size").await.unwrap();
+        assert_eq!(font_size, "10px");
     }
 
     #[tokio::test]

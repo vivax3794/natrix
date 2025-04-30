@@ -5,8 +5,14 @@ use std::borrow::Cow;
 use crate::component::Component;
 use crate::element::Element;
 use crate::events::Event;
-use crate::html_elements::{ToAttribute, ToClass};
-use crate::render_callbacks::{ReactiveAttribute, ReactiveClass, ReactiveNode, SimpleReactive};
+use crate::html_elements::{ToAttribute, ToClass, ToCssValue};
+use crate::render_callbacks::{
+    ReactiveAttribute,
+    ReactiveClass,
+    ReactiveCss,
+    ReactiveNode,
+    SimpleReactive,
+};
 use crate::signal::RenderingState;
 use crate::state::{RenderCtx, State};
 
@@ -71,6 +77,31 @@ where
         );
         rendering_state.hooks.push(hook);
         None
+    }
+}
+
+impl<C, F, T> ToCssValue<C> for F
+where
+    C: Component,
+    T: ToCssValue<C> + 'static,
+    F: Fn(&mut RenderCtx<C>) -> T + 'static,
+{
+    fn apply_css(
+        self: Box<Self>,
+        name: &'static str,
+        node: &web_sys::HtmlElement,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+    ) {
+        let hook = SimpleReactive::init_new(
+            Box::new(move |ctx| ReactiveCss {
+                property: name,
+                data: self(ctx),
+            }),
+            node.clone().into(),
+            ctx,
+        );
+        render_state.hooks.push(hook);
     }
 }
 

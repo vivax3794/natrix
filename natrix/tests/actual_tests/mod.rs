@@ -2,6 +2,7 @@ mod async_callbacks;
 mod attributes;
 mod classes;
 mod computed;
+mod css_vars;
 mod events;
 mod generic_component;
 mod guards;
