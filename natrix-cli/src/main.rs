@@ -728,7 +728,7 @@ fn generate_html(
         <link rel="stylesheet" href="{base_path}/{css_file}"/>
     </head>
     <body>
-        <div id="{}"></div>
+        <div id="{}">This website requires Javascript and Wasm support.</div>
         <script type="module">
             import init from "{base_path}/{js_file}";
             init("{base_path}/{wasm_file}");
