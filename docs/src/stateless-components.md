@@ -144,7 +144,7 @@ struct HelloWorld {
 impl Component for HelloWorld {
     fn render() -> impl Element<Self> {
         e::div()
-            .child(fancy_button(|ctx: E<Self>, _| {
+            .child(fancy_button(|ctx: E<Self>, _, _| {
                 *ctx.counter += 1;
             }))
     }

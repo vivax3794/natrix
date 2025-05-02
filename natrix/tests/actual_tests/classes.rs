@@ -22,7 +22,7 @@ impl Component for HelloWorld {
             .child(
                 e::button()
                     .id(BUTTON_ID)
-                    .on::<events::Click>(|ctx: E<Self>, _| {
+                    .on::<events::Click>(|ctx: E<Self>, _, _| {
                         *ctx.counter += 1;
                     })
                     .class(|ctx: R<Self>| {
@@ -43,7 +43,7 @@ impl Component for HelloWorld {
             .child(
                 e::button()
                     .id(DECREMENT_ID)
-                    .on::<events::Click>(|ctx: E<Self>, _| {
+                    .on::<events::Click>(|ctx: E<Self>, _, _| {
                         *ctx.counter -= 1;
                     }),
             )

@@ -14,7 +14,7 @@ use crate::render_callbacks::{
     SimpleReactive,
 };
 use crate::signal::RenderingState;
-use crate::state::{RenderCtx, State};
+use crate::state::{EventToken, RenderCtx, State};
 
 impl<F, C, R> Element<C> for F
 where
@@ -119,10 +119,10 @@ where
 /// ```
 pub trait EventHandler<C, E: Event> {
     /// Return a boxed version of the function in this event
-    fn func(self) -> impl Fn(&mut State<C>, E::JsEvent) + 'static;
+    fn func(self) -> impl Fn(&mut State<C>, EventToken, E::JsEvent) + 'static;
 }
-impl<C, E: Event, F: Fn(&mut State<C>, E::JsEvent) + 'static> EventHandler<C, E> for F {
-    fn func(self) -> impl Fn(&mut State<C>, E::JsEvent) + 'static {
+impl<C, E: Event, F: Fn(&mut State<C>, EventToken, E::JsEvent) + 'static> EventHandler<C, E> for F {
+    fn func(self) -> impl Fn(&mut State<C>, EventToken, E::JsEvent) + 'static {
         self
     }
 }

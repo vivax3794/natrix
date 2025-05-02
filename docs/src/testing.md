@@ -67,8 +67,8 @@ To wait until all messages have been processed, you can use [`next_animation_fra
 # impl Component for Child {
 #     type EmitMessage = u8;
 #     fn render() -> impl Element<Self> {
-#         e::div().id("CHILD").on::<events::Click>(|ctx: E<Self>, _| {
-#             ctx.emit(1);
+#         e::div().id("CHILD").on::<events::Click>(|ctx: E<Self>, token, _| {
+#             ctx.emit(1, token);
 #         })
 #     }
 # }

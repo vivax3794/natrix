@@ -53,8 +53,8 @@ impl Component for MyChild {
     fn render() -> impl Element<Self> {
         e::button()
             .text("Click Me")
-            .on::<events::Click>(|ctx: E<Self>, _| {
-                ctx.emit(10);
+            .on::<events::Click>(|ctx: E<Self>, token, _| {
+                ctx.emit(10, token);
             })
     }
 }
@@ -81,6 +81,8 @@ Similaryly you can use [`ReceiveMessage`](component::Component::ReceiveMessage) 
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
+use natrix::state::EventToken;
+
 #[derive(Component, Default)]
 struct MyChild {
     state: usize,
@@ -94,7 +96,7 @@ impl Component for MyChild {
             .text(|ctx: R<Self>| *ctx.state)
     }
 
-    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage) {
+    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage, token: EventToken) {
         *ctx.state += msg;
     }
 }
@@ -108,8 +110,8 @@ impl Component for MyParent {
         e::div()
             .child(child)
             // We use `move` to move ownership of the sender into the closure
-            .on::<events::Click>(move |ctx: E<Self>, _| {
-                sender.send(10);
+            .on::<events::Click>(move |ctx: E<Self>, token, _| {
+                sender.send(10, token);
             })
     }
 }

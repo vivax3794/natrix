@@ -62,7 +62,7 @@ This is disabled by default because it does not match other smart pointers, and 
 # struct Hello { counter: u8 }
 # impl Component for Hello {
 #     fn render() -> impl Element<Self> {
-#        e::button().on::<events::Click>(|ctx: E<Self>, _|{
+#        e::button().on::<events::Click>(|ctx: E<Self>, _, _|{
 // Without `ergonomic_ops`
 *ctx.counter += 1;
 *ctx.counter = *ctx.counter + 1;

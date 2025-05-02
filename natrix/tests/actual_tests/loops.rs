@@ -23,7 +23,7 @@ impl Component for ManualLoop {
             .child(
                 e::button()
                     .id(ADD_BUTTON_ID)
-                    .on::<events::Click>(|ctx: E<Self>, _| {
+                    .on::<events::Click>(|ctx: E<Self>, _, _| {
                         let len = ctx.items.len();
                         ctx.items.push(len);
                     }),
@@ -31,14 +31,14 @@ impl Component for ManualLoop {
             .child(
                 e::button()
                     .id(REMOVE_BUTTON_ID)
-                    .on::<events::Click>(|ctx: E<Self>, _| {
+                    .on::<events::Click>(|ctx: E<Self>, _, _| {
                         ctx.items.pop();
                     }),
             )
             .child(
                 e::button()
                     .id(CHANGE_BUTTON_ID)
-                    .on::<events::Click>(|ctx: E<Self>, _| {
+                    .on::<events::Click>(|ctx: E<Self>, _, _| {
                         ctx.items[0] = 100;
                     }),
             )

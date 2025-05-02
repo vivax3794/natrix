@@ -21,7 +21,7 @@ impl Component for GuardTester {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _| match &mut *ctx.value {
+                    .on::<events::Click>(|ctx: E<Self>, _, _| match &mut *ctx.value {
                         Some(2) => *ctx.value = None,
                         Some(value) => *value += 1,
                         None => *ctx.value = Some(0),
@@ -75,7 +75,7 @@ impl Component for GuardTesterResult {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _| match &mut *ctx.value {
+                    .on::<events::Click>(|ctx: E<Self>, _, _| match &mut *ctx.value {
                         Ok(value) => *value += 1,
                         Err(_) => *ctx.value = Ok(0),
                     }),
@@ -127,7 +127,7 @@ impl Component for GuardTesterNested {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _| match &mut *ctx.value {
+                    .on::<events::Click>(|ctx: E<Self>, _, _| match &mut *ctx.value {
                         Some(Some(2)) => *ctx.value = None,
                         Some(Some(value)) => *value += 1,
                         Some(None) => *ctx.value = Some(Some(0)),
@@ -196,7 +196,7 @@ impl Component for GuardSwitchProp {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _| {
+                    .on::<events::Click>(|ctx: E<Self>, _, _| {
                         *ctx.value = *ctx.next;
                     }),
             )
@@ -256,7 +256,7 @@ impl Component for NonCopyComponent {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _| {
+                    .on::<events::Click>(|ctx: E<Self>, _, _| {
                         *ctx.value = Some(NonCopy);
                     }),
             )

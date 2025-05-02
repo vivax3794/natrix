@@ -21,7 +21,7 @@ impl Component for Comp {
             .css_value("--rem", Numeric::rem(10))
             .css_value("--color", Color::rgb(255, 100, 10))
             .css_value("--size", |ctx: R<Self>| Numeric::rem(*ctx.size))
-            .on::<events::Click>(|ctx: E<Self>, _| {
+            .on::<events::Click>(|ctx: E<Self>, _, _| {
                 *ctx.size += 1;
             })
     }

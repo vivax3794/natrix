@@ -98,7 +98,7 @@ We need to specify the argument type of the closure, this is because of limitati
 
 ### Updating State
 
-Updating state is done very similarly, but using [`E`](state::E), the [`.on`](html_elements::HtmlElement::on) method takes a callback that is called when the event is triggered. The callback takes a reference to the component and the event as arguments. The event is passed as a generic type, so you can use any event that implements the [`Event`](events::Event) trait. the second argument will automatically be inferred to the type of the event. for example the [`Click`](events::Click) event will be passed as a [`MouseEvent`](web_sys::MouseEvent) type.
+Updating state is done very similarly, but using [`E`](state::E), the [`.on`](html_elements::HtmlElement::on) method takes a callback that is called when the event is triggered. The callback takes a reference to the component and the event as arguments, as well as a [`EventToken`](state::EventToken) which is used to access event-only apis. The event is passed as a generic type, so you can use any event that implements the [`Event`](events::Event) trait. the second argument will automatically be inferred to the type of the event. for example the [`Click`](events::Click) event will be passed as a [`MouseEvent`](web_sys::MouseEvent) type.
 
 ```rust,no_run
 # extern crate natrix;
@@ -112,7 +112,7 @@ impl Component for HelloWorld {
     fn render() -> impl Element<Self> {
         e::button()
             .text(|ctx: R<Self>| *ctx.counter)
-            .on::<events::Click>(|ctx: E<Self>, _| {
+            .on::<events::Click>(|ctx: E<Self>, _, _| {
                 *ctx.counter += 1;
             })
     }

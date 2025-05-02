@@ -24,7 +24,7 @@ use crate::component::Component;
 use crate::element::{Element, generate_fallback_node};
 use crate::events::Event;
 use crate::signal::RenderingState;
-use crate::state::{DeferredCtx, State};
+use crate::state::{DeferredCtx, EventToken, State};
 use crate::utils::{debug_expect, debug_panic};
 use crate::{get_document, type_macros};
 
@@ -228,7 +228,10 @@ pub struct HtmlElement<C: Component, T = ()> {
     /// List of child elements
     children: Vec<Box<dyn Element<C>>>,
     /// Events to be registered on the element
-    events: Vec<(&'static str, Box<dyn Fn(&mut State<C>, web_sys::Event)>)>,
+    events: Vec<(
+        &'static str,
+        Box<dyn Fn(&mut State<C>, EventToken, web_sys::Event)>,
+    )>,
     /// Potentially dynamic attributes to apply
     attributes: Vec<(&'static str, Box<dyn ToAttribute<C>>)>,
     /// Css classes to apply
@@ -255,6 +258,19 @@ impl<C: Component, T> HtmlElement<C, T> {
         }
     }
 
+    /// Replace the tag type marker with `()` to allow returning different types of elements
+    pub fn generic(self) -> HtmlElement<C, ()> {
+        HtmlElement {
+            tag: self.tag,
+            events: self.events,
+            children: self.children,
+            attributes: self.attributes,
+            classes: self.classes,
+            css: self.css,
+            phantom: std::marker::PhantomData,
+        }
+    }
+
     /// Register a event handler for this element.
     ///
     /// The event handler is a closure taking a mutable reference to `S<Self>`.
@@ -268,7 +284,7 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// # type EmitMessage = NoMessages;
     /// # type ReceiveMessage = NoMessages;
     /// # fn render() -> impl Element<Self> {
-    /// e::button().on::<events::Click>(|ctx: E<Self>, _| {
+    /// e::button().on::<events::Click>(|ctx: E<Self>, _, _| {
     ///     *ctx.some_value += 1;
     /// })
     /// # }}
@@ -278,9 +294,9 @@ impl<C: Component, T> HtmlElement<C, T> {
         let function = function.func();
         self.events.push((
             E::EVENT_NAME,
-            Box::new(move |ctx, event| {
+            Box::new(move |ctx, token, event| {
                 if let Ok(event) = event.dyn_into::<E::JsEvent>() {
-                    function(ctx, event);
+                    function(ctx, token, event);
                 } else {
                     debug_panic!("Mismatched event types");
                 }
@@ -383,7 +399,7 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
                 &element,
                 event,
                 function,
-                ctx.deferred_borrow(),
+                ctx.deferred_borrow(EventToken::new()),
                 render_state,
             );
         }
@@ -412,7 +428,7 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
 fn create_event_handler<C: Component>(
     element: &web_sys::Element,
     event: &str,
-    function: Box<dyn Fn(&mut State<C>, web_sys::Event)>,
+    function: Box<dyn Fn(&mut State<C>, EventToken, web_sys::Event)>,
     ctx_weak: DeferredCtx<C>,
     render_state: &mut RenderingState<'_>,
 ) {
@@ -428,7 +444,7 @@ fn create_event_handler<C: Component>(
         };
 
         ctx.clear();
-        function(&mut ctx, event);
+        function(&mut ctx, EventToken::new(), event);
         ctx.update();
     });
     let closure = Closure::wrap(callback);

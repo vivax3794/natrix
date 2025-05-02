@@ -37,6 +37,20 @@ pub(crate) type KeepAlive = Box<dyn SmallAny>;
 
 new_key_type! { pub(crate) struct HookKey; }
 
+/// A token only accessible in events.
+/// This is used to guard certain apis that should only be used in events.
+pub struct EventToken {
+    /// A private field to prevent this from being constructed outside of the framework
+    _private: (),
+}
+
+impl EventToken {
+    /// Create a new token
+    pub(crate) fn new() -> Self {
+        Self { _private: () }
+    }
+}
+
 /// The core component state, stores all framework data
 pub struct State<T: Component> {
     /// The user (macro) defined reactive struct
@@ -186,8 +200,16 @@ impl<T: Component> State<T> {
         (guard.getter)(self)
     }
 
+    /// Get the unwrapped data referenced by this guard, but mut
+    pub fn get_mut<'s, F, R>(&'s mut self, guard: &Guard<F>) -> &'s mut R
+    where
+        F: Fn(&'s mut Self) -> &'s mut R,
+    {
+        (guard.getter)(self)
+    }
+
     /// Emit a message to the parent component
-    pub fn emit(&mut self, msg: T::EmitMessage) {
+    pub fn emit(&self, msg: T::EmitMessage, _token: EventToken) {
         if let Some(sender) = self.send_to_parent.as_ref() {
             debug_expect!(
                 sender.unbounded_send(msg),
@@ -207,7 +229,7 @@ impl<T: Component> State<T> {
         M: 'static,
         F: Fn(&mut Self, M) + 'static,
     {
-        let this = self.deferred_borrow();
+        let this = self.deferred_borrow(EventToken::new());
         wasm_bindgen_futures::spawn_local(async move {
             while let Some(messages) = utils::recv_all(&mut rx).await {
                 let Some(mut this) = this.borrow_mut() else {
@@ -222,14 +244,14 @@ impl<T: Component> State<T> {
 
     /// Spawn a async task to recv messages from the parent
     pub(crate) fn spawn_recivier_task(&mut self, mut rx: UnboundedReceiver<T::ReceiveMessage>) {
-        let this = self.deferred_borrow();
+        let this = self.deferred_borrow(EventToken::new());
         wasm_bindgen_futures::spawn_local(async move {
             while let Some(messages) = utils::recv_all(&mut rx).await {
                 let Some(mut this) = this.borrow_mut() else {
                     break;
                 };
                 for message in messages {
-                    T::handle_message(&mut this, message);
+                    T::handle_message(&mut this, message, EventToken::new());
                 }
             }
         });
@@ -237,7 +259,7 @@ impl<T: Component> State<T> {
 
     /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
     /// framework assumptions.
-    pub fn deferred_borrow(&mut self) -> DeferredCtx<T> {
+    pub fn deferred_borrow(&self, _token: EventToken) -> DeferredCtx<T> {
         DeferredCtx {
             inner: self.this.clone(),
         }
@@ -245,12 +267,12 @@ impl<T: Component> State<T> {
 
     /// Spawn a async task in the local event loop, which will run on the next possible moment.
     // This is `&mut` to make sure it cant be called in render callbacks.
-    pub fn use_async<C, F>(&mut self, func: C)
+    pub fn use_async<C, F>(&self, token: EventToken, func: C)
     where
         C: FnOnce(DeferredCtx<T>) -> F,
         F: Future<Output = Option<()>> + 'static,
     {
-        let deferred = self.deferred_borrow();
+        let deferred = self.deferred_borrow(token);
         let future = func(deferred);
 
         wasm_bindgen_futures::spawn_local(async {
@@ -316,6 +338,15 @@ impl<C: Component> RenderCtx<'_, C> {
         F: Fn(&State<C>) -> T + 'static,
         T: PartialEq + Clone + 'static,
     {
+        self.watch_mut(move |ctx| func(ctx))
+    }
+
+    #[doc(hidden)]
+    pub fn watch_mut<T, F>(&mut self, func: F) -> T
+    where
+        F: Fn(&mut State<C>) -> T + 'static,
+        T: PartialEq + Clone + 'static,
+    {
         let signal_state = self.ctx.pop_signals();
 
         let result = func(self.ctx);
@@ -333,6 +364,14 @@ impl<C: Component> RenderCtx<'_, C> {
 
         result
     }
+
+    /// Get a readonly reference from a mut guard
+    pub fn get_downgrade<F, R>(&mut self, guard: &Guard<F>) -> &R
+    where
+        F: Fn(&mut State<C>) -> &mut R,
+    {
+        (guard.getter)(self.ctx)
+    }
 }
 
 /// The wather hook / signal
@@ -349,7 +388,7 @@ impl<C, F, T> ReactiveHook<C> for WatchState<F, T>
 where
     C: Component,
     T: PartialEq,
-    F: Fn(&State<C>) -> T,
+    F: Fn(&mut State<C>) -> T,
 {
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         ctx.clear();
@@ -438,6 +477,55 @@ where
 ///
 /// Internally this uses `ctx.watch` and `.unwrap` (which should never fail)
 ///
+/// ## Mutable returns
+/// If you want to return a mutable reference to the value you can use the `@mut` version:
+/// ```rust
+/// # use natrix::prelude::*;
+/// # use natrix::guard_option;
+/// # #[derive(Component)]
+/// # struct MyComponent {value: Option<u32>}
+/// # impl Component for MyComponent {
+/// # type EmitMessage = NoMessages;
+/// # type ReceiveMessage = NoMessages;
+/// # fn render() -> impl Element<Self> {
+/// # |ctx: R<Self>| {
+/// if let Some(value_guard) = guard_option!(@mut |ctx| ctx.value.as_mut()) {
+///   e::button().on::<events::Click>(move |ctx: E<Self>, _, _| {
+///     *ctx.get_mut(&value_guard) += 1;
+///   }).generic()
+/// } else {
+///   e::div().text("Is none").generic()
+/// }
+/// # }}}
+/// ```
+///
+/// You can also use a mutable guard in reactive closures via `get_downgrade`
+/// ```rust
+/// # use natrix::prelude::*;
+/// # use natrix::guard_option;
+/// # #[derive(Component)]
+/// # struct MyComponent {value: Option<u32>}
+/// # impl Component for MyComponent {
+/// # type EmitMessage = NoMessages;
+/// # type ReceiveMessage = NoMessages;
+/// # fn render() -> impl Element<Self> {
+/// # |ctx: R<Self>| {
+/// if let Some(value_guard) = guard_option!(@mut |ctx| ctx.value.as_mut()) {
+///   e::button()
+///     .text(move |ctx: R<Self>| *ctx.get_downgrade(&value_guard))
+///     .on::<events::Click>(move |ctx: E<Self>, _, _| {
+///       *ctx.get_mut(&value_guard) += 1;
+///     })
+///     .generic()
+/// } else {
+///   e::div().text("Is none").generic()
+/// }
+/// # }}}
+/// ```
+///
+/// **IMPORTANT**: Even tho the guard closure takes a mutable reference, you should not mutate it.
+/// Instead it should be only be used to get a `&mut ...` to value you want.
+///
 /// ## Owned returns
 /// By default this macro assumes the return value is `&T`, but if you want to return an owned
 /// value you can use the `@owned` version:
@@ -469,6 +557,15 @@ macro_rules! guard_option {
             None
         }
     };
+    (@mut | $ctx:ident | $expr:expr) => {
+        if $ctx.watch_mut(move |$ctx| $expr.is_some()) {
+            Some(::natrix::macro_ref::Guard::new_mut::<Self, _>(
+                move |$ctx| $expr.expect("Guard used on None value"),
+            ))
+        } else {
+            None
+        }
+    };
     (@owned | $ctx:ident | $expr:expr) => {
         if $ctx.watch(move |$ctx| $expr.is_some()) {
             Some(::natrix::macro_ref::Guard::new_owned::<Self, _>(
@@ -493,6 +590,17 @@ macro_rules! guard_result {
             Err(::natrix::macro_ref::Guard::new::<Self, _>(move |$ctx| {
                 $expr.expect_err("Guard used on Ok value")
             }))
+        }
+    };
+    (@mut | $ctx:ident | $expr:expr) => {
+        if $ctx.watch_mut(move |$ctx| $expr.is_ok()) {
+            Ok(::natrix::macro_ref::Guard::new_mut::<Self, _>(
+                move |$ctx| $expr.expect("Guard used on Err value"),
+            ))
+        } else {
+            Err(::natrix::macro_ref::Guard::new_mut::<Self, _>(
+                move |$ctx| $expr.expect_err("Guard used on Ok value"),
+            ))
         }
     };
     (@owned | $ctx:ident | $expr:expr) => {
@@ -521,6 +629,15 @@ impl<F> Guard<F> {
     pub fn new<C, R>(getter: F) -> Self
     where
         F: for<'a> Fn(&'a State<C>) -> &'a R,
+        C: Component,
+    {
+        Self { getter }
+    }
+
+    #[doc(hidden)]
+    pub fn new_mut<C, R>(getter: F) -> Self
+    where
+        F: for<'a> Fn(&'a mut State<C>) -> &'a mut R,
         C: Component,
     {
         Self { getter }

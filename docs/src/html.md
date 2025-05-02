@@ -61,7 +61,7 @@ e::div()
     .class("my-component")
     .child(e::button()
         .text("Click me!")
-        .on::<events::Click>(|ctx: E<Self>, _| {
+        .on::<events::Click>(|ctx: E<Self>, _, _| {
             *ctx.is_active = !*ctx.is_active;
         })
     )
@@ -133,7 +133,7 @@ e::button()
     .class("my-button")
     .disabled(|ctx: R<Self>| !*ctx.is_active)
     .text("Click me!")
-    .on::<events::Click>(|ctx: E<Self>, _| {
+    .on::<events::Click>(|ctx: E<Self>, _, _| {
         *ctx.is_active = !*ctx.is_active;
     })
 #     }
@@ -179,7 +179,7 @@ e::div()
     })
     .child(e::button()
         .text("Click me!")
-        .on::<events::Click>(|ctx: E<Self>, _| {
+        .on::<events::Click>(|ctx: E<Self>, _, _| {
             *ctx.is_active = !*ctx.is_active;
         })
     )
@@ -216,7 +216,7 @@ e::div()
     })
     .child(e::button()
         .text("Click me!")
-        .on::<events::Click>(|ctx: E<Self>, _| {
+        .on::<events::Click>(|ctx: E<Self>, _, _| {
             *ctx.is_active = !*ctx.is_active;
         })
     )

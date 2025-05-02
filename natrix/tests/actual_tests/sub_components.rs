@@ -1,4 +1,5 @@
 use natrix::prelude::*;
+use natrix::state::EventToken;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
@@ -17,15 +18,15 @@ impl Component for Counter {
         e::button()
             .id(BUTTON_ID)
             .text(|ctx: R<Self>| *ctx.value)
-            .on::<events::Click>(|ctx: E<Self>, _| {
+            .on::<events::Click>(|ctx: E<Self>, token, _| {
                 *ctx.value += 1;
-                ctx.emit(*ctx.value);
+                ctx.emit(*ctx.value, token);
             })
     }
 
-    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage) {
+    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage, token: EventToken) {
         *ctx.value += msg;
-        ctx.emit(*ctx.value);
+        ctx.emit(*ctx.value, token);
     }
 }
 
@@ -50,8 +51,8 @@ impl Component for RootOne {
             .child(
                 e::button()
                     .id(ADD_ID)
-                    .on::<events::Click>(move |_ctx: E<Self>, _| {
-                        sender.send(10);
+                    .on::<events::Click>(move |_ctx: E<Self>, token, _| {
+                        sender.send(10, token);
                     }),
             )
     }

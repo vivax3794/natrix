@@ -19,7 +19,7 @@ impl Component for Counter {
     fn render() -> impl Element<Self> {
         e::button()
             .text(|ctx: R<Self>| *ctx.0)
-            .on::<events::Click>(|ctx: E<Self>, _| {
+            .on::<events::Click>(|ctx: E<Self>, _, _| {
                 *ctx.0 += 1;
             })
     }

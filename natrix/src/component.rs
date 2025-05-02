@@ -9,7 +9,7 @@ use crate::element::Element;
 use crate::get_document;
 use crate::html_elements::{ToAttribute, ToClass};
 use crate::signal::{RenderingState, SignalMethods};
-use crate::state::{ComponentData, E, HookKey, State};
+use crate::state::{ComponentData, E, EventToken, HookKey, State};
 use crate::utils::SmallAny;
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
@@ -126,7 +126,7 @@ pub trait Component: ComponentBase {
         unused_variables,
         reason = "We want the auto-completion for this method to be connvenient"
     )]
-    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage) {
+    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage, token: EventToken) {
         // This doesnt have anything to do with panic hooks
         // but `panic_hook` does pull in `web_sys::console`
         // And it feels very silly to add a cargo feature for
@@ -226,7 +226,7 @@ pub struct Sender<M>(UnboundedSender<M>);
 
 impl<M> Sender<M> {
     /// Send a message to the component
-    pub fn send(&self, msg: M) {
+    pub fn send(&self, msg: M, _token: EventToken) {
         if self.0.unbounded_send(msg).is_err() {
             #[cfg(all(feature = "panic_hook", debug_assertions))]
             web_sys::console::warn_1(&"Failed to send message to component ".into());

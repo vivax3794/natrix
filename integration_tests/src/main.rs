@@ -72,14 +72,14 @@ impl Component for HelloWorld {
             .child(
                 e::button()
                     .id(PANIC_ID)
-                    .on::<events::Click>(|_ctx: E<Self>, _| {
+                    .on::<events::Click>(|_ctx: E<Self>, _, _| {
                         panic!("Panic button clicked!");
                     }),
             )
             .child(
                 e::button()
                     .id(BUTTON_ID)
-                    .on::<events::Click>(|ctx: E<Self>, _| {
+                    .on::<events::Click>(|ctx: E<Self>, _, _| {
                         *ctx.counter += 1;
                     })
                     .text(|ctx: R<Self>| *ctx.counter)
