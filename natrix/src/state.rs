@@ -372,6 +372,81 @@ impl<C: Component> RenderCtx<'_, C> {
     {
         (guard.getter)(self.ctx)
     }
+
+    /// Register a event handler to run when the given reactive items change.
+    /// This method takes two closures, the first one will be called to register the reactive value
+    /// to rerun for. This is given a `RenderCtx` so you can use stuff like `.watch`
+    ///
+    /// This is meant to be used to inform external code of changes to the state.
+    /// For updating internal state in response to changes instead upt for updating state via
+    /// methods as this will be WAY more efficient.
+    /// As such you are not given mutable access to the state.
+    /// But you are given an `EventToken` which can be used to emit messages to the parent
+    /// component or otherwise do most event-handler things.
+    pub fn on_change<Fr, Fe>(&mut self, reactive_func: Fr, handler_func: Fe)
+    where
+        Fr: Fn(&mut RenderCtx<C>) + 'static,
+        Fe: Fn(&State<C>, EventToken) + 'static,
+    {
+        let signal_state = self.ctx.pop_signals();
+
+        (reactive_func)(self);
+
+        let inner = self.ctx.pop_signals();
+        (handler_func)(self.ctx, EventToken::new());
+        self.ctx.set_signals(inner);
+
+        let me = self.ctx.insert_hook(Box::new(ChangeHook {
+            func: Box::new(handler_func),
+            reactive_func: Box::new(reactive_func),
+            hooks: Vec::new(),
+            keep_alive: Vec::new(),
+        }));
+        self.ctx.reg_dep(me);
+        self.render_state.hooks.push(me);
+        self.ctx.set_signals(signal_state);
+    }
+}
+
+/// A hook that is used to run a on change function as a hook
+struct ChangeHook<C: Component> {
+    /// The function to call when the signal changes
+    func: Box<dyn Fn(&State<C>, EventToken)>,
+    /// The reactive function to call when the signal changes
+    reactive_func: Box<dyn Fn(&mut RenderCtx<C>)>,
+    /// Hooks
+    hooks: Vec<HookKey>,
+    /// Keep alive
+    keep_alive: Vec<KeepAlive>,
+}
+
+impl<C> ReactiveHook<C> for ChangeHook<C>
+where
+    C: Component,
+{
+    fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
+        (self.func)(ctx, EventToken::new());
+
+        let prev_hooks = std::mem::take(&mut self.hooks);
+        self.keep_alive.clear();
+
+        ctx.clear();
+        (self.reactive_func)(&mut RenderCtx {
+            ctx,
+            render_state: RenderingState {
+                keep_alive: &mut self.keep_alive,
+                hooks: &mut self.hooks,
+                parent_dep: you,
+            },
+        });
+        ctx.reg_dep(you);
+
+        UpdateResult::DropHooks(prev_hooks)
+    }
+
+    fn drop_us(self: Box<Self>) -> Vec<HookKey> {
+        self.hooks
+    }
 }
 
 /// The wather hook / signal

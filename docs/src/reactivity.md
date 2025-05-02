@@ -211,3 +211,38 @@ impl Component for HelloWorld {
 ```
 
 See the docs in the [`List`](list::List) module for more details.
+
+## Reacting to Reactive changes
+> [!NOTE]
+> This is for informing external code about changes to the state.
+> Such as child or parent components.
+> It should *not* be used to update internal state.
+> For that you should instead encapsulate state updates in a method.
+
+You can use the [`.on_change`](state::RenderCtx::on_change) method to react to changes in the state.
+This takes two closures, one that registers the reactive state you are interested in,
+The other is the callback that will be called when the state changes.
+
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+# #[derive(Component)]
+# struct HelloWorld {
+#     counter: u8,
+# }
+# impl Component for HelloWorld {
+#     type EmitMessage = u8;
+#     fn render() -> impl Element<Self> {
+e::div()
+    .child(|ctx: R<Self>| {
+        ctx.on_change(
+            |ctx| {*ctx.counter;},
+            |ctx, token| {
+                ctx.emit(*ctx.counter, token);
+            }
+        );
+        format!("{}", *ctx.counter)
+    })
+#      }
+# }
+```

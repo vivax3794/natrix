@@ -32,6 +32,7 @@ impl Component for Counter {
 
 const DOUBLE_ID: &str = "DOUBLE_ID";
 const ADD_ID: &str = "ADD_ID";
+const PARENT_ADD_ID: &str = "PARENT_ADD_ID";
 
 #[derive(Component)]
 struct RootOne {
@@ -43,6 +44,8 @@ impl Component for RootOne {
     type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         let (child, sender) = SubComponent::new(Counter { value: 0 }).sender();
+        let sender_clone = sender.clone();
+
         e::div()
             .child(child.on(|ctx: E<Self>, amount| {
                 *ctx.double = amount * 2;
@@ -53,6 +56,13 @@ impl Component for RootOne {
                     .id(ADD_ID)
                     .on::<events::Click>(move |_ctx: E<Self>, token, _| {
                         sender.send(10, token);
+                    }),
+            )
+            .child(
+                e::button()
+                    .id(PARENT_ADD_ID)
+                    .on::<events::Click>(|ctx: E<Self>, token, _| {
+                        *ctx.double += 10;
                     }),
             )
     }
@@ -132,4 +142,73 @@ async fn parent_to_child() {
     async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("30".to_owned()));
     assert_eq!(double.text_content(), Some("60".to_owned()));
+}
+
+#[derive(Component)]
+struct ChildTwo {
+    value: u8,
+}
+
+impl Component for ChildTwo {
+    type EmitMessage = NoMessages;
+    type ReceiveMessage = u8;
+    fn render() -> impl Element<Self> {
+        e::div().id(BUTTON_ID).text(|ctx: R<Self>| *ctx.value)
+    }
+
+    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage, _token: EventToken) {
+        *ctx.value = msg;
+    }
+}
+
+#[derive(Component)]
+struct RootTwo {
+    value: u8,
+}
+
+impl Component for RootTwo {
+    type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
+    fn render() -> impl Element<Self> {
+        |ctx: R<Self>| {
+            let (child, sender) = SubComponent::new(ChildTwo { value: 0 }).sender();
+
+            ctx.on_change(
+                |ctx| {
+                    *ctx.value;
+                },
+                move |ctx, token| {
+                    sender.send(*ctx.value, token);
+                },
+            );
+
+            e::div()
+                .child(child)
+                .child(
+                    e::button()
+                        .id(ADD_ID)
+                        .on::<events::Click>(|ctx: E<Self>, _token, _| {
+                            *ctx.value += 1;
+                        }),
+                )
+        }
+    }
+}
+
+#[wasm_bindgen_test]
+async fn on_change() {
+    crate::mount_test(RootTwo { value: 0 });
+
+    let button = crate::get(BUTTON_ID);
+    let add_button = crate::get(ADD_ID);
+
+    assert_eq!(button.text_content(), Some("0".to_owned()));
+
+    add_button.click();
+    natrix::async_utils::next_animation_frame().await;
+    assert_eq!(button.text_content(), Some("1".to_owned()));
+
+    add_button.click();
+    natrix::async_utils::next_animation_frame().await;
+    assert_eq!(button.text_content(), Some("2".to_owned()));
 }
