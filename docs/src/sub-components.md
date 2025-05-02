@@ -129,5 +129,8 @@ Which one you should use depends on how many values you have, and how often you 
 ### `css_value` in child
 Simply have reactive state for the various styling options and have message passing to update them, and then use [`.css_value`](html_elements::HtmlElement::css_value).
 
+> [!TIP]
+> See the [HTML documentation on Inline CSS](html.md#inline-css) and the [CSS documentation](css.md) for more information about styling approaches.
+
 ### `css_value` in parent
 Instead you can re-export the css vars from a `scoped_css` and let a parent use them to set them on a wrapper. The downside here is that it requires wrapping the component in another element.

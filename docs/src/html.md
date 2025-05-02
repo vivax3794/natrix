@@ -188,10 +188,11 @@ e::div()
 ```
 
 ## Inline Css
-> [!NOTE]
-> For constant inline styles use the `style` macro instead, This section is meant for runtime / parent configurable css.
-
 Similarly to `.attr` there is [`.css_value`](html_elements::HtmlElement::css_value) which sets a inline style, this should primerly be used for reactive values. 
+
+> [!TIP]
+> See the [CSS documentation](css.md) for more information about static CSS styling options, including the `style!` macro and scoped CSS.
+
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;

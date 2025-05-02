@@ -5,6 +5,9 @@
 You have already seen `|ctx: R<Self>| ...` used in the varying examples in the book.
 Lets go into some more detail about what this does.
 
+> [!TIP]
+> If you're looking to create components without state that still leverage natrix's reactivity system, see the [Stateless Components](stateless-components.md) documentation.
+
 The callbacks return a value that implements [`Element`](element::Element), internally the framework will register which fields you accessed.
 And when those fields change, the framework will recall the callback and update the element with the result.
 
