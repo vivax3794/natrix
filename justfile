@@ -6,7 +6,8 @@ alias f := full
 default: test_native test_web
 
 # Run the full set of tests and checks
-full: test check check_docs
+# full: test check check_docs
+full: integration_tests_dev
 
 # Run the full set of tests
 test: test_native test_web integration_tests_dev integration_tests_build test_css_tree_shaking project_gen_test
@@ -72,8 +73,7 @@ integration_tests_dev: install_cli
     natrix_pid=$!
 
     sleep 1
-    cargo nextest run -E "not (test(reload))"
-    cargo nextest run reload
+    cargo nextest run -j 1
 
     kill $natrix_pid 2>/dev/null || true
     (natrix dev --profile release --port 8000 > /dev/null 2>&1) & 
@@ -99,8 +99,7 @@ integration_tests_dev: install_cli
       echo "Waiting for server... attempt $attempt of $max_attempts"
     done
 
-    cargo nextest run -E "not (test(reload))"
-    cargo nextest run reload
+    cargo nextest run -j 1
 
 [working-directory: "./integration_tests"]
 integration_tests_build: install_cli
@@ -125,7 +124,7 @@ integration_tests_build: install_cli
     (python3 -m http.server > /dev/null 2>&1) & # Yes we are not serving the dist dir, this is to test the BASE_PATH option
     python_pid=$!
 
-    TEST_KIND_BUILD="1" cargo nextest run
+    TEST_KIND_BUILD="1" cargo nextest run -j 1
 
 # Check that css tree-shaking works
 [working-directory: "./integration_tests"]

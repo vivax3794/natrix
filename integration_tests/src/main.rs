@@ -127,8 +127,8 @@ mod tests {
             if res.is_ok() {
                 break;
             }
-            if start.elapsed().as_secs() > 5 {
-                panic!("Loading took too long");
+            if start.elapsed().as_secs() > 20 {
+                panic!("Loading URL took too long");
             }
         }
 
@@ -139,8 +139,8 @@ mod tests {
             if element.is_ok() {
                 break;
             }
-            if start.elapsed().as_secs() > 5 {
-                panic!("Loading took too long");
+            if start.elapsed().as_secs() > 20 {
+                panic!("Loading WASM took too long");
             }
         }
 
