@@ -134,6 +134,7 @@ mod tests {
         }
 
         let start = Instant::now();
+        let mut last_refresh = Instant::now();
         loop {
             let element = driver.find(By::Id(HELLO_ID)).await;
             sleep(Duration::from_millis(100)).await;
@@ -142,10 +143,11 @@ mod tests {
             }
             if start.elapsed().as_secs() > 20 {
                 panic!("Loading WASM took too long");
-            } else if start.elapsed().as_secs() > 3 {
+            } else if last_refresh.elapsed().as_secs() > 3 {
                 println!("Loading WASM taking too long - trying a refresh");
                 driver.get(url).await.unwrap();
                 sleep(Duration::from_millis(300)).await;
+                last_refresh = Instant::now();
             }
         }
 
