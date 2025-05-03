@@ -59,6 +59,7 @@ integration_tests_dev: install_cli
         if [ -n "$chrome_pid" ]; then
             kill "$chrome_pid" 2>/dev/null || true
         fi
+        sleep 2
     }
     trap cleanup EXIT
 
@@ -71,15 +72,16 @@ integration_tests_dev: install_cli
     (natrix dev --port 8000 > /dev/null 2>&1) &
     natrix_pid=$!
 
-    sleep 1
+    sleep 2
     cargo nextest run -E "not (test(reload))"
     cargo nextest run reload
 
     kill $natrix_pid 2>/dev/null || true
+    sleep 1
     (natrix dev --profile release --port 8000 > /dev/null 2>&1) &
     natrix_pid=$!
 
-    sleep 2
+    sleep 3
     cargo nextest run -E "not (test(reload))"
     cargo nextest run reload
 
