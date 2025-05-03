@@ -341,6 +341,7 @@ impl<C: Component> RenderCtx<'_, C> {
         self.watch_mut(move |ctx| func(ctx))
     }
 
+    /// Internal only version of mutable version of watch
     #[doc(hidden)]
     pub fn watch_mut<T, F>(&mut self, func: F) -> T
     where

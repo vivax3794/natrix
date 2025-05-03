@@ -59,7 +59,6 @@ integration_tests_dev: install_cli
         if [ -n "$chrome_pid" ]; then
             kill "$chrome_pid" 2>/dev/null || true
         fi
-        sleep 2
     }
     trap cleanup EXIT
 
@@ -72,16 +71,34 @@ integration_tests_dev: install_cli
     (natrix dev --port 8000 > /dev/null 2>&1) &
     natrix_pid=$!
 
-    sleep 2
+    sleep 1
     cargo nextest run -E "not (test(reload))"
     cargo nextest run reload
 
     kill $natrix_pid 2>/dev/null || true
-    sleep 1
-    (natrix dev --profile release --port 8000 > /dev/null 2>&1) &
+    (natrix dev --profile release --port 8000 > /dev/null 2>&1) & 
     natrix_pid=$!
 
-    sleep 3
+    echo "Waiting for server to start..."
+    max_attempts=30
+    attempt=0
+    while true; do
+      if [ $attempt -ge $max_attempts ]; then
+        echo "Server failed to start after $max_attempts attempts"
+        exit 1
+      fi
+      
+      # Use curl with options to limit the time spent waiting
+      if curl -s --max-time 2 --head http://localhost:8000 > /dev/null 2>&1; then
+        echo "Server is up!"
+        break
+      fi
+      
+      sleep 1
+      attempt=$((attempt+1))
+      echo "Waiting for server... attempt $attempt of $max_attempts"
+    done
+
     cargo nextest run -E "not (test(reload))"
     cargo nextest run reload
 

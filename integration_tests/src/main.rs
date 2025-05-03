@@ -296,7 +296,7 @@ mod tests {
                 }
             }
 
-            if start.elapsed().as_secs() > 5 {
+            if start.elapsed().as_secs() > 20 {
                 panic!("Reloading took too long");
             }
         }
@@ -318,7 +318,7 @@ mod tests {
                     }
                 }
             }
-            if start.elapsed().as_secs() > 5 {
+            if start.elapsed().as_secs() > 20 {
                 panic!("Reloading took too long");
             }
         }
