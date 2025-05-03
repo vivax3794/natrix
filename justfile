@@ -71,34 +71,11 @@ integration_tests_dev: install_cli
 
     (natrix dev --port 8000 > /dev/null 2>&1) &
     natrix_pid=$!
-
-    sleep 1
     cargo nextest run -j 1
 
     kill $natrix_pid 2>/dev/null || true
     (natrix dev --profile release --port 8000 > /dev/null 2>&1) & 
     natrix_pid=$!
-
-    echo "Waiting for server to start..."
-    max_attempts=30
-    attempt=0
-    while true; do
-      if [ $attempt -ge $max_attempts ]; then
-        echo "Server failed to start after $max_attempts attempts"
-        exit 1
-      fi
-      
-      # Use curl with options to limit the time spent waiting
-      if curl -s --max-time 2 --head http://localhost:8000 > /dev/null 2>&1; then
-        echo "Server is up!"
-        break
-      fi
-      
-      sleep 1
-      attempt=$((attempt+1))
-      echo "Waiting for server... attempt $attempt of $max_attempts"
-    done
-
     cargo nextest run -j 1
 
 [working-directory: "./integration_tests"]

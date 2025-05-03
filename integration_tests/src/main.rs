@@ -108,20 +108,21 @@ mod tests {
     use crate::{BUTTON_ID, HELLO_ID, HELLO_TEXT, IMG_ID, PANIC_ID, RELOAD_ID, reload_tests};
 
     async fn create_client() -> WebDriver {
+        let url = if option_env!("TEST_KIND_BUILD").is_some() {
+            "http://localhost:8000/dist/"
+        } else {
+            "http://localhost:8000"
+        };
+
         let mut caps = DesiredCapabilities::chrome();
         caps.set_headless().unwrap();
+
         let driver = WebDriver::new("http://localhost:9999", caps)
             .await
             .expect("Failed to connect to chrome driver");
 
         let start = Instant::now();
         loop {
-            let url = if option_env!("TEST_KIND_BUILD").is_some() {
-                "http://localhost:8000/dist/"
-            } else {
-                "http://localhost:8000"
-            };
-
             let res = driver.get(url).await;
             sleep(Duration::from_millis(100)).await;
             if res.is_ok() {
@@ -141,6 +142,10 @@ mod tests {
             }
             if start.elapsed().as_secs() > 20 {
                 panic!("Loading WASM took too long");
+            } else if start.elapsed().as_secs() > 3 {
+                println!("Loading WASM taking too long - trying a refresh");
+                driver.get(url).await.unwrap();
+                sleep(Duration::from_millis(300)).await;
             }
         }
 
