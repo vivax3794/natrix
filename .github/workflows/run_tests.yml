@@ -30,6 +30,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Install wasm32
+        run: rustup target add wasm32-unknown-unknown
+
       - name: Install rust-analyzer
         run: rustup component add rust-analyzer
 
