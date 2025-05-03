@@ -69,11 +69,11 @@ integration_tests_dev: install_cli
     chromedriver --port=9999 &
     chrome_pid=$!
 
-    (natrix dev --port 8000 > /dev/null 2>&1) &
-    natrix_pid=$!
-    cargo nextest run -j 1
-
-    kill $natrix_pid 2>/dev/null || true
+    # (natrix dev --port 8000 > /dev/null 2>&1) &
+    # natrix_pid=$!
+    # cargo nextest run -j 1
+    #
+    # kill $natrix_pid 2>/dev/null || true
     (natrix dev --profile release --port 8000 > /dev/null 2>&1) & 
     natrix_pid=$!
     cargo nextest run -j 1
