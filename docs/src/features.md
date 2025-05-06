@@ -38,6 +38,31 @@ this annotates certain framework structs as [`must_not_suspend`](https://github.
 > #![warn(must_not_suspend)]
 > ```
 
+#### Expand macro inputs
+The various macros that take string literals (`global_css`, `style`, `asset`, ...), will with with this feature enabled support "const string" macros expressions, such as `concat!`, `stringify!`, etc.
+
+```rust
+# extern crate natrix;
+natrix::global_css!(concat!(
+    "div {",
+    "  color: red;",
+    "}"
+));
+```
+
+This allows using the `asset` macro in css
+
+```rust,ignore
+# extern crate natrix;
+natrix::scoped_css!(concat!(
+    ".use_img {
+        background-img: url('",
+    natrix::asset!("./assets/logo.png"),
+    "');
+    }"
+));
+```
+
 ### `async_utils`
 
 adds the [`async_utils`] module which contains stuff like a wasm compatible [`sleep`](async_utils::sleep) function.
@@ -90,10 +115,12 @@ This pulls in `lightningcss` *in the proc-macro*.
 As such disabling this feature will result in faster compile times.
 
 ### `inline_css`
-This enables [Inline Css](css.md#inline-css). This doesnt have the same compile time impact as `scoped_css` as it only pulls in `data-encoding` in the proc-macro, but it will still impact compile times.
+This enables [Inline Css](css.md#inline-css).
+This pulls in `data-encoding` in the proc-macro.
 
 ### `assets`
 Enables the `asset` macro for bundling arbitrary assets.
+This pulls in `data-encoding` and `bincode` in the proc-macro.
 
 ### `panic_hook`
 

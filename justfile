@@ -6,11 +6,10 @@ alias f := full
 default: test_native test_web
 
 # Run the full set of tests and checks
-# full: test check check_docs
-full: integration_tests_dev
+full: test check check_docs
 
 # Run the full set of tests
-test: test_native test_web integration_tests_dev integration_tests_build test_css_tree_shaking project_gen_test
+test: test_native test_web integration_tests_dev integration_tests_build project_gen_test
 
 # Run tests that are not dependent on the web
 test_native:
@@ -69,11 +68,11 @@ integration_tests_dev: install_cli
     chromedriver --port=9999 &
     chrome_pid=$!
 
-    # (natrix dev --port 8000 > /dev/null 2>&1) &
-    # natrix_pid=$!
-    # cargo nextest run -j 1
-    #
-    # kill $natrix_pid 2>/dev/null || true
+    (natrix dev --port 8000 > /dev/null 2>&1) &
+    natrix_pid=$!
+    cargo nextest run -j 1
+
+    kill $natrix_pid 2>/dev/null || true
     (natrix dev --profile release --port 8000 > /dev/null 2>&1) & 
     natrix_pid=$!
     cargo nextest run -j 1
@@ -97,20 +96,11 @@ integration_tests_build: install_cli
     chromedriver --port=9999 &
     chrome_pid=$!
 
-    natrix build
     (python3 -m http.server > /dev/null 2>&1) & # Yes we are not serving the dist dir, this is to test the BASE_PATH option
     python_pid=$!
 
-    TEST_KIND_BUILD="1" cargo nextest run -j 1
-
-# Check that css tree-shaking works
-[working-directory: "./integration_tests"]
-test_css_tree_shaking: install_cli
-    natrix build --profile dev
-    grep "I_amNotUsed" dist/*.css
-
-    natrix build --profile release
-    ! grep "I_amNotUsed" dist/*.css
+    natrix build
+    cargo nextest run -j 1 --features build_test
 
 # Run the project generation tests
 # These will use `natrix new` to create a new project and then build it

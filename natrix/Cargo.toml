@@ -43,7 +43,7 @@ inline_css = ["natrix_macros/inline_css"]
 assets = ["natrix_macros/assets"]
 panic_hook = ["web-sys/console"]
 
-nightly = []
+nightly = ["natrix_macros/nightly"]
 ergonomic_ops = []
 
 test_utils = []

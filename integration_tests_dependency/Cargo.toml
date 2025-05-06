@@ -5,4 +5,4 @@ edition = "2024"
 publish = false
 
 [dependencies]
-natrix = {path = "../natrix"}
+natrix = {path = "../natrix", features = ["nightly"]}

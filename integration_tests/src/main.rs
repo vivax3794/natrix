@@ -37,6 +37,14 @@ scoped_css!("
     }
 ");
 
+scoped_css!(concat!(
+    ".use_img {
+        background-image: url('",
+    natrix::asset!("../assets/logo.png"),
+    "');
+    }"
+));
+
 #[derive(Component)]
 struct NotUsed;
 
@@ -44,7 +52,9 @@ impl Component for NotUsed {
     type EmitMessage = NoMessages;
     type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
-        e::div().class(I_AM_NOT_USED)
+        e::img()
+            .class(I_AM_NOT_USED)
+            .src(natrix::asset!("./src/main.rs"))
     }
 }
 
@@ -64,6 +74,7 @@ impl Component for HelloWorld {
                     .id(HELLO_ID)
                     .class("hello_world")
                     .class(HELLO)
+                    .class(USE_IMG)
                     .class(format!("dyn{}", black_box("amic")))
                     .class(style!("margin: 1px 2px 3px 4px"))
                     .css_value(SIZE, Numeric::px(10)),
@@ -99,16 +110,16 @@ fn main() {
 }
 
 #[cfg(test)]
-mod tests {
+mod driver_tests {
     use std::time::{Duration, Instant};
 
     use thirtyfour::{By, ChromiumLikeCapabilities, DesiredCapabilities, WebDriver};
     use tokio::time::sleep;
 
-    use crate::{BUTTON_ID, HELLO_ID, HELLO_TEXT, IMG_ID, PANIC_ID, RELOAD_ID, reload_tests};
+    use crate::{BUTTON_ID, HELLO_ID, HELLO_TEXT, IMG_ID, PANIC_ID};
 
     async fn create_client() -> WebDriver {
-        let url = if option_env!("TEST_KIND_BUILD").is_some() {
+        let url = if cfg!(feature = "build_test") {
             "http://localhost:8000/dist/"
         } else {
             "http://localhost:8000"
@@ -272,7 +283,21 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn concat_asset_works() {
+        let client = create_client().await;
+        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+        let text = element.css_value("background-image").await.unwrap();
+        assert!(
+            text.contains("logo.png"),
+            "{text} expected to point to .*-logo.png"
+        );
+    }
+
+    #[tokio::test]
+    #[cfg(not(feature = "build_test"))]
     async fn reload() {
+        use crate::{RELOAD_ID, reload_tests};
+
         if option_env!("TEST_KIND_BUILD").is_some() {
             return;
         }
@@ -329,5 +354,36 @@ mod tests {
                 panic!("Reloading took too long");
             }
         }
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "build_test")]
+mod dist_tests {
+    use crate::I_AM_NOT_USED;
+
+    #[test]
+    fn unused_css() {
+        let css_file = std::fs::read_to_string("./dist/styles.css").unwrap();
+        assert!(
+            !css_file.contains(I_AM_NOT_USED),
+            "Unused CSS class should not be present in the dist file"
+        );
+    }
+
+    #[test]
+    fn duplicate_assets_calls() {
+        let mut amount_logo = 0;
+        for file in std::fs::read_dir("./dist").unwrap() {
+            let file = file.unwrap();
+            if file.file_name().to_str().unwrap().contains("logo.png") {
+                amount_logo += 1;
+            }
+        }
+
+        assert_eq!(
+            amount_logo, 1,
+            "There should be only one logo.png in the dist folder, even if included multiple times"
+        );
     }
 }

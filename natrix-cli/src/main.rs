@@ -167,7 +167,7 @@ impl DevArguments {
             dist,
             temp_dir: target,
             live_reload,
-            cache_bust: CacheBustOption::None,
+            cache_bust: CacheBustOption::Timestamp,
             base_path: Box::from(""),
             invalidate_cache: self.shared.invalidate_cache,
         })

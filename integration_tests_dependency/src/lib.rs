@@ -1,11 +1,11 @@
 use natrix::prelude::*;
 use natrix::{global_css, scoped_css};
 
-global_css!("
-    h1 {
-        color: rgba(9,8,7,1);
-    }
-");
+global_css!(concat!("
+    h1 {",
+        "color: rgba(9,8,7,1);",
+    "}"
+));
 
 scoped_css!("
     .hello {
