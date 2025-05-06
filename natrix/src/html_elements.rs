@@ -367,12 +367,9 @@ impl<C: Component, T> HtmlElement<C, T> {
     }
 }
 
-impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
-    fn render_box(
-        self: Box<Self>,
-        ctx: &mut State<C>,
-        render_state: &mut RenderingState,
-    ) -> web_sys::Node {
+impl<C: Component> HtmlElement<C, ()> {
+    /// Version of render that depends on less genericity
+    fn render(self, ctx: &mut State<C>, render_state: &mut RenderingState<'_>) -> web_sys::Node {
         let Self {
             tag: name,
             events,
@@ -381,7 +378,7 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
             classes,
             css,
             phantom: _,
-        } = *self;
+        } = self;
 
         let document = get_document();
         let Ok(element) = document.create_element(intern(name)) else {
@@ -420,6 +417,16 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
         }
 
         element.into()
+    }
+}
+
+impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
+    fn render_box(
+        self: Box<Self>,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+    ) -> web_sys::Node {
+        self.generic().render(ctx, render_state)
     }
 }
 
