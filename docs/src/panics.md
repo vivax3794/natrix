@@ -12,10 +12,13 @@ The framework only makes use of `debug_assert!`, its our goal that any issues sh
   - Natrix will skip handling the event/message, this might lead to dropped messages.
 - **User Borrow Errors** - If you use [`.borrow_mut`](state::DeferredCtx::borrow_mut) while a borrow is active (which again can only happen due to dev error) it will panic in debug builds.
   - In release builds it will return `None` to signal the calling context should cancel itself.
+- **Other Validations** A few methods have debug_asserts, listing all of them would be impractical.
 
 ## When does Natrix panic (in release builds)?
 
 - **Mount Not Found** - if [`mount`](component::mount) fails to find the standard natrix mount point it will error.
 - **User Panics** - This one should be obvious.
-- **Misused Guards** - If you use async or interor mutability to use a [Guard](state::Guard) outside of the context it was created in you are violating its contract, which might lead to panics.
+- **Moving values outside intended scope** - Certain values are intended to only be valid in a given scope.
+    - Using interior mutability to move a [`EventToken`](state::EventToken) outside its intended scope will likely lead to bugs if used to call apis in non-event contexts.
+    - Using interior mutability to move a [`Guard`](state::Guard), or using it after a `.await`, will invalidate its guarantees.
 - **Deferred Borrows After Panic** - If you use [`.borrow_mut`](state::DeferredCtx::borrow_mut) after a panic has happened it will cause another panic, as returning to the user code could cause undefined behaviour.
