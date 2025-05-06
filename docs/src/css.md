@@ -132,6 +132,8 @@ impl Component for HelloWorld {
 
 I.e it will **not** use the `style` attribute, but instead still emit css to the bundling system.
 This is best used for short snippets, and `scoped_css` should still be used for longer styles, even if only for a single element.
+The class name is based on the hash of the style, this means that if multiple parts of the code use, say, `style!("font-size: 4rem")` they will all resolve to the same class name and the emitted css will be deduplicated.
 
 > [!TIP]
-> The class name is based on the hash of the style, this means that if multiple parts of the code use, say, `style!("font-size: 4rem")` they will all resolve to the same class name and the emitted css will be deduplicated.
+> If you prefer shorter class names, you can manually define utility classes using `scoped_css!`,
+> or even `style!`
