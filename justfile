@@ -144,6 +144,7 @@ dev_deps: book_deps
     command -v wasm-pack || cargo binstall -y wasm-pack
     command -v wasm-bindgen || cargo binstall -y wasm-bindgen-cli
     command -v cargo-deny || cargo binstall -y cargo-deny
+    command -v cargo-about || cargo binstall -y cargo-about
 
 # Check for the presence of all required system dependencies
 # That there is no cross-platform way to install
@@ -166,6 +167,7 @@ health_check:
     command -v mdbook-rustdoc-link || (echo "mdbook-rustdoc-link not found, required for documentation" && exit 1)
     command -v wasm-bindgen || (echo "wasm-bindgen not found, required for building wasm" && exit 1)
     command -v cargo-deny || (echo "cargo-deny not found, required for security checks" && exit 1)
+    command -v cargo-about || (echo "cargo-about not found, required for license generation" && exit 1)
 
 # Generate and open public docs
 docs:
