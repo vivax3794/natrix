@@ -27,6 +27,12 @@ const BINDGEN_OUTPUT_NAME: &str = "code";
 /// Name of the collected css
 const CSS_OUTPUT_NAME: &str = "styles.css";
 
+/// The license of the cli
+const CLI_LICENSE: &str = include_str!("../../THIRD_PARTY_LICENSES_CLI.html");
+
+/// The license of the framework
+const FRAMEWORK_LICENSE: &str = include_str!("../../THIRD_PARTY_LICENSES_FRAMEWORK.html");
+
 /// The toml config
 #[derive(Deserialize)]
 #[serde(default)]
@@ -75,6 +81,12 @@ impl NatrixConfig {
 /// Natrix CLI
 #[derive(Parser)]
 enum Cli {
+    /// Spawn a web server to serve licenses
+    License {
+        /// The license to show
+        #[arg(value_enum)]
+        license: License,
+    },
     /// Create a new project
     New {
         /// The name of the project
@@ -87,6 +99,15 @@ enum Cli {
     Dev(DevArguments),
     /// Build the project
     Build(BuildArguments),
+}
+
+/// The license to show
+#[derive(ValueEnum, Clone, Copy)]
+enum License {
+    /// The license of the cli
+    Cli,
+    /// The license of the framework
+    Framework,
 }
 
 /// Arguments for the dev subcommand
@@ -250,6 +271,16 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli {
+        Cli::License { license } => {
+            let license = match license {
+                License::Cli => CLI_LICENSE,
+                License::Framework => FRAMEWORK_LICENSE,
+            };
+
+            spawn_static_server(8000, license)?;
+
+            Ok(())
+        }
         Cli::New { name, stable } => generate_project(&name, stable),
         Cli::Dev(args) => do_dev(&args),
         Cli::Build(args) => {
@@ -553,7 +584,7 @@ fn spawn_websocket(port: u16, reload_signal: Receiver<()>) {
 }
 
 /// Find a free port
-fn get_free_port(mut preferred: u16) -> Result<u16, &'static str> {
+fn get_free_port(mut preferred: u16) -> Result<u16> {
     loop {
         if TcpListener::bind(("127.0.0.1", preferred)).is_ok() {
             return Ok(preferred);
@@ -561,7 +592,7 @@ fn get_free_port(mut preferred: u16) -> Result<u16, &'static str> {
         if let Some(new_port) = preferred.checked_add(1) {
             preferred = new_port;
         } else {
-            return Err("No free port found");
+            return Err(anyhow!("Failed to find free port"));
         }
     }
 }
@@ -647,6 +678,37 @@ fn spawn_server(
 
         let _ = request.respond(response);
     }
+}
+
+/// Spawn a server to serve a single static string
+fn spawn_static_server(port: u16, content: &'static str) -> Result<()> {
+    let port = get_free_port(port)?;
+    let server =
+        Server::http(("127.0.0.1", port)).map_err(|_| anyhow!("Failed to start server"))?;
+
+    println!(
+        "{}{}",
+        "🚀 Server running on http://localhost:".green(),
+        port.to_string().bright_red()
+    );
+
+    for request in server.incoming_requests() {
+        let is_root = request.url() == "/";
+
+        if !is_root {
+            let response = Response::from_string("🚫 404 Not Found!").with_status_code(404);
+            let _ = request.respond(response);
+            continue;
+        }
+
+        let response = Response::from_string(content).with_header(
+            #[expect(clippy::expect_used, reason = "Hardcoded header for the content type")]
+            Header::from_bytes(b"Content-Type", b"text/html").expect("Invalid header"),
+        );
+        let _ = request.respond(response);
+    }
+
+    Ok(())
 }
 
 /// Build a project

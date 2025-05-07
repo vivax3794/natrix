@@ -1,0 +1,26 @@
+[graph]
+targets = [
+    "x86_64-unknown-linux",
+]
+all-features = true
+
+[advisories]
+ignore = [
+    { id="RUSTSEC-2024-0436", reason="Used by lightningcss, so we might as well use it as well."}
+]
+
+[licenses]
+allow = [
+    "MIT",
+    "Zlib",
+    "Apache-2.0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "ISC",
+    "CC0-1.0"
+]
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"

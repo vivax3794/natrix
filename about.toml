@@ -1,0 +1,14 @@
+accepted = [
+    "MIT",
+    "Zlib",
+    "Apache-2.0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Apache-2.0",
+    "ISC",
+    "CC0-1.0"
+]
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+private = { ignore = true }

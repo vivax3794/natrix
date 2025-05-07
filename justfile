@@ -6,7 +6,7 @@ alias f := full
 default: test_native test_web
 
 # Run the full set of tests and checks
-full: test check check_docs
+full: test check check_docs check_deps license
 
 # Run the full set of tests
 test: test_native test_web integration_tests_dev integration_tests_build project_gen_test
@@ -30,6 +30,12 @@ check:
 
     cargo +stable hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --skip nightly --tests -- -Dwarnings
     cargo +nightly hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --tests -- -Dwarnings
+
+check_deps:
+    cargo udeps
+    cargo outdated -R --exit-code 1
+    cd natrix && cargo deny check all --exclude-dev
+    cd natrix-cli && cargo deny check all --exclude-dev
 
 # Check the documentation for all packages
 # And for typos in the docs
@@ -137,6 +143,7 @@ dev_deps: book_deps
     command -v cargo-nextest || cargo binstall -y cargo-nextest
     command -v wasm-pack || cargo binstall -y wasm-pack
     command -v wasm-bindgen || cargo binstall -y wasm-bindgen-cli
+    command -v cargo-deny || cargo binstall -y cargo-deny
 
 # Check for the presence of all required system dependencies
 # That there is no cross-platform way to install
@@ -158,6 +165,7 @@ health_check:
     command -v mdbook-callouts || (echo "mdbook-callouts not found, required for documentation" && exit 1)
     command -v mdbook-rustdoc-link || (echo "mdbook-rustdoc-link not found, required for documentation" && exit 1)
     command -v wasm-bindgen || (echo "wasm-bindgen not found, required for building wasm" && exit 1)
+    command -v cargo-deny || (echo "cargo-deny not found, required for security checks" && exit 1)
 
 # Generate and open public docs
 docs:
@@ -171,3 +179,8 @@ clean:
 
 gh_action:
     act -P ubuntu-latest=catthehacker/ubuntu:full-latest -W .github/workflows/run_tests.yml
+
+
+license:
+    cargo about generate about.hbs --manifest-path natrix/Cargo.toml > THIRD_PARTY_LICENSES_FRAMEWORK.html
+    cargo about generate about.hbs --manifest-path natrix-cli/Cargo.toml > THIRD_PARTY_LICENSES_CLI.html

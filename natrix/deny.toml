@@ -1,0 +1,23 @@
+[graph]
+targets = [
+    "wasm32-unknown-unknown",
+]
+all-features = true
+
+[advisories]
+ignore = [
+    { id="RUSTSEC-2024-0436", reason="Used by lightningcss, so we might as well use it as well."}
+]
+
+[licenses]
+allow = [
+    "MIT",
+    "Zlib",
+    "Unicode-3.0",
+    "BSL-1.0",
+    "MPL-2.0",
+]
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"

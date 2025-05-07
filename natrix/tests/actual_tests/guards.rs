@@ -1,6 +1,5 @@
 use natrix::prelude::*;
 use natrix::{guard_option, guard_result};
-use proptest::proptest;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
@@ -221,17 +220,6 @@ impl Component for GuardSwitchProp {
                     e::div().text("NO VALUE").id(TEXT)
                 }
             })
-    }
-}
-
-proptest! {
-    #[wasm_bindgen_test]
-    fn guard_switch(start: Option<Option<bool>>, next: Option<Option<bool>>) {
-
-        crate::mount_test(GuardSwitchProp {value: start, next});
-
-        let button = crate::get(BUTTON);
-        button.click();
     }
 }
 

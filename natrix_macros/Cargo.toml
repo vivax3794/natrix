@@ -24,9 +24,8 @@ lightningcss = { version = "1.0.0-alpha.65", default-features = false, features 
 data-encoding = {version="2.9.0", optional = true, default-features = false, features = ["alloc"]}
 
 proc-macro2 = {version="1.0.83", default-features = false}
-quote = {version="1.0.35", default-features = false}
+quote = {version="1.0.35"}
 syn = { version = "2.0.87", default-features = false, features=["proc-macro", "parsing", "printing", "full"]}
-template-quote = "0.4.0"
 
 [features]
 scoped_css = ["dep:lightningcss", "dep:convert_case"]

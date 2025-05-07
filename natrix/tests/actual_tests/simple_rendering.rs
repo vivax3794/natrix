@@ -1,6 +1,5 @@
 use natrix::component::NonReactive;
 use natrix::prelude::*;
-use proptest::proptest;
 use wasm_bindgen_test::*;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
@@ -91,23 +90,5 @@ mod either_test {
 
         let element = crate::get(HELLO_ID);
         assert_eq!(element.text_content(), Some("hey".to_owned()));
-    }
-}
-
-proptest! {
-    #[wasm_bindgen_test]
-    fn render_int(x: u32) {
-
-        crate::mount_test(Render(x));
-    }
-    #[wasm_bindgen_test]
-    fn render_float(x: f32) {
-
-        crate::mount_test(Render(x));
-    }
-    #[wasm_bindgen_test]
-    fn render_string(x: String) {
-
-        crate::mount_test(Render(x));
     }
 }

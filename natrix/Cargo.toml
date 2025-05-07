@@ -51,9 +51,7 @@ test_utils = []
 either = ["dep:either"]
 
 [dev-dependencies]
-proptest = { version = "1.6.0", default-features = false, features = ["std"] }
 wasm-bindgen-test = {version="0.3.50"}
-getrandom = { version = "0.2.0", features = ["js"] }
 
 [build-dependencies]
 rustversion = "1.0.19"

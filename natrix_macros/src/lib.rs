@@ -3,14 +3,14 @@
 
 extern crate proc_macro;
 
+mod component_impl;
+
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::{fs, io};
 
 use proc_macro2::TokenStream;
-use quote::format_ident;
-use syn::{ItemStruct, parse_quote};
-use template_quote::{ToTokens, quote};
+use quote::{format_ident, quote};
 
 /// Derive the `ComponentBase` trait for a struct, required for implementing `Component`
 ///
@@ -26,8 +26,8 @@ use template_quote::{ToTokens, quote};
 /// ```
 #[proc_macro_derive(Component)]
 pub fn component_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let item = syn::parse_macro_input!(item as ItemStruct);
-    let result = component_derive_implementation(item);
+    let item = syn::parse_macro_input!(item as syn::ItemStruct);
+    let result = component_impl::component_derive_implementation(item);
     result.into()
 }
 
@@ -59,146 +59,6 @@ pub fn data(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// Create the name for the data struct of a struct
 fn create_data_struct_name(name: &syn::Ident) -> syn::Ident {
     format_ident!("_{name}Data")
-}
-
-/// Actual implementation of the macro, split out to make dealing with the different `TokenStream`
-/// types easier
-fn component_derive_implementation(item: ItemStruct) -> TokenStream {
-    let name = item.ident.clone();
-    let vis = item.vis;
-    let (fields, is_named) = get_fields(item.fields);
-
-    let field_count = proc_macro2::Literal::usize_unsuffixed(fields.len());
-    let data_name = create_data_struct_name(&name);
-    let signal_state_name = format_ident!("_{name}SignalState");
-
-    let mut generics = item.generics;
-    for type_ in generics.type_params_mut() {
-        type_.bounds.push(parse_quote!('static));
-    }
-    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
-
-    quote! {
-        #[doc(hidden)]
-        #(if is_named) {
-            #vis struct #data_name #generics {
-                #(for field in &fields) {
-                    #{field.access.clone()}: ::natrix::macro_ref::Signal<#{field.type_.clone()}>,
-                }
-            }
-            #vis struct #signal_state_name {
-                #(for field in &fields) {
-                    #{field.access.clone()}: ::natrix::macro_ref::SignalState,
-                }
-            }
-        } #(else) {
-            #vis struct #data_name #generics (
-                #(for field in &fields) {
-                    ::natrix::macro_ref::Signal<#{field.type_.clone()}>,
-                }
-            );
-            #vis struct #signal_state_name (
-                #(for _ in &fields) {
-                    ::natrix::macro_ref::SignalState,
-                }
-            );
-        }
-
-        #[automatically_derived]
-        impl #impl_generics ::natrix::macro_ref::ComponentData for #data_name #type_generics #where_clause {
-            type FieldRef<'s> = [&'s mut dyn ::natrix::macro_ref::SignalMethods; #field_count];
-            type SignalState = #signal_state_name;
-
-            fn signals_mut(&mut self) -> Self::FieldRef<'_> {
-                [
-                    #(for field in &fields) {
-                        &mut self.#{field.access.clone()},
-                    }
-                ]
-            }
-
-            fn pop_signals(&mut self) -> Self::SignalState {
-                #(if is_named) {
-                    #signal_state_name {
-                        #(for field in &fields) {
-                            #{field.access.clone()}: self.#{field.access.clone()}.pop_state(),
-                        }
-                    }
-                } #(else) {
-                    #signal_state_name (
-                        #(for field in &fields) {
-                            self.#{field.access.clone()}.pop_state(),
-                        }
-                    )
-                }
-            }
-
-            fn set_signals(&mut self, state: Self::SignalState) {
-                #(for field in &fields) {
-                    self.#{field.access.clone()}.set_state(state.#{field.access.clone()});
-                }
-            }
-        }
-
-        #[automatically_derived]
-        impl #impl_generics ::natrix::macro_ref::ComponentBase for #name #type_generics #where_clause {
-            type Data = #data_name #type_generics;
-             fn into_data(self) -> Self::Data {
-                #(if is_named) {
-                    #data_name {
-                        #(for field in fields) {
-                            #{field.access.clone()}: ::natrix::macro_ref::Signal::new(self.#{field.access}),
-                        }
-                    }
-                } #(else) {
-                    #data_name(
-                        #(for field in fields) {
-                            ::natrix::macro_ref::Signal::new(self.#{field.access}),
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-/// Retrieve abstract fields from a struct, as well as a boolean indicating whether its a named
-/// struct or not (unit structs are considered named)
-fn get_fields(fields: syn::Fields) -> (Vec<Field>, bool) {
-    match fields {
-        syn::Fields::Unit => (vec![], true),
-        syn::Fields::Named(fields) => (
-            fields
-                .named
-                .into_iter()
-                .map(|field| Field {
-                    type_: field.ty.into_token_stream(),
-                    access: field.ident.into_token_stream(),
-                })
-                .collect(),
-            true,
-        ),
-        syn::Fields::Unnamed(fields) => (
-            fields
-                .unnamed
-                .into_iter()
-                .enumerate()
-                .map(|(index, field)| Field {
-                    type_: field.ty.to_token_stream(),
-                    access: proc_macro2::Literal::usize_unsuffixed(index).to_token_stream(),
-                })
-                .collect(),
-            false,
-        ),
-    }
-}
-
-/// A abstract representation of a struct field
-struct Field {
-    /// The type of the field
-    type_: TokenStream,
-    /// How one would access the field (identifiers for named structs, a number for tuple)
-    access: TokenStream,
 }
 
 /// If this is the first time a macro is used in this crate we should clear out the target folder
@@ -378,23 +238,22 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
         reason = "We set the css_modules value to true, so this field should be present"
     )]
     let expand = css_result.exports.expect("Exports not found");
-    let mut consts = Vec::with_capacity(expand.len());
+    let mut consts = quote!();
     for (name, export) in expand {
         let new_name = export.name;
         let const_name = name.to_case(Case::Constant);
         let const_name = format_ident!("{const_name}");
 
-        consts.push(quote! {
+        consts = quote! {
+            #consts
             #[doc = #name]
             pub(crate) const #const_name: &str = #new_name;
-        });
+        };
     }
 
     let emit_css_result = emit_file(css_result.code, "css");
     quote! {
-        #(for const_ in consts) {
-            #const_
-        }
+        #consts
         #emit_css_result
     }
     .into()
