@@ -63,6 +63,12 @@ natrix::scoped_css!(concat!(
 ));
 ```
 
+> [!BUG]
+> Due to unimplemented features in rust-analyzer, macros using `concat!` and friends will not be expanded in your editor. Leading to poor completion and hover support.
+> 
+> Tracking issue: [rust-analyzer#19759](https://github.com/rust-lang/rust-analyzer/issues/19759)
+
+
 ### `async_utils`
 
 adds the [`async_utils`] module which contains stuff like a wasm compatible [`sleep`](async_utils::sleep) function.
