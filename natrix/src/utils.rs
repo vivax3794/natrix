@@ -47,6 +47,12 @@ macro_rules! debug_expect {
 macro_rules! debug_panic {
     ($($msg:expr),*) => {
         crate::utils::cold_path();
+
+        #[cfg(console_log)]
+        {
+            web_sys::console::error_1(&format!($($msg),*).into());
+        }
+
         if cfg!(debug_assertions) {
             panic!($($msg),*);
         }

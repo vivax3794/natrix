@@ -135,7 +135,7 @@ pub trait Component: ComponentBase {
         //
         // Also since the default (should) be `NoMessages` (which is `!`) this will only ever actually be called
         // If the user has a `ReceiveMessage` type that is not `NoMessages`.
-        #[cfg(feature = "panic_hook")]
+        #[cfg(console_log)]
         web_sys::console::warn_1(
             &format!(
                 "Component {} received message, but does not implement a handler",
@@ -228,7 +228,7 @@ impl<M> Sender<M> {
     /// Send a message to the component
     pub fn send(&self, msg: M, _token: EventToken) {
         if self.0.unbounded_send(msg).is_err() {
-            #[cfg(all(feature = "panic_hook", debug_assertions))]
+            #[cfg(console_log)]
             web_sys::console::warn_1(&"Failed to send message to component ".into());
         }
     }
@@ -323,7 +323,6 @@ pub struct RenderResult<C: Component> {
     reason = "This will never happen if `natrix build` is used, and also happens early in the app lifecycle"
 )]
 pub fn mount<C: Component>(component: C) {
-    #[cfg(feature = "panic_hook")]
     crate::panics::set_panic_hook();
 
     mount_at(component, natrix_shared::MOUNT_POINT).expect("Failed to mount");

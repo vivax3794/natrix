@@ -274,10 +274,13 @@ impl<T: Component> State<T> {
     {
         let deferred = self.deferred_borrow(token);
         let future = func(deferred);
-
-        wasm_bindgen_futures::spawn_local(async {
+        let future = async {
             let _ = future.await;
-        });
+        };
+
+        let future = PanicCheckFuture { inner: future };
+
+        wasm_bindgen_futures::spawn_local(future);
     }
 }
 
@@ -287,6 +290,29 @@ fn drop_hook<T: Component>(ctx: &mut State<T>, hook: HookKey) {
         let mut hooks = hook.0.drop_us();
         for hook in hooks.drain(..) {
             drop_hook(ctx, hook);
+        }
+    }
+}
+
+/// A wrapper future that checks `has_panicked` before resolving.
+#[pin_project::pin_project]
+struct PanicCheckFuture<F> {
+    /// The future to run
+    #[pin]
+    inner: F,
+}
+
+impl<F: Future> Future for PanicCheckFuture<F> {
+    type Output = F::Output;
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Self::Output> {
+        if crate::panics::has_panicked() {
+            std::task::Poll::Pending
+        } else {
+            self.project().inner.poll(cx)
         }
     }
 }
@@ -626,7 +652,7 @@ where
 macro_rules! guard_option {
     (| $ctx:ident | $expr:expr) => {
         if $ctx.watch(move |$ctx| $expr.is_some()) {
-            Some(::natrix::macro_ref::Guard::new::<Self, _>(move |$ctx| {
+            Some($crate::macro_ref::Guard::new::<Self, _>(move |$ctx| {
                 $expr.expect("Guard used on None value")
             }))
         } else {
@@ -635,16 +661,16 @@ macro_rules! guard_option {
     };
     (@mut | $ctx:ident | $expr:expr) => {
         if $ctx.watch_mut(move |$ctx| $expr.is_some()) {
-            Some(::natrix::macro_ref::Guard::new_mut::<Self, _>(
-                move |$ctx| $expr.expect("Guard used on None value"),
-            ))
+            Some($crate::macro_ref::Guard::new_mut::<Self, _>(move |$ctx| {
+                $expr.expect("Guard used on None value")
+            }))
         } else {
             None
         }
     };
     (@owned | $ctx:ident | $expr:expr) => {
         if $ctx.watch(move |$ctx| $expr.is_some()) {
-            Some(::natrix::macro_ref::Guard::new_owned::<Self, _>(
+            Some($crate::macro_ref::Guard::new_owned::<Self, _>(
                 move |$ctx| $expr.expect("Guard used on None value"),
             ))
         } else {
@@ -659,33 +685,33 @@ macro_rules! guard_option {
 macro_rules! guard_result {
     (| $ctx:ident | $expr:expr) => {
         if $ctx.watch(move |$ctx| $expr.is_ok()) {
-            Ok(::natrix::macro_ref::Guard::new::<Self, _>(move |$ctx| {
+            Ok($crate::macro_ref::Guard::new::<Self, _>(move |$ctx| {
                 $expr.expect("Guard used on Err value")
             }))
         } else {
-            Err(::natrix::macro_ref::Guard::new::<Self, _>(move |$ctx| {
+            Err($crate::macro_ref::Guard::new::<Self, _>(move |$ctx| {
                 $expr.expect_err("Guard used on Ok value")
             }))
         }
     };
     (@mut | $ctx:ident | $expr:expr) => {
         if $ctx.watch_mut(move |$ctx| $expr.is_ok()) {
-            Ok(::natrix::macro_ref::Guard::new_mut::<Self, _>(
-                move |$ctx| $expr.expect("Guard used on Err value"),
-            ))
+            Ok($crate::macro_ref::Guard::new_mut::<Self, _>(move |$ctx| {
+                $expr.expect("Guard used on Err value")
+            }))
         } else {
-            Err(::natrix::macro_ref::Guard::new_mut::<Self, _>(
-                move |$ctx| $expr.expect_err("Guard used on Ok value"),
-            ))
+            Err($crate::macro_ref::Guard::new_mut::<Self, _>(move |$ctx| {
+                $expr.expect_err("Guard used on Ok value")
+            }))
         }
     };
     (@owned | $ctx:ident | $expr:expr) => {
         if $ctx.watch(move |$ctx| $expr.is_ok()) {
-            Ok(::natrix::macro_ref::Guard::new_owned::<Self, _>(
+            Ok($crate::macro_ref::Guard::new_owned::<Self, _>(
                 move |$ctx| $expr.expect("Guard used on Err value"),
             ))
         } else {
-            Err(::natrix::macro_ref::Guard::new_owned::<Self, _>(
+            Err($crate::macro_ref::Guard::new_owned::<Self, _>(
                 move |$ctx| $expr.expect_err("Guard used on Ok value"),
             ))
         }
@@ -789,16 +815,12 @@ impl<T: Component> DeferredCtx<T> {
     /// The nightly feature flag enables a lint to detect this misuse.
     /// See the [Features]() chapther for details on how to set it up (it requires a bit more
     /// setup than just turning on the feature flag).
-    #[cfg_attr(
-        feature = "panic_hook",
-        expect(
-            clippy::missing_panics_doc,
-            reason = "This happens when we already are in a panic"
-        )
+    #[expect(
+        clippy::missing_panics_doc,
+        reason = "This happens when we already are in a panic"
     )]
     #[must_use]
     pub fn borrow_mut(&self) -> Option<DeferredRef<'_, T>> {
-        #[cfg(feature = "panic_hook")]
         assert!(!crate::panics::has_panicked());
 
         let rc = self.inner.upgrade()?;

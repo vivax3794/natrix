@@ -443,10 +443,7 @@ fn create_event_handler<C: Component>(
         crate::return_if_panic!();
 
         let Some(mut ctx) = ctx_weak.borrow_mut() else {
-            debug_assert!(
-                false,
-                "Component dropped without event handlers being cleaned up"
-            );
+            debug_panic!("Component dropped without event handlers being cleaned up");
             return;
         };
 

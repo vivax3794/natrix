@@ -6,7 +6,7 @@ alias f := full
 default: test_native test_web
 
 # Run the full set of tests and checks
-full: test check check_docs check_deps license
+full: test check check_docs check_deps
 
 # Run the full set of tests
 test: test_native test_web integration_tests_dev integration_tests_build project_gen_test
@@ -32,7 +32,7 @@ check:
     cargo +nightly hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --tests -- -Dwarnings
 
 check_deps:
-    cargo udeps
+    cargo hack udeps --each-feature --ignore-private
     cargo outdated -R --exit-code 1
     cd natrix && cargo deny check all --exclude-dev
     cd natrix-cli && cargo deny check all --exclude-dev
@@ -184,5 +184,5 @@ gh_action:
 
 
 license:
-    cargo about generate about.hbs --manifest-path natrix/Cargo.toml > THIRD_PARTY_LICENSES_FRAMEWORK.html
-    cargo about generate about.hbs --manifest-path natrix-cli/Cargo.toml > THIRD_PARTY_LICENSES_CLI.html
+    cargo about generate about.hbs --manifest-path natrix/Cargo.toml > natrix-cli/THIRD_PARTY_LICENSES_FRAMEWORK.html
+    cargo about generate about.hbs --manifest-path natrix-cli/Cargo.toml > natrix-cli/THIRD_PARTY_LICENSES_CLI.html

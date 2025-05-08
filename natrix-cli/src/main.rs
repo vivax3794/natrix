@@ -28,10 +28,10 @@ const BINDGEN_OUTPUT_NAME: &str = "code";
 const CSS_OUTPUT_NAME: &str = "styles.css";
 
 /// The license of the cli
-const CLI_LICENSE: &str = include_str!("../../THIRD_PARTY_LICENSES_CLI.html");
+const CLI_LICENSE: &str = include_str!("../THIRD_PARTY_LICENSES_CLI.html");
 
 /// The license of the framework
-const FRAMEWORK_LICENSE: &str = include_str!("../../THIRD_PARTY_LICENSES_FRAMEWORK.html");
+const FRAMEWORK_LICENSE: &str = include_str!("../THIRD_PARTY_LICENSES_FRAMEWORK.html");
 
 /// The toml config
 #[derive(Deserialize)]
@@ -723,15 +723,6 @@ fn build(config: &BuildConfig) -> Result<AssetManifest> {
     );
     std::fs::create_dir_all(&config.dist).context("Creating dist")?;
 
-    if !is_feature_enabled("panic_hook", true)? {
-        println!(
-            "{}",
-            "⚠️ `panic_hook` feature is disabled, panicking without this feature enabled is instant UB"
-                .red()
-                .bold()
-        );
-    }
-
     let source_wasm_file = build_wasm(config).context("Building wasm")?;
     let (wasm_file, js_file) = wasm_bindgen(config, &source_wasm_file)?;
     if config.profile == BuildProfile::Release {
@@ -862,7 +853,7 @@ fn minimize_js(js_file: &PathBuf) -> Result<(), anyhow::Error> {
             ..Default::default()
         }),
         compress: Some(oxc::minifier::CompressOptions {
-            drop_console: true,
+            drop_console: !is_feature_enabled("keep_console_in_release", false)?,
             drop_debugger: true,
             ..Default::default()
         }),
@@ -917,11 +908,7 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
         let mut rustc_flags =
             String::from("-C target-feature=+bulk-memory -C target-feature=+reference-types ");
         if rustc_is_nightly {
-            let mut std_features = String::from("optimize_for_size");
-            if !is_feature_enabled("panic_hook", true)? {
-                std_features.push_str(",panic_immediate_abort");
-            }
-
+            let std_features = String::from("optimize_for_size");
             command
                 .args(["-Z", "build-std=core,std,panic_abort"])
                 .arg(format!("-Zbuild-std-features={std_features}"));
@@ -988,9 +975,6 @@ fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         .arg("--strip-debug")
         .arg("--strip-dwarf")
         .arg("--strip-producers");
-    if !is_feature_enabled("panic_hook", true)? {
-        command.arg("--traps-never-happen");
-    }
     command.args(["-O3", "--converge", "-Oz"]);
 
     let result = command.status()?.success();

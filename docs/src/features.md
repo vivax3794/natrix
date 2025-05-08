@@ -111,6 +111,10 @@ Notice how we still need the dereference for a plain assignment and addition? Th
 
 Implements [`Component`](component::Component) and [`ToAttribute`](html_elements::ToAttribute) for [`Either`](https://docs.rs/either/latest/either/enum.either.html) from the `either` crate.
 
+### `keep_console_in_release`
+By default natrix strips out all console logs, including your own, in release builds. (including from panics)
+This feature disables that, allowing you to see the console logs in release builds.
+
 ## default features
 For most complex applications you will likely need all the default features.
 But they can be disabled if you want to reduce compile times or binary size.
@@ -128,19 +132,9 @@ This pulls in `data-encoding` in the proc-macro.
 Enables the `asset` macro for bundling arbitrary assets.
 This pulls in `data-encoding` and `bincode` in the proc-macro.
 
-### `panic_hook`
-
-This feature enables a panic hook that is auto installed when using [`mount`](component::mount) (or can be set manually with [`natrix::set_panic_hook`](set_panic_hook)), this panic hook will prevent any further rust code from running if a panic happens, which prevents undefined behaviour.
-
-On the default `natrix new` project (on nightly), a normal build is 30KB while a build without this feature is 22KB.
-
-> [!DANGER]
-> Disabling this should be considered `unsafe`, and is an assertion from you that your code will never panic.
->
-> This will actually make `natrix build` strip out all branches that panic, which means hitting those branches is **undefined behaviour**.
-
 ## auto nightly
 
 natrix will auto detect when its compiled on nightly and use certain (non-public-facing) features. this is one of the reasons its recommended to use nightly rust.
 
-- optimize text updates, on stable updating a text node is done via `replace_child`, on nightly it uses `set_text_content`
+- optimize text updates, on stable updating a text node is done via `replace_child`, on nightly it uses `set_text_content` via the help of trait specialization.
+- Use the nightly only [`cold_path`](std::hints::cold_path) hint to optimize certain code paths. On stable uses a function marked as `#[cold]` instead.

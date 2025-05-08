@@ -10,12 +10,22 @@ fn nightly() {
 #[rustversion::not(nightly)]
 fn nightly() {}
 
+/// Should we log stuff to the console?
+#[cfg(any(debug_assertions, feature = "keep_console_in_release"))]
+fn log() {
+    println!("cargo::rustc-cfg=console_log");
+}
+
+/// Should we log stuff to the console?
+#[cfg(not(any(debug_assertions, feature = "keep_console_in_release")))]
+fn log() {
+    println!("cargo::rustc-cfg=console_log");
+}
+
 fn main() {
     nightly();
-    println!("cargo::rustc-check-cfg=cfg(nightly)");
+    log();
 
-    #[cfg(not(feature = "panic_hook"))]
-    println!(
-        "cargo::warning=`panic_hook` feature disabled, panicking without this feature enabled is instant UB"
-    );
+    println!("cargo::rustc-check-cfg=cfg(nightly)");
+    println!("cargo::rustc-check-cfg=cfg(console_log)");
 }

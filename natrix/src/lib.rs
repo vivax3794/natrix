@@ -62,15 +62,18 @@ pub(crate) fn get_window() -> web_sys::Window {
 }
 
 /// Panic handling
-#[cfg(feature = "panic_hook")]
-mod panics {
+pub mod panics {
     /// Mark that a panic has happened
     static PANIC_HAPPENED: std::sync::Once = std::sync::Once::new();
 
-    /// Is the panic hook set?
-    pub(crate) fn has_panicked() -> bool {
+    /// Has a panic occurred
+    /// This is only needed for you to call if you are using custom callbacks passed to js.
+    /// All natrix event handlers already check this.
+    /// And all uses of `ctx.use_async` uses some magic to insert a check to this *after every*
+    /// await.
+    pub fn has_panicked() -> bool {
         let result = PANIC_HAPPENED.is_completed();
-        #[cfg(debug_assertions)]
+        #[cfg(console_log)]
         if result {
             web_sys::console::warn_1(
                 &"
@@ -92,7 +95,7 @@ If you which to allow execution after a panic (not recommended) you can disable 
                 // This is a no-op, we just want to mark that a panic has happened
             });
 
-            #[cfg(debug_assertions)]
+            #[cfg(console_log)]
             {
                 let panic_message = info.to_string();
                 web_sys::console::error_1(&panic_message.into());
@@ -101,21 +104,16 @@ If you which to allow execution after a panic (not recommended) you can disable 
     }
 }
 
-#[cfg(feature = "panic_hook")]
-pub use panics::set_panic_hook;
-
 /// Returns if a panic has happened
 ///
 /// (or is a noop when the `panic_hook` feature is not enabled)
 macro_rules! return_if_panic {
     ($val:expr) => {
-        #[cfg(feature = "panic_hook")]
         if $crate::panics::has_panicked() {
             return $val;
         }
     };
     () => {
-        #[cfg(feature = "panic_hook")]
         if $crate::panics::has_panicked() {
             return;
         }
