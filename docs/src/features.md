@@ -137,4 +137,4 @@ This pulls in `data-encoding` and `bincode` in the proc-macro.
 natrix will auto detect when its compiled on nightly and use certain (non-public-facing) features. this is one of the reasons its recommended to use nightly rust.
 
 - optimize text updates, on stable updating a text node is done via `replace_child`, on nightly it uses `set_text_content` via the help of trait specialization.
-- Use the nightly only [`cold_path`](std::hints::cold_path) hint to optimize certain code paths. On stable uses a function marked as `#[cold]` instead.
+- Use the nightly only [`cold_path`](std::hint::cold_path) hint to optimize certain code paths. On stable uses a function marked as `#[cold]` instead.
