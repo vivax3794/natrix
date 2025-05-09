@@ -37,20 +37,10 @@ scoped_css!("
     }
 ");
 
-scoped_css!(concat!(
-    ".use_img {
-        background-image: url('",
-    natrix::asset!("../assets/logo.png"),
-    "');
-    }"
-));
-
 #[derive(Component)]
 struct NotUsed;
 
 impl Component for NotUsed {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::img()
             .class(I_AM_NOT_USED)
@@ -64,8 +54,6 @@ struct HelloWorld {
 }
 
 impl Component for HelloWorld {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::div()
             .child(
@@ -74,7 +62,7 @@ impl Component for HelloWorld {
                     .id(HELLO_ID)
                     .class("hello_world")
                     .class(HELLO)
-                    .class(USE_IMG)
+                    // .class(USE_IMG)
                     .class(format!("dyn{}", black_box("amic")))
                     .class(style!("margin: 1px 2px 3px 4px"))
                     .css_value(SIZE, Numeric::px(10)),
@@ -282,16 +270,16 @@ mod driver_tests {
         assert_eq!(font_size, "10px");
     }
 
-    #[tokio::test]
-    async fn concat_asset_works() {
-        let client = create_client().await;
-        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
-        let text = element.css_value("background-image").await.unwrap();
-        assert!(
-            text.contains("logo.png"),
-            "{text} expected to point to .*-logo.png"
-        );
-    }
+    // #[tokio::test]
+    // async fn concat_asset_works() {
+    //     let client = create_client().await;
+    //     let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+    //     let text = element.css_value("background-image").await.unwrap();
+    //     assert!(
+    //         text.contains("logo.png"),
+    //         "{text} expected to point to .*-logo.png"
+    //     );
+    // }
 
     #[tokio::test]
     #[cfg(not(feature = "build_test"))]

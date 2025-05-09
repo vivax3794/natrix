@@ -1,5 +1,4 @@
 //! Derive macros for [Natrix](https://github.com/vivax3794/natrix)
-#![cfg_attr(feature = "nightly", feature(proc_macro_expand))]
 
 extern crate proc_macro;
 
@@ -72,9 +71,6 @@ static FILE_COUNTER: AtomicU32 = AtomicU32::new(0);
 /// For most usecases prefer scoped css machinery.
 #[proc_macro]
 pub fn global_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    #[cfg(feature = "nightly")]
-    let css_input = css_input.expand_expr().unwrap_or(css_input);
-
     let css = syn::parse_macro_input!(css_input as syn::LitStr);
     let css = css.value();
 
@@ -181,9 +177,6 @@ fn emit_file(content: impl AsRef<[u8]>, extension: &str) -> TokenStream {
 pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     use convert_case::{Case, Casing};
 
-    #[cfg(feature = "nightly")]
-    let css_input = css_input.expand_expr().unwrap_or(css_input);
-
     let css = syn::parse_macro_input!(css_input as syn::LitStr);
     let css = css.value();
 
@@ -272,9 +265,6 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
 pub fn style(css: proc_macro::TokenStream) -> proc_macro::TokenStream {
     use std::hash::{DefaultHasher, Hash, Hasher};
 
-    #[cfg(feature = "nightly")]
-    let css = css.expand_expr().unwrap_or(css);
-
     let css = syn::parse_macro_input!(css as syn::LitStr);
     let css = css.value();
 
@@ -306,9 +296,6 @@ pub fn style(css: proc_macro::TokenStream) -> proc_macro::TokenStream {
 )]
 pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
     use std::hash::{DefaultHasher, Hash, Hasher};
-
-    #[cfg(feature = "nightly")]
-    let file_path = file_path.expand_expr().unwrap_or(file_path);
 
     let file_path = syn::parse_macro_input!(file_path as syn::LitStr);
     let file_path = file_path.value();

@@ -38,18 +38,6 @@ this annotates certain framework structs as [`must_not_suspend`](https://github.
 > #![warn(must_not_suspend)]
 > ```
 
-#### Expand macro inputs
-The various macros that take string literals (`global_css`, `style`, `asset`, ...), will with with this feature enabled support "const string" macros expressions, such as `concat!`, `stringify!`, etc.
-
-```rust
-# extern crate natrix;
-natrix::global_css!(concat!(
-    "div {",
-    "  color: red;",
-    "}"
-));
-```
-
 This allows using the `asset` macro in css
 
 ```rust,ignore
