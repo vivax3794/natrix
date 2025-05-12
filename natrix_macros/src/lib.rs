@@ -8,7 +8,6 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::{fs, io};
 
-use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
 /// Derive the `ComponentBase` trait for a struct, required for implementing `Component`
@@ -74,25 +73,26 @@ pub fn global_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
     let css = syn::parse_macro_input!(css_input as syn::LitStr);
     let css = css.value();
 
-    emit_file(css, "css").into()
+    emit_file(css, "css");
+    proc_macro::TokenStream::new()
 }
 
 /// Emit the css to the target directory
-fn emit_file(content: impl AsRef<[u8]>, extension: &str) -> TokenStream {
+fn emit_file(content: impl AsRef<[u8]>, extension: &str) {
     let first_use = FIRST_USE_IN_CRATE.fetch_and(false, Ordering::AcqRel);
 
     let caller_name =
         std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| String::from("unknown-caller"));
 
     let Ok(output_directory) = std::env::var(natrix_shared::MACRO_OUTPUT_ENV) else {
-        return quote!();
+        return;
     };
     let output_directory = PathBuf::from(output_directory);
     let output_directory = output_directory.join(caller_name);
 
     #[expect(
         clippy::expect_used,
-        reason = "This should be valid because the natrix build tool should have made sure of that"
+        reason = "We should have write permission to target/"
     )]
     {
         if first_use {
@@ -110,12 +110,11 @@ fn emit_file(content: impl AsRef<[u8]>, extension: &str) -> TokenStream {
     let name = FILE_COUNTER.fetch_add(1, Ordering::AcqRel);
     let output_file = output_directory.join(format!("{name}.{extension}"));
 
-    if let Err(err) = fs::write(output_file, content) {
-        let err = err.to_string();
-        quote!(compile_error!(#err))
-    } else {
-        quote!()
-    }
+    #[expect(
+        clippy::expect_used,
+        reason = "We should have write permission to target/"
+    )]
+    fs::write(output_file, content).expect("Failed to write output file.");
 }
 
 /// Create scoped css for a component.
@@ -171,7 +170,7 @@ fn emit_file(content: impl AsRef<[u8]>, extension: &str) -> TokenStream {
 #[proc_macro]
 #[expect(
     clippy::missing_panics_doc,
-    reason = "This can only panic if its not called from cargo"
+    reason = "All uses of expect are for internal macro bugs."
 )]
 #[cfg(feature = "scoped_css")]
 pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -182,6 +181,8 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
 
     let caller_name =
         std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| String::from("unknown-caller"));
+
+    let pattern = "[content-hash]-[local]";
 
     #[expect(clippy::expect_used, reason = "Pattern should be valid")]
     let styles = lightningcss::stylesheet::StyleSheet::parse(
@@ -195,7 +196,7 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
                 animation: true,
                 grid: true,
                 pure: true,
-                pattern: lightningcss::css_modules::Pattern::parse("[content-hash]-[local]")
+                pattern: lightningcss::css_modules::Pattern::parse(pattern)
                     .expect("Failed to parse pattern"),
             }),
             source_index: 0,
@@ -204,7 +205,7 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
             flags: lightningcss::stylesheet::ParserFlags::empty(),
         },
     );
-    let styles = match styles {
+    let mut styles = match styles {
         Ok(styles) => styles,
         Err(err) => {
             let err = err.to_string();
@@ -212,13 +213,18 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
         }
     };
 
+    if let Err(err) = styles.minify(lightningcss::stylesheet::MinifyOptions::default()) {
+        let err = err.to_string();
+        return quote!(compile_error!(#err)).into();
+    }
+
     #[expect(
         clippy::expect_used,
         reason = "If the css can be parsed it should be valid to serialize it"
     )]
     let css_result = styles
         .to_css(lightningcss::stylesheet::PrinterOptions {
-            minify: false,
+            minify: true,
             project_root: None,
             analyze_dependencies: None,
             pseudo_classes: None,
@@ -244,10 +250,9 @@ pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream
         };
     }
 
-    let emit_css_result = emit_file(css_result.code, "css");
+    emit_file(css_result.code, "css");
     quote! {
         #consts
-        #emit_css_result
     }
     .into()
 }
@@ -292,7 +297,7 @@ pub fn style(css: proc_macro::TokenStream) -> proc_macro::TokenStream {
 #[proc_macro]
 #[expect(
     clippy::missing_panics_doc,
-    reason = "This can only panic if its not called from cargo"
+    reason = "This can only panic if its not called from cargo, or due to internal macro bugs"
 )]
 pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
     use std::hash::{DefaultHasher, Hash, Hasher};
@@ -308,6 +313,11 @@ pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
         std::env::var("CARGO_MANIFEST_DIR").expect("Proc macro not called from cargo");
     let package_directory = PathBuf::from(package_directory);
     let file_path = package_directory.join(file_path);
+
+    if !file_path.exists() {
+        let err = format!("File {} does not exist.", file_path.display());
+        return quote!(compile_error!(#err)).into();
+    }
 
     let mut hasher = DefaultHasher::default();
 
