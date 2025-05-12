@@ -48,7 +48,7 @@ check_book:
     rm -r target/debug/deps/*natrix*
     rm -r target/debug/deps/*wasm_bindgen_test*
     rustup run nightly cargo build -p natrix --all-features --tests
-    CARGO_PKG_NAME="mdbook_example" cd docs && rustup run nightly mdbook test -L ../target/debug/deps
+    cd docs && rustup run nightly mdbook test -L ../target/debug/deps
 
 # Run the integration tests
 # These will spawn the `natrix dev` server and run the tests against it
