@@ -121,7 +121,13 @@ impl<C: Component, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
         self.update(ctx, you)
     }
 
+    #[cfg(not(nightly))]
     fn drop_us(self: Box<Self>) -> Vec<HookKey> {
+        self.hooks
+    }
+
+    #[cfg(nightly)]
+    default fn drop_us(self: Box<Self>) -> Vec<HookKey> {
         self.hooks
     }
 }
@@ -152,6 +158,10 @@ impl<C: Component> ReactiveHook<C> for ReactiveNode<C, String> {
         }
 
         UpdateResult::DropHooks(hooks)
+    }
+
+    fn drop_us(self: Box<Self>) -> Vec<HookKey> {
+        self.hooks
     }
 }
 
@@ -187,6 +197,10 @@ macro_rules! node_specialize_int {
                 }
 
                 UpdateResult::DropHooks(hooks)
+            }
+
+            fn drop_us(self: Box<Self>) -> Vec<HookKey> {
+                self.hooks
             }
         }
     };
