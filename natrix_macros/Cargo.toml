@@ -20,7 +20,7 @@ natrix_shared = {path = "../natrix_shared", version="1.0.0"}
 natrix_shared = {path = "../natrix_shared", version="1.0.0"}
 
 convert_case = {version="0.8.0", default-features = false, optional = true}
-lightningcss = { version = "1.0.0-alpha.65", default-features = false, features = ["grid"], optional = true }
+lightningcss = { version = "1.0.0-alpha.66", default-features = false, optional = true }
 data-encoding = {version="2.9.0", optional = true, default-features = false, features = ["alloc"]}
 
 proc-macro2 = {version="1.0.83", default-features = false}
