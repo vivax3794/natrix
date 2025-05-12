@@ -38,25 +38,6 @@ this annotates certain framework structs as [`must_not_suspend`](https://github.
 > #![warn(must_not_suspend)]
 > ```
 
-This allows using the `asset` macro in css
-
-```rust,ignore
-# extern crate natrix;
-natrix::scoped_css!(concat!(
-    ".use_img {
-        background-img: url('",
-    natrix::asset!("./assets/logo.png"),
-    "');
-    }"
-));
-```
-
-> [!BUG]
-> Due to unimplemented features in rust-analyzer, macros using `concat!` and friends will not be expanded in your editor. Leading to poor completion and hover support.
-> 
-> Tracking issue: [rust-analyzer#19759](https://github.com/rust-lang/rust-analyzer/issues/19759)
-
-
 ### `async_utils`
 
 adds the [`async_utils`] module which contains stuff like a wasm compatible [`sleep`](async_utils::sleep) function.
