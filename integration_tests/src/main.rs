@@ -1,8 +1,7 @@
 use std::hint::black_box;
 
-use natrix::css_values::Numeric;
 use natrix::prelude::*;
-use natrix::{global_css, scoped_css, style};
+use natrix::{css, global_css, scoped_css, style};
 mod reload_tests;
 
 const HELLO_TEXT: &str = "HELLO WORLD, TEST TEST!";
@@ -65,7 +64,7 @@ impl Component for HelloWorld {
                     // .class(USE_IMG)
                     .class(format!("dyn{}", black_box("amic")))
                     .class(style!("margin: 1px 2px 3px 4px"))
-                    .css_value(SIZE, Numeric::px(10)),
+                    .css_value(SIZE, css::values::Numeric::px(10)),
             )
             .child(SubComponent::new(integration_tests_dependency::DepComp))
             .child(

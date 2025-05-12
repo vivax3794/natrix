@@ -8,7 +8,7 @@
 pub mod async_utils;
 pub mod callbacks;
 pub mod component;
-pub mod css_values;
+pub mod css;
 pub mod element;
 pub mod events;
 pub mod html_elements;

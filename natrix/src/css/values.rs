@@ -1,4 +1,6 @@
-//! Various wrapper types to auto format css values.
+//! Types for the various css values
+//!
+//! This is the only part of the css system that should be invoked at runtime.
 
 use crate::component::Component;
 use crate::html_elements::ToCssValue;
