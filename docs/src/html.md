@@ -196,7 +196,7 @@ Similarly to `.attr` there is [`.css_value`](html_elements::HtmlElement::css_val
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
-use natrix::css_values::Color;
+use natrix::css::values::Color;
 #
 # #[derive(Component)]
 # struct MyComponent {

@@ -22,5 +22,5 @@ allow = [
 ]
 
 [bans]
-multiple-versions = "allow"
+multiple-versions = "warn"
 wildcards = "deny"
