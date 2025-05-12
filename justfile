@@ -184,5 +184,4 @@ gh_action:
 
 
 license:
-    cargo about generate about.hbs --manifest-path natrix/Cargo.toml > natrix-cli/THIRD_PARTY_LICENSES_FRAMEWORK.html
-    cargo about generate about.hbs --manifest-path natrix-cli/Cargo.toml > natrix-cli/THIRD_PARTY_LICENSES_CLI.html
+    cargo about generate about.hbs > natrix-cli/THIRD_PARTY_LICENSES.html

@@ -27,11 +27,8 @@ const BINDGEN_OUTPUT_NAME: &str = "code";
 /// Name of the collected css
 const CSS_OUTPUT_NAME: &str = "styles.css";
 
-/// The license of the cli
-const CLI_LICENSE: &str = include_str!("../THIRD_PARTY_LICENSES_CLI.html");
-
 /// The license of the framework
-const FRAMEWORK_LICENSE: &str = include_str!("../THIRD_PARTY_LICENSES_FRAMEWORK.html");
+const LICENSE: &str = include_str!("../THIRD_PARTY_LICENSES.html");
 
 /// The toml config
 #[derive(Deserialize)]
@@ -82,11 +79,7 @@ impl NatrixConfig {
 #[derive(Parser)]
 enum Cli {
     /// Spawn a web server to serve licenses
-    License {
-        /// The license to show
-        #[arg(value_enum)]
-        license: License,
-    },
+    License,
     /// Create a new project
     New {
         /// The name of the project
@@ -99,15 +92,6 @@ enum Cli {
     Dev(DevArguments),
     /// Build the project
     Build(BuildArguments),
-}
-
-/// The license to show
-#[derive(ValueEnum, Clone, Copy)]
-enum License {
-    /// The license of the cli
-    Cli,
-    /// The license of the framework
-    Framework,
 }
 
 /// Arguments for the dev subcommand
@@ -271,13 +255,8 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli {
-        Cli::License { license } => {
-            let license = match license {
-                License::Cli => CLI_LICENSE,
-                License::Framework => FRAMEWORK_LICENSE,
-            };
-
-            spawn_static_server(8000, license)?;
+        Cli::License => {
+            spawn_static_server(8000, LICENSE)?;
 
             Ok(())
         }
