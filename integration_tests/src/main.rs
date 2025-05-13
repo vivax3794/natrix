@@ -41,8 +41,7 @@ struct NotUsed;
 impl Component for NotUsed {
     fn render() -> impl Element<Self> {
         e::img()
-            // .class(I_AM_NOT_USED)
-            .src(natrix::asset!("./src/main.rs"))
+        // .class(I_AM_NOT_USED)
     }
 }
 
@@ -65,6 +64,7 @@ impl Component for HelloWorld {
                                                                  // .css_value(SIZE, css::values::Numeric::px(10)),
             )
             .child(SubComponent::new(integration_tests_dependency::DepComp))
+            // .child(SubComponent::new(NotUsed))
             .child(
                 e::button()
                     .id(PANIC_ID)

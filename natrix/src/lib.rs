@@ -133,7 +133,6 @@ pub mod prelude {
 pub use component::{Component, NoMessages, SubComponent, mount};
 pub use element::Element;
 pub use list::List;
-pub use natrix_macros;
 pub use natrix_macros::{Component, asset, data};
 pub use state::{RenderCtx, State};
 

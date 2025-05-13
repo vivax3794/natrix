@@ -683,6 +683,10 @@ fn build(config: &BuildConfig) -> Result<AssetManifest> {
     println!("🧹 {}", "Cleaning dist".bright_black(),);
     let _ = fs::remove_dir_all(&config.dist);
 
+    if config.invalidate_cache {
+        let _ = fs::remove_dir_all(&config.temp_dir);
+    }
+
     println!(
         "🚧 {} (using profile {})",
         "Starting Build".bright_blue(),
@@ -944,7 +948,7 @@ fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         .arg("--strip-debug")
         .arg("--strip-dwarf")
         .arg("--strip-producers");
-    command.args(["-O3", "--converge", "-Oz"]);
+    command.args(["--converge", "-Oz"]);
 
     let result = command.status()?.success();
 

@@ -6,6 +6,9 @@ pub const MOUNT_POINT: &str = "NATRIX_MOUNT";
 /// The env var for setting macro settings
 pub const MACRO_SETTINGS: &str = "NATRIX_MACRO_SETTINGS";
 
+/// Compile time instropection cfg name
+pub const SSG_CFG: &str = "natrix_ssg";
+
 /// Code used for macros and bundler
 #[cfg(feature = "macros")]
 pub mod macros {

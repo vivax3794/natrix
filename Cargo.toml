@@ -14,7 +14,7 @@ opt-level = "z"
 codegen-units = 1
 lto = "fat"
 panic = "abort"
-strip = "symbols"
+# strip = "symbols"
 
 [workspace.lints.rust]
 missing_docs = "warn"

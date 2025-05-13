@@ -91,12 +91,14 @@ pub struct State<T: Component> {
 impl<T: Component> Deref for State<T> {
     type Target = T::Data;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.data
     }
 }
 
 impl<T: Component> DerefMut for State<T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.data
     }
@@ -111,15 +113,21 @@ pub type E<'c, C> = &'c mut State<C>;
 pub type R<'a, 'c, C> = &'a mut RenderCtx<'c, C>;
 
 impl<T: Component> State<T> {
-    /// Create a new instance of the state, returning a `Rc` to it
-    pub(crate) fn new(data: T::Data) -> Rc<RefCell<Self>> {
-        let this = Self {
+    /// Create a minimal instance of this without wrapping in Self
+    ///
+    /// Warning the `Weak` reference is not set up yet
+    pub(crate) fn create_base(data: T::Data) -> Self {
+        Self {
             data,
             this: Weak::new(),
             hooks: SlotMap::default(),
             next_insertion_order_value: 0,
             send_to_parent: None,
-        };
+        }
+    }
+    /// Create a new instance of the state, returning a `Rc` to it
+    pub(crate) fn new(data: T::Data) -> Rc<RefCell<Self>> {
+        let this = Self::create_base(data);
         let this = Rc::new(RefCell::new(this));
 
         this.borrow_mut().this = Rc::downgrade(&this);
@@ -212,6 +220,7 @@ impl<T: Component> State<T> {
     }
 
     /// Get the unwrapped data referenced by this guard
+    #[inline]
     pub fn get<'s, F, R>(&'s self, guard: &Guard<F>) -> &'s R
     where
         F: Fn(&'s Self) -> &'s R,
@@ -220,6 +229,7 @@ impl<T: Component> State<T> {
     }
 
     /// Get the unwrapped data referenced by this guard, but owned
+    #[inline]
     pub fn get_owned<F, R>(&self, guard: &Guard<F>) -> R
     where
         F: Fn(&Self) -> R,
@@ -228,6 +238,7 @@ impl<T: Component> State<T> {
     }
 
     /// Get the unwrapped data referenced by this guard, but mut
+    #[inline]
     pub fn get_mut<'s, F, R>(&'s mut self, guard: &Guard<F>) -> &'s mut R
     where
         F: Fn(&'s mut Self) -> &'s mut R,
@@ -356,6 +367,7 @@ pub struct RenderCtx<'c, C: Component> {
 impl<C: Component> Deref for RenderCtx<'_, C> {
     type Target = State<C>;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         self.ctx
     }
@@ -385,6 +397,7 @@ impl<C: Component> RenderCtx<'_, C> {
     /// }
     /// # }}}
     /// ```
+    #[inline]
     pub fn watch<T, F>(&mut self, func: F) -> T
     where
         F: Fn(&State<C>) -> T + 'static,
@@ -419,6 +432,7 @@ impl<C: Component> RenderCtx<'_, C> {
     }
 
     /// Get a readonly reference from a mut guard
+    #[inline]
     pub fn get_downgrade<F, R>(&mut self, guard: &Guard<F>) -> &R
     where
         F: Fn(&mut State<C>) -> &mut R,
@@ -754,6 +768,7 @@ pub struct Guard<F> {
 
 impl<F> Guard<F> {
     #[doc(hidden)]
+    #[inline]
     pub fn new<C, R>(getter: F) -> Self
     where
         F: for<'a> Fn(&'a State<C>) -> &'a R,
@@ -763,6 +778,7 @@ impl<F> Guard<F> {
     }
 
     #[doc(hidden)]
+    #[inline]
     pub fn new_mut<C, R>(getter: F) -> Self
     where
         F: for<'a> Fn(&'a mut State<C>) -> &'a mut R,
@@ -772,6 +788,7 @@ impl<F> Guard<F> {
     }
 
     #[doc(hidden)]
+    #[inline]
     pub fn new_owned<C, R>(getter: F) -> Self
     where
         F: Fn(&State<C>) -> R,
@@ -867,11 +884,13 @@ impl<T: Component> DeferredCtx<T> {
 impl<T: Component> Deref for DeferredRef<'_, T> {
     type Target = State<T>;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         self.0.borrow_reference()
     }
 }
 impl<T: Component> DerefMut for DeferredRef<'_, T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.with_reference_mut(|cell| &mut **cell)
     }

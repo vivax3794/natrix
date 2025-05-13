@@ -1,0 +1,5 @@
+
+<head>
+    <link data-trunk rel='rust' href='Cargo.toml' data-wasm-opt-params='--enable-bulk-memory-opt' />
+</head>
+<body></body>

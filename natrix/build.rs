@@ -28,4 +28,5 @@ fn main() {
 
     println!("cargo::rustc-check-cfg=cfg(nightly)");
     println!("cargo::rustc-check-cfg=cfg(console_log)");
+    println!("cargo::rustc-check-cfg=cfg({})", natrix_shared::SSG_CFG);
 }

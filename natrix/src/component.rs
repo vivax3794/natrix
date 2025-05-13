@@ -7,7 +7,7 @@ use futures_channel::mpsc::{UnboundedReceiver, UnboundedSender};
 
 use crate::element::{Element, ElementRenderResult};
 use crate::get_document;
-use crate::html_elements::{ToAttribute, ToClass};
+use crate::html_elements::{ToAttribute, ToClass, ToCssValue};
 use crate::signal::{RenderingState, SignalMethods};
 use crate::state::{ComponentData, E, EventToken, HookKey, KeepAlive, State};
 use crate::utils::{debug_panic, error_log};
@@ -188,6 +188,7 @@ pub struct SubComponent<I: Component, Im, Ir> {
 
 impl<I: Component> SubComponent<I, (), ()> {
     /// Create a new sub component wrapper
+    #[inline]
     pub fn new(data: I) -> Self {
         SubComponent {
             data,
@@ -198,6 +199,7 @@ impl<I: Component> SubComponent<I, (), ()> {
 }
 impl<I: Component, Ir> SubComponent<I, (), Ir> {
     /// Handle messages from the component
+    #[inline]
     pub fn on<P: Component>(
         self,
         handler: impl Fn(E<P>, I::EmitMessage, EventToken) + 'static,
@@ -217,6 +219,7 @@ pub struct Sender<M>(UnboundedSender<M>);
 
 impl<M> Sender<M> {
     /// Send a message to the component
+    #[inline]
     pub fn send(&self, msg: M, _token: EventToken) {
         if self.0.unbounded_send(msg).is_err() {
             error_log!(
@@ -229,6 +232,7 @@ impl<M> Sender<M> {
 
 impl<I: Component, Im> SubComponent<I, Im, ()> {
     /// Get a sender to allow sending messages to the component
+    #[inline]
     pub fn sender(
         self,
     ) -> (
@@ -392,7 +396,7 @@ impl Component for () {
     type ReceiveMessage = NoMessages;
 
     fn render() -> impl Element<Self> {
-        crate::element::Comment
+        crate::element::generate_fallback_node()
     }
 }
 
@@ -439,9 +443,7 @@ impl<E: Element<()>, C: Component> Element<C> for NonReactive<E> {
         _ctx: &mut State<C>,
         render_state: &mut RenderingState,
     ) -> ElementRenderResult {
-        let state = State::new(());
-        let mut state = state.borrow_mut();
-        self.0.render(&mut state, render_state)
+        self.0.render(&mut State::create_base(()), render_state)
     }
 }
 
@@ -453,9 +455,7 @@ impl<A: ToAttribute<()>, C: Component> ToAttribute<C> for NonReactive<A> {
         _ctx: &mut State<C>,
         rendering_state: &mut RenderingState,
     ) {
-        let state = State::new(());
-        let mut state = state.borrow_mut();
-        Box::new(self.0).apply_attribute(name, node, &mut state, rendering_state);
+        Box::new(self.0).apply_attribute(name, node, &mut State::create_base(()), rendering_state);
     }
 }
 
@@ -466,8 +466,18 @@ impl<A: ToClass<()>, C: Component> ToClass<C> for NonReactive<A> {
         _ctx: &mut State<C>,
         rendering_state: &mut RenderingState,
     ) -> Option<std::borrow::Cow<'static, str>> {
-        let state = State::new(());
-        let mut state = state.borrow_mut();
-        Box::new(self.0).apply_class(node, &mut state, rendering_state)
+        Box::new(self.0).apply_class(node, &mut State::create_base(()), rendering_state)
+    }
+}
+
+impl<Css: ToCssValue<()>, C: Component> ToCssValue<C> for NonReactive<Css> {
+    fn apply_css(
+        self: Box<Self>,
+        name: &'static str,
+        node: &web_sys::HtmlElement,
+        _ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+    ) {
+        Box::new(self.0).apply_css(name, node, &mut State::create_base(()), render_state);
     }
 }

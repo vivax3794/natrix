@@ -290,6 +290,7 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// # }}
     /// ```
     /// For more information see [Reactivity](https://vivax3794.github.io/natrix/reactivity.html) in the book.
+    #[inline]
     pub fn on<E: Event>(mut self, function: impl EventHandler<C, E>) -> Self {
         let function = function.func();
         self.events.push((
@@ -328,39 +329,36 @@ impl<C: Component, T> HtmlElement<C, T> {
     ///     })
     /// # }}
     /// ```
+    #[inline]
     pub fn child<E: Element<C> + 'static>(mut self, child: E) -> Self {
         self.children.push(Box::new(child));
         self
     }
 
     /// This is a simple alias for `child`
+    #[inline]
     pub fn text<E: Element<C>>(self, text: E) -> Self {
         self.child(text)
     }
 
     /// Add a attribute to the node.
+    #[inline]
     pub fn attr(mut self, key: &'static str, value: impl ToAttribute<C>) -> Self {
         self.attributes.push((key, Box::new(value)));
         self
     }
 
     /// Add a class to the element.
+    #[inline]
     pub fn class(mut self, class: impl ToClass<C> + 'static) -> Self {
         self.classes.push(Box::new(class));
-        self
-    }
-
-    /// Add multiple classes to the element.
-    pub fn classes(mut self, classes: impl IntoIterator<Item = &'static str>) -> Self {
-        for class in classes {
-            self.classes.push(Box::new(class));
-        }
         self
     }
 
     /// Add a css variable to the node.
     ///
     /// This uses the `style` api and hence is similar to setting the `style` attribute
+    #[inline]
     pub fn css_value(mut self, key: &'static str, value: impl ToCssValue<C> + 'static) -> Self {
         self.css.push((key, Box::new(value)));
         self

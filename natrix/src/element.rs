@@ -72,6 +72,7 @@ pub trait Element<C: Component>: 'static {
 
     /// A utility wrapper around `render_box` for when you have a concrete type.
     #[doc(hidden)]
+    #[inline]
     fn render(self, ctx: &mut State<C>, render_state: &mut RenderingState) -> ElementRenderResult
     where
         Self: Sized,
@@ -81,6 +82,7 @@ pub trait Element<C: Component>: 'static {
 
     /// Wrap this element in a `Box`.
     /// This lets you easially return different element types from the same function.
+    #[inline]
     fn into_box(self) -> Box<dyn Element<C>>
     where
         Self: Sized,
@@ -90,6 +92,7 @@ pub trait Element<C: Component>: 'static {
 }
 
 impl<C: Component> Element<C> for Box<dyn Element<C>> {
+    #[inline]
     fn render_box(
         self: Box<Self>,
         ctx: &mut State<C>,
@@ -98,6 +101,7 @@ impl<C: Component> Element<C> for Box<dyn Element<C>> {
         (*self).render_box(ctx, render_state)
     }
 
+    #[inline]
     fn render(self, ctx: &mut State<C>, render_state: &mut RenderingState) -> ElementRenderResult
     where
         Self: Sized,
@@ -105,6 +109,7 @@ impl<C: Component> Element<C> for Box<dyn Element<C>> {
         self.render_box(ctx, render_state)
     }
 
+    #[inline]
     fn into_box(self) -> Box<dyn Element<C>>
     where
         Self: Sized,
@@ -123,24 +128,6 @@ impl<C: Component> Element<C> for web_sys::Node {
     }
 }
 
-/// A simple Dom comment, used as a placeholder and replacement target.
-pub struct Comment;
-
-impl<C: Component> Element<C> for Comment {
-    fn render_box(
-        self: Box<Self>,
-        _ctx: &mut State<C>,
-        _render_state: &mut RenderingState,
-    ) -> ElementRenderResult {
-        let Ok(node) = web_sys::Comment::new() else {
-            debug_panic!("Failed to create comment node");
-            return ElementRenderResult::Node(generate_fallback_node());
-        };
-
-        ElementRenderResult::Node(node.into())
-    }
-}
-
 impl<T: Element<C>, C: Component> Element<C> for Option<T> {
     fn render_box(
         self: Box<Self>,
@@ -149,7 +136,7 @@ impl<T: Element<C>, C: Component> Element<C> for Option<T> {
     ) -> ElementRenderResult {
         match *self {
             Some(element) => element.render(ctx, render_state),
-            None => Element::<C>::render(Comment, ctx, render_state),
+            None => ElementRenderResult::Node(generate_fallback_node()),
         }
     }
 }

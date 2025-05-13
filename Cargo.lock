@@ -986,6 +986,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "inventory"
+version = "0.3.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab08d7cd2c5897f2c949e5383ea7c7db03fb19130ffcfbf7eda795137ae3cb83"
+dependencies = [
+ "rustversion",
+]
+
+[[package]]
 name = "ipnet"
 version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1172,6 +1181,7 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "futures-util",
+ "inventory",
  "itoa",
  "natrix_macros",
  "natrix_shared",

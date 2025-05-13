@@ -27,7 +27,9 @@ where
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
     ) -> ElementRenderResult {
-        let (me, node) = ReactiveNode::create_initial(Box::new(self), ctx);
+        let this = *self;
+        let (me, node) =
+            ReactiveNode::create_initial(Box::new(move |ctx| Box::new(this(ctx))), ctx);
         render_state.hooks.push(me);
         ElementRenderResult::Node(node)
     }

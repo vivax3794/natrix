@@ -25,9 +25,9 @@ impl<C: Component> ReactiveHook<C> for DummyHook {
 }
 
 /// Reactive hook for swapping out a entire dom node.
-pub(crate) struct ReactiveNode<C: Component, E> {
+pub(crate) struct ReactiveNode<C: Component> {
     /// The callback to produce nodes
-    callback: Box<dyn Fn(&mut RenderCtx<C>) -> E>,
+    callback: Box<dyn Fn(&mut RenderCtx<C>) -> Box<dyn Element<C>>>,
     /// The current rendered node to replace
     target_node: web_sys::Node,
     /// Vector of various objects to be kept alive for the duration of the rendered content
@@ -36,7 +36,7 @@ pub(crate) struct ReactiveNode<C: Component, E> {
     hooks: Vec<HookKey>,
 }
 
-impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
+impl<C: Component> ReactiveNode<C> {
     /// Render this hook and simply return the node
     ///
     /// IMPORTANT: This function works with the assumption what it returns will be put in its
@@ -66,7 +66,7 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
     /// Create a new `ReactiveNode` registering the initial dependencies and returning both the `Rc`
     /// reference to it and the initial node (Which should be inserted in the dom)
     pub(crate) fn create_initial(
-        callback: Box<dyn Fn(&mut RenderCtx<C>) -> E>,
+        callback: Box<dyn Fn(&mut RenderCtx<C>) -> Box<dyn Element<C>>>,
         ctx: &mut State<C>,
     ) -> (HookKey, web_sys::Node) {
         let me = ctx.insert_hook(Box::new(DummyHook));
@@ -122,7 +122,7 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
     }
 }
 
-impl<C: Component, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
+impl<C: Component> ReactiveHook<C> for ReactiveNode<C> {
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         self.update(ctx, you)
     }

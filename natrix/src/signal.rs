@@ -129,12 +129,14 @@ impl<T> SignalMethods for Signal<T> {
 impl<T> Deref for Signal<T> {
     type Target = T;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         self.read.set(true);
         &self.data
     }
 }
 impl<T> DerefMut for Signal<T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.written = true;
         &mut self.data

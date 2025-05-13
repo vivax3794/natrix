@@ -22,7 +22,6 @@ test_web:
     rustup run stable wasm-pack test --headless --chrome --features test_utils
     rustup run nightly wasm-pack test --headless --chrome --all-features
 
-
 # Run clippy on all packages and all features
 check:
     cargo fmt --check
@@ -188,3 +187,19 @@ gh_action:
 
 license:
     cargo about generate about.hbs > natrix-cli/THIRD_PARTY_LICENSES.html
+
+twiggy:
+    cp target/wasm32-unknown-unknown/release/deps/root-*.wasm target/wasm32-unknown-unknown/release/deps/old.wasm
+    rm -rf target/wasm32-unknown-unknown/release/deps/root-*.wasm
+    # TODO: make this automatically consistent with natrix-cli somehow
+    RUSTFLAGS="-C target-feature=+bulk-memory -C target-feature=+reference-types -Zfmt-debug=none -Zlocation-detail=none" cargo build -p natrix --target wasm32-unknown-unknown --release --tests --all-features -Z build-std=core,std,panic_abort -Zbuild-std-features=optimize_for_size
+    twiggy diff target/wasm32-unknown-unknown/release/deps/old.wasm target/wasm32-unknown-unknown/release/deps/root-*.wasm
+    twiggy diff target/wasm32-unknown-unknown/release/deps/old.wasm target/wasm32-unknown-unknown/release/deps/root-*.wasm -a | rg natrix
+
+[working-directory: './integration_tests']
+compare_integration:
+    wc -c dist/code_bg.wasm
+    natrix build
+    wc -c dist/code_bg.wasm
+
+compare_size: twiggy compare_integration
