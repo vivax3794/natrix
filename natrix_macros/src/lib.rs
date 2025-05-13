@@ -65,30 +65,18 @@ static FIRST_USE_IN_CRATE: AtomicBool = AtomicBool::new(true);
 /// Counter to generate unique file names
 static FILE_COUNTER: AtomicU32 = AtomicU32::new(0);
 
-/// Register global css to be included in the final bundle.
-///
-/// For most usecases prefer scoped css machinery.
-#[proc_macro]
-pub fn global_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let css = syn::parse_macro_input!(css_input as syn::LitStr);
-    let css = css.value();
-
-    emit_file(css, "css");
-    proc_macro::TokenStream::new()
-}
-
 /// Emit the css to the target directory
-fn emit_file(content: impl AsRef<[u8]>, extension: &str) {
+fn emit_file(
+    content: impl AsRef<[u8]>,
+    extension: &str,
+    settings: &natrix_shared::macros::Settings,
+) {
     let first_use = FIRST_USE_IN_CRATE.fetch_and(false, Ordering::AcqRel);
 
     let caller_name =
         std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| String::from("unknown-caller"));
 
-    let Ok(output_directory) = std::env::var(natrix_shared::MACRO_OUTPUT_ENV) else {
-        return;
-    };
-    let output_directory = PathBuf::from(output_directory);
-    let output_directory = output_directory.join(caller_name);
+    let output_directory = settings.output_dir.join(caller_name);
 
     #[expect(
         clippy::expect_used,
@@ -117,175 +105,6 @@ fn emit_file(content: impl AsRef<[u8]>, extension: &str) {
     fs::write(output_file, content).expect("Failed to write output file.");
 }
 
-/// Create scoped css for a component.
-///
-/// This generates a set of constants for every class and id in the css.
-///
-/// ```rust
-/// # use natrix_macros::scoped_css;
-/// scoped_css!("
-///    .hello {
-///        color: red;
-///     }
-///    button .test {
-///        color: blue;
-///    }
-/// ");
-/// ```
-/// Will expand to (actual string values will be random):
-/// ```rust
-/// pub(crate) const HELLO: &str = "hello-123456";
-/// pub(crate) const TEST: &str = "test-123456";
-/// ```
-/// (`pub(crate)` is always used as the visibility)
-///
-/// While emitting something like this to the css bundle:
-/// ```css
-/// .hello-123456 {
-///   color: red;   
-/// }
-/// button .test-123456 {
-///  color: blue;
-/// }
-/// ```
-///
-/// Its is generally recommended to use this macro in a module to make it clear where constants are
-/// coming from
-/// ```ignore
-/// mod css {
-///     scoped_css!("
-///     .hello {
-///         color: red;
-///     }
-///     ");
-/// }
-///
-/// // ...
-/// e::div().class(css::HELLO);
-/// ```
-///
-/// # Consistency
-/// The generated string literals are not guaranteed to be the same between builds.
-/// Their exact format is not covered by the public API and may change in the future.
-#[proc_macro]
-#[expect(
-    clippy::missing_panics_doc,
-    reason = "All uses of expect are for internal macro bugs."
-)]
-#[cfg(feature = "scoped_css")]
-pub fn scoped_css(css_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    use convert_case::{Case, Casing};
-
-    let css = syn::parse_macro_input!(css_input as syn::LitStr);
-    let css = css.value();
-
-    let caller_name =
-        std::env::var("CARGO_PKG_NAME").unwrap_or_else(|_| String::from("unknown-caller"));
-
-    let pattern = "[content-hash]-[local]";
-
-    #[expect(clippy::expect_used, reason = "Pattern should be valid")]
-    let styles = lightningcss::stylesheet::StyleSheet::parse(
-        &css,
-        lightningcss::stylesheet::ParserOptions {
-            filename: caller_name,
-            css_modules: Some(lightningcss::css_modules::Config {
-                dashed_idents: true,
-                container: true,
-                custom_idents: true,
-                animation: true,
-                grid: true,
-                pure: true,
-                pattern: lightningcss::css_modules::Pattern::parse(pattern)
-                    .expect("Failed to parse pattern"),
-            }),
-            source_index: 0,
-            error_recovery: false,
-            warnings: None,
-            flags: lightningcss::stylesheet::ParserFlags::empty(),
-        },
-    );
-    let mut styles = match styles {
-        Ok(styles) => styles,
-        Err(err) => {
-            let err = err.to_string();
-            return quote!(compile_error!(#err)).into();
-        }
-    };
-
-    if let Err(err) = styles.minify(lightningcss::stylesheet::MinifyOptions::default()) {
-        let err = err.to_string();
-        return quote!(compile_error!(#err)).into();
-    }
-
-    #[expect(
-        clippy::expect_used,
-        reason = "If the css can be parsed it should be valid to serialize it"
-    )]
-    let css_result = styles
-        .to_css(lightningcss::stylesheet::PrinterOptions {
-            minify: true,
-            project_root: None,
-            analyze_dependencies: None,
-            pseudo_classes: None,
-            targets: lightningcss::targets::Targets::default(),
-        })
-        .expect("Failed to convert css to string");
-
-    #[expect(
-        clippy::expect_used,
-        reason = "We set the css_modules value to true, so this field should be present"
-    )]
-    let expand = css_result.exports.expect("Exports not found");
-    let mut consts = quote!();
-    for (name, export) in expand {
-        let new_name = export.name;
-        let const_name = name.to_case(Case::Constant);
-        let const_name = format_ident!("{const_name}");
-
-        consts = quote! {
-            #consts
-            #[doc = #name]
-            pub(crate) const #const_name: &str = #new_name;
-        };
-    }
-
-    emit_file(css_result.code, "css");
-    quote! {
-        #consts
-    }
-    .into()
-}
-
-/// Generate a ad-hoc class with the specific style
-/// These names will be identical for indetical styling.
-/// This is a natrixses answer to tailwindcss, we do not do short hand classes
-/// But instead generate a class for every unique style
-/// This still isnt as strong as tailwindcss in terms of modifiers (`:hover`, `:active`, etc)
-///
-/// If a element requires many of these classes, consider using a scoped css macro instead of
-/// generate one common class for all properties
-#[proc_macro]
-#[cfg(feature = "inline_css")]
-pub fn style(css: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    use std::hash::{DefaultHasher, Hash, Hasher};
-
-    let css = syn::parse_macro_input!(css as syn::LitStr);
-    let css = css.value();
-
-    let mut hasher = DefaultHasher::default();
-    css.hash(&mut hasher);
-    let hash = hasher.finish();
-    let hash = data_encoding::BASE64URL_NOPAD.encode(&hash.to_le_bytes());
-
-    let class_name = format!("inline-{hash}");
-
-    let css = format!(".{class_name} {{ {css} }}");
-    emit_file(css, "css");
-
-    quote!(#class_name).into()
-}
-
 /// Inform the bundling system to include the given asset
 /// Will return the url needed to fetch said asset at runtime.
 ///
@@ -293,7 +112,6 @@ pub fn style(css: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// e::img()
 ///     .src(asset!("./my_cool_img.png"))
 /// ```
-#[cfg(feature = "assets")]
 #[proc_macro]
 #[expect(
     clippy::missing_panics_doc,
@@ -340,11 +158,27 @@ pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
         hash_base64
     };
 
-    let base_path = std::env::var(natrix_shared::MACRO_BASE_PATH_ENV).unwrap_or_default();
-    let url = format!("{base_path}/{target}");
+    let Ok(settings) = std::env::var(natrix_shared::MACRO_SETTINGS) else {
+        return quote!("/warn_no_bundler/this_expansion_was_not_via_the_natrix_bundler/as_such_a_proper_path_cant_be_given").into();
+    };
+
+    #[expect(clippy::expect_used, reason = "We should have a valid base64 string")]
+    let settings = data_encoding::BASE64_NOPAD
+        .decode(settings.as_bytes())
+        .expect("Corrupt base64 in settings var");
+
+    #[expect(clippy::expect_used, reason = "We should have a valid bincode config")]
+    let (settings, _): (natrix_shared::macros::Settings, _) =
+        natrix_shared::macros::bincode::decode_from_slice(
+            &settings,
+            natrix_shared::macros::bincode_config(),
+        )
+        .expect("Failed to decode settings");
+
+    let url = format!("{}/{target}", settings.base_path);
 
     let result = quote!(#url).into();
-    let asset = natrix_shared::Asset {
+    let asset = natrix_shared::macros::Asset {
         path: file_path,
         emitted_path: target,
     };
@@ -353,10 +187,12 @@ pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
         clippy::expect_used,
         reason = "We dont have any of the types that could cause errors"
     )]
-    let asset_encoded =
-        natrix_shared::bincode::encode_to_vec(asset, natrix_shared::bincode_config())
-            .expect("Failed to encode asset information");
+    let asset_encoded = natrix_shared::macros::bincode::encode_to_vec(
+        asset,
+        natrix_shared::macros::bincode_config(),
+    )
+    .expect("Failed to encode asset information");
 
-    emit_file(asset_encoded, "asset");
+    emit_file(asset_encoded, "asset", &settings);
     result
 }

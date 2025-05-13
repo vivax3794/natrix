@@ -14,6 +14,7 @@ test: test_native test_web integration_tests_dev integration_tests_build project
 # Run tests that are not dependent on the web
 test_native:
     cargo +nightly nextest run --all-features -p natrix
+    cargo +nightly nextest run --all-features -p natrix --release
 
 # Run tests that are dependent on the web
 [working-directory: './natrix']
@@ -30,6 +31,8 @@ check:
 
     cargo +stable hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --skip nightly --tests -- -Dwarnings
     cargo +nightly hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --tests -- -Dwarnings
+    cargo +stable hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --skip nightly --tests --release -- -Dwarnings
+    cargo +nightly hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --tests --release -- -Dwarnings
 
 check_deps:
     cargo hack udeps --each-feature --ignore-private
@@ -122,7 +125,7 @@ project_gen_test: install_cli
 
 # Install the CLI for use in tests
 # This installs it in debug mode and should *not* be used for actually installing
-install_cli: license
+install_cli:
     cargo install --path natrix-cli --profile dev
 
 # Open the guide book with a auto reloading server

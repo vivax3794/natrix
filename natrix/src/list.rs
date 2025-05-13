@@ -3,11 +3,11 @@
 use std::cmp::Ordering;
 
 use crate::component::Component;
-use crate::element::Element;
+use crate::element::{Element, ElementRenderResult};
 use crate::render_callbacks::DummyHook;
 use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
-use crate::state::{HookKey, R as Ra, RenderCtx, State};
-use crate::utils::{SmallAny, debug_expect, debug_panic};
+use crate::state::{HookKey, KeepAlive, R as Ra, RenderCtx, State};
+use crate::utils::{debug_expect, debug_panic};
 
 /// List lets you efficiently render a list of items
 /// It takes a function that returns a vector of items and a render function
@@ -44,7 +44,7 @@ struct ListItemState {
     node: web_sys::Node,
     /// The keep alive objects that are used to render this item
     #[expect(dead_code, reason = "This is used to keep alive various objects")]
-    keep_alive: Vec<Box<dyn SmallAny>>,
+    keep_alive: Vec<KeepAlive>,
 }
 
 /// The reactive hook state for `List`
@@ -172,12 +172,12 @@ where
                         parent_dep: you,
                     };
 
-                    let node = hook.render(ctx, &mut render_state);
+                    let node = hook.render(ctx, &mut render_state).into_node();
                     let previous = self
                         .existing_hooks
                         .last()
                         .map_or_else(|| self.start_marker.clone(), |state| state.node.clone());
-                    let next = node.next_sibling();
+                    let next = previous.next_sibling();
                     if let Some(parent) = previous.parent_node() {
                         debug_expect!(
                             parent.insert_before(&node, next.as_ref()),
@@ -221,7 +221,7 @@ where
         self: Box<Self>,
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
-    ) -> web_sys::Node {
+    ) -> ElementRenderResult {
         let document = crate::get_document();
         let fragment = document.create_document_fragment();
         let start_marker = document.create_comment("list start");
@@ -242,6 +242,6 @@ where
         ctx.set_hook(you, Box::new(state));
         render_state.hooks.push(you);
 
-        fragment.into()
+        ElementRenderResult::Node(fragment.into())
     }
 }

@@ -3,6 +3,7 @@
 #![expect(warnings, reason = "tests")]
 #![expect(clippy::arithmetic_side_effects, reason = "tests")]
 #![expect(clippy::indexing_slicing, reason = "tests")]
+#![expect(clippy::expect_used, reason = "tests")]
 
 #[cfg(feature = "test_utils")]
 mod actual_tests;

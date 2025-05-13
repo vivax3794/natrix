@@ -27,6 +27,13 @@ In this case you can use the [`.into_box`](element::Element::into_box) method to
 
 Alternatively you can use a [Result](std::result::Result) or [Either](either::Either) (behind the `either` feature) to return multiple types.
 
+### Execution Guarantees
+Natrix *only* makes the following guarantees about when a callback will be called:
+* It will not be called if a parent is dirty.
+
+Thats, natrix does not make any guarantees about the order of sibling callbacks.
+Natrix guarantees around how often a value is called is... complex because of features such as `.watch`, in general the reactive features below should be mainly treated as very strong hints to the framework, and optimizations might cause various use cases to result in more or less calls.
+
 ## `.watch`
 
 Now imagine you only access part of a field.

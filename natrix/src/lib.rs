@@ -2,7 +2,6 @@
 #![cfg_attr(feature = "nightly", feature(must_not_suspend))]
 #![cfg_attr(feature = "nightly", warn(must_not_suspend))]
 #![cfg_attr(feature = "nightly", feature(associated_type_defaults))]
-#![cfg_attr(nightly, feature(min_specialization))]
 #![cfg_attr(nightly, feature(cold_path))]
 
 pub mod async_utils;
@@ -90,6 +89,7 @@ If you which to allow execution after a panic (not recommended) you can disable 
 
     /// Set the panic hook to mark that a panic has happened
     pub fn set_panic_hook() {
+        #[cfg(target_arch = "wasm32")]
         std::panic::set_hook(Box::new(|info| {
             PANIC_HAPPENED.call_once(|| {
                 // This is a no-op, we just want to mark that a panic has happened
@@ -134,13 +134,7 @@ pub use component::{Component, NoMessages, SubComponent, mount};
 pub use element::Element;
 pub use list::List;
 pub use natrix_macros;
-#[cfg(feature = "assets")]
-pub use natrix_macros::asset;
-#[cfg(feature = "scoped_css")]
-pub use natrix_macros::scoped_css;
-#[cfg(feature = "inline_css")]
-pub use natrix_macros::style;
-pub use natrix_macros::{Component, data, global_css};
+pub use natrix_macros::{Component, asset, data};
 pub use state::{RenderCtx, State};
 
 /// Public exports of internal data structures for `natrix_macros` to use in generated code.

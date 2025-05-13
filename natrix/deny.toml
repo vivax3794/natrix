@@ -15,9 +15,8 @@ allow = [
     "Zlib",
     "Unicode-3.0",
     "BSL-1.0",
-    "MPL-2.0",
 ]
 
 [bans]
-multiple-versions = "warn"
+multiple-versions = "deny"
 wildcards = "deny"

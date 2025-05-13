@@ -47,7 +47,7 @@ impl Component for RootOne {
         let sender_clone = sender.clone();
 
         e::div()
-            .child(child.on(|ctx: E<Self>, amount| {
+            .child(child.on(|ctx: E<Self>, amount, _| {
                 *ctx.double = amount * 2;
             }))
             .child(e::div().id(DOUBLE_ID).text(|ctx: R<Self>| *ctx.double))

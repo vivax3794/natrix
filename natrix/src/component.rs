@@ -5,12 +5,12 @@ use std::rc::Rc;
 
 use futures_channel::mpsc::{UnboundedReceiver, UnboundedSender};
 
-use crate::element::Element;
+use crate::element::{Element, ElementRenderResult};
 use crate::get_document;
 use crate::html_elements::{ToAttribute, ToClass};
 use crate::signal::{RenderingState, SignalMethods};
-use crate::state::{ComponentData, E, EventToken, HookKey, State};
-use crate::utils::SmallAny;
+use crate::state::{ComponentData, E, EventToken, HookKey, KeepAlive, State};
+use crate::utils::{debug_panic, error_log};
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
 /// associating a component with its reactive state as well as converting to a struct to its
@@ -38,10 +38,6 @@ pub trait ComponentBase: Sized + 'static {
 
 /// A type that has no possible values.
 /// Similar to the stdlib `!` type.
-// The reason we do not use `std::convert::Infallible` is
-// That we do not want the auto trait to be not implemented on say `Result<Self, !>`
-// Why a component would declare a message type with `!` is beyond me, but it is possible
-// (I suppose it could be the result of Generics)
 pub enum NoMessages {}
 
 /// The user facing part of the Component traits.
@@ -118,7 +114,11 @@ pub trait Component: ComponentBase {
 
     /// Called when the component is mounted.
     /// Can be used to setup Effects or start async tasks.
-    fn on_mount(_ctx: E<Self>) {}
+    #[expect(
+        unused_variables,
+        reason = "We want the auto-completion for this method to be connvenient"
+    )]
+    fn on_mount(ctx: E<Self>) {}
 
     /// Handle a incoming message
     /// Default implementation does nothing
@@ -127,27 +127,18 @@ pub trait Component: ComponentBase {
         reason = "We want the auto-completion for this method to be connvenient"
     )]
     fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage, token: EventToken) {
-        // This doesnt have anything to do with panic hooks
-        // but `panic_hook` does pull in `web_sys::console`
-        // And it feels very silly to add a cargo feature for
-        // "warn_on_handle_message_not_implemented"
-        // (I suppose we could also just always pull in `web_sys::console`)
-        //
-        // Also since the default (should) be `NoMessages` (which is `!`) this will only ever actually be called
-        // If the user has a `ReceiveMessage` type that is not `NoMessages`.
-        #[cfg(console_log)]
-        web_sys::console::warn_1(
-            &format!(
-                "Component {} received message, but does not implement a handler",
-                std::any::type_name::<Self>(),
-            )
-            .into(),
+        // since the default (should) be `NoMessages` (which is `!`) this will only ever actually be called
+        // If the user has a `ReceiveMessage` type that is not `NoMessages` and forgot to implement
+        // this method.
+        debug_panic!(
+            "Component {} received message, but does not implement a handler",
+            std::any::type_name::<Self>()
         );
     }
 }
 
 /// Type of the emitting message handler
-type MessageHandler<P, M> = Box<dyn Fn(E<P>, M)>;
+type MessageHandler<P, M> = Box<dyn Fn(E<P>, M, EventToken)>;
 
 /// Trait for maybe getting a message handler
 trait MaybeHandler<C: Component, M> {
@@ -209,7 +200,7 @@ impl<I: Component, Ir> SubComponent<I, (), Ir> {
     /// Handle messages from the component
     pub fn on<P: Component>(
         self,
-        handler: impl Fn(E<P>, I::EmitMessage) + 'static,
+        handler: impl Fn(E<P>, I::EmitMessage, EventToken) + 'static,
     ) -> SubComponent<I, MessageHandler<P, I::EmitMessage>, Ir> {
         SubComponent {
             data: self.data,
@@ -228,8 +219,10 @@ impl<M> Sender<M> {
     /// Send a message to the component
     pub fn send(&self, msg: M, _token: EventToken) {
         if self.0.unbounded_send(msg).is_err() {
-            #[cfg(console_log)]
-            web_sys::console::warn_1(&"Failed to send message to component ".into());
+            error_log!(
+                "Failed to send message to component, receiver is closed. \
+                This is likely a bug in the framework, please report it"
+            );
         }
     }
 }
@@ -264,7 +257,7 @@ where
         self: Box<Self>,
         ctx: &mut State<P>,
         render_state: &mut RenderingState,
-    ) -> web_sys::Node {
+    ) -> ElementRenderResult {
         let data = self.data.into_state();
         let element = I::render();
 
@@ -276,7 +269,7 @@ where
             ctx.spawn_listening_task(handler, rx);
         }
         if let Some(receiver) = self.receiver.get() {
-            borrow_data.spawn_recivier_task(receiver);
+            borrow_data.spawn_receivier_task(receiver);
         }
         I::on_mount(&mut borrow_data);
 
@@ -307,13 +300,11 @@ pub struct RenderResult<C: Component> {
     /// The component data
     data: Rc<RefCell<State<C>>>,
     /// The various things that need to be kept alive
-    keep_alive: Vec<Box<dyn SmallAny>>,
+    keep_alive: Vec<KeepAlive>,
 }
 
 /// Mount the specified component at natrixses default location.
 /// This is what should be used when building with the natrix cli.
-///
-/// If the `panic_hook` feature is enabled, this will set the panic hook as well.
 ///
 /// **WARNING:** This method implicitly leaks the memory of the root component
 /// # Panics
@@ -364,7 +355,7 @@ pub fn render_component<C: Component>(
         hooks: &mut hooks,
         parent_dep: HookKey::default(),
     };
-    let node = element.render(&mut borrow_data, &mut state);
+    let node = element.render(&mut borrow_data, &mut state).into_node();
 
     let document = get_document();
     let target = document
@@ -447,7 +438,7 @@ impl<E: Element<()>, C: Component> Element<C> for NonReactive<E> {
         self: Box<Self>,
         _ctx: &mut State<C>,
         render_state: &mut RenderingState,
-    ) -> web_sys::Node {
+    ) -> ElementRenderResult {
         let state = State::new(());
         let mut state = state.borrow_mut();
         self.0.render(&mut state, render_state)

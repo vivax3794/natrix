@@ -12,4 +12,4 @@ workspace = true
 bincode = { version = "2.0.1", optional = true }
 
 [features]
-assets = ["dep:bincode"]
+macros = ["dep:bincode"]

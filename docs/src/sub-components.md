@@ -67,7 +67,7 @@ struct MyParent {
 impl Component for MyParent {
     fn render() -> impl Element<Self> {
         e::div()
-            .child(SubComponent::new(MyChild).on(|ctx: E<Self>, msg| {
+            .child(SubComponent::new(MyChild).on(|ctx: E<Self>, msg, _| {
                 ctx.state += msg;
             }))
     }

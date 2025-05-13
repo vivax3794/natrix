@@ -10,7 +10,7 @@ include = ["src", "THIRD_PARTY_LICENSES*"]
 workspace = true
 
 [dependencies]
-natrix_shared = {path = "../natrix_shared", version="1.0.0", features=["assets"]}
+natrix_shared = {path = "../natrix_shared", version="1.0.0", features=["macros"]}
 
 anyhow = "1.0.97"
 clap = { version = "4.5.34", features = ["derive"] }

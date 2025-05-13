@@ -38,10 +38,7 @@ paste = "1.0.15"
 pin-project = { version = "1.1.10" }
 
 [features]
-default = ["scoped_css", "inline_css", "assets"]
-scoped_css = ["natrix_macros/scoped_css"]
-inline_css = ["natrix_macros/inline_css"]
-assets = ["natrix_macros/assets"]
+default = []
 keep_console_in_release = []
 
 nightly = ["natrix_macros/nightly"]

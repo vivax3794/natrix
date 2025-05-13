@@ -82,7 +82,7 @@ To wait until all messages have been processed, you can use [`next_animation_fra
 #     fn render() -> impl Element<Self> {
 #         e::div()
 #             .child(e::div().id("PARENT").text(|ctx: R<Self>| *ctx.state))
-#             .child(SubComponent::new(Child).on(|ctx: E<Self>, msg| {
+#             .child(SubComponent::new(Child).on(|ctx: E<Self>, msg, _| {
 #                   *ctx.state += msg;
 #             }))
 #     }

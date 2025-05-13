@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 
 use crate::component::Component;
-use crate::element::Element;
+use crate::element::{Element, ElementRenderResult};
 use crate::events::Event;
 use crate::html_elements::{ToAttribute, ToClass, ToCssValue};
 use crate::render_callbacks::{
@@ -26,10 +26,10 @@ where
         self: Box<Self>,
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
-    ) -> web_sys::Node {
+    ) -> ElementRenderResult {
         let (me, node) = ReactiveNode::create_initial(Box::new(self), ctx);
         render_state.hooks.push(me);
-        node
+        ElementRenderResult::Node(node)
     }
 }
 

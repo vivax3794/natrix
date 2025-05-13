@@ -87,23 +87,3 @@ This feature disables that, allowing you to see the console logs in release buil
 ## default features
 For most complex applications you will likely need all the default features.
 But they can be disabled if you want to reduce compile times or binary size.
-
-### `scoped_css`
-This enables [Scoped Css](css.md#scoped-css). 
-This pulls in `lightningcss` *in the proc-macro*.
-As such disabling this feature will result in faster compile times.
-
-### `inline_css`
-This enables [Inline Css](css.md#inline-css).
-This pulls in `data-encoding` in the proc-macro.
-
-### `assets`
-Enables the `asset` macro for bundling arbitrary assets.
-This pulls in `data-encoding` and `bincode` in the proc-macro.
-
-## auto nightly
-
-natrix will auto detect when its compiled on nightly and use certain (non-public-facing) features. this is one of the reasons its recommended to use nightly rust.
-
-- optimize text updates, on stable updating a text node is done via `replace_child`, on nightly it uses `set_text_content` via the help of trait specialization.
-- Use the nightly only [`cold_path`](std::hint::cold_path) hint to optimize certain code paths. On stable uses a function marked as `#[cold]` instead.

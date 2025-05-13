@@ -21,7 +21,7 @@ use wasm_bindgen::{JsCast, intern};
 
 use crate::callbacks::EventHandler;
 use crate::component::Component;
-use crate::element::{Element, generate_fallback_node};
+use crate::element::{Element, ElementRenderResult, generate_fallback_node};
 use crate::events::Event;
 use crate::signal::RenderingState;
 use crate::state::{DeferredCtx, EventToken, State};
@@ -387,7 +387,7 @@ impl<C: Component> HtmlElement<C, ()> {
         };
 
         for child in children {
-            let child = child.render_box(ctx, render_state);
+            let child = child.render_box(ctx, render_state).into_node();
             debug_expect!(element.append_child(&child), "Failed to append child");
         }
 
@@ -425,8 +425,8 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
         self: Box<Self>,
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
-    ) -> web_sys::Node {
-        self.generic().render(ctx, render_state)
+    ) -> ElementRenderResult {
+        ElementRenderResult::Node(self.generic().render(ctx, render_state))
     }
 }
 

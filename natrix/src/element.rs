@@ -6,6 +6,31 @@ use crate::state::State;
 use crate::type_macros;
 use crate::utils::debug_panic;
 
+/// A result of the rendering process.
+pub(crate) enum ElementRenderResult {
+    /// A generic node.
+    Node(web_sys::Node),
+    /// A text node.
+    Text(Box<str>),
+}
+
+impl ElementRenderResult {
+    /// Convert to a `web_sys::Node`.
+    pub(crate) fn into_node(self) -> web_sys::Node {
+        match self {
+            ElementRenderResult::Node(node) => node,
+            ElementRenderResult::Text(text) => {
+                if let Ok(node) = web_sys::Text::new_with_data(&text) {
+                    node.into()
+                } else {
+                    debug_panic!("Failed to create text node");
+                    generate_fallback_node()
+                }
+            }
+        }
+    }
+}
+
 /// An `Element` is anything that can produce a DOM node.
 /// The most common examples include `HtmlElement` and types like `String`.
 ///
@@ -43,11 +68,11 @@ pub trait Element<C: Component>: 'static {
         self: Box<Self>,
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
-    ) -> web_sys::Node;
+    ) -> ElementRenderResult;
 
     /// A utility wrapper around `render_box` for when you have a concrete type.
     #[doc(hidden)]
-    fn render(self, ctx: &mut State<C>, render_state: &mut RenderingState) -> web_sys::Node
+    fn render(self, ctx: &mut State<C>, render_state: &mut RenderingState) -> ElementRenderResult
     where
         Self: Sized,
     {
@@ -69,8 +94,22 @@ impl<C: Component> Element<C> for Box<dyn Element<C>> {
         self: Box<Self>,
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
-    ) -> web_sys::Node {
+    ) -> ElementRenderResult {
         (*self).render_box(ctx, render_state)
+    }
+
+    fn render(self, ctx: &mut State<C>, render_state: &mut RenderingState) -> ElementRenderResult
+    where
+        Self: Sized,
+    {
+        self.render_box(ctx, render_state)
+    }
+
+    fn into_box(self) -> Box<dyn Element<C>>
+    where
+        Self: Sized,
+    {
+        self
     }
 }
 
@@ -79,8 +118,8 @@ impl<C: Component> Element<C> for web_sys::Node {
         self: Box<Self>,
         _ctx: &mut State<C>,
         _render_state: &mut RenderingState,
-    ) -> web_sys::Node {
-        *self
+    ) -> ElementRenderResult {
+        ElementRenderResult::Node(*self)
     }
 }
 
@@ -92,13 +131,13 @@ impl<C: Component> Element<C> for Comment {
         self: Box<Self>,
         _ctx: &mut State<C>,
         _render_state: &mut RenderingState,
-    ) -> web_sys::Node {
+    ) -> ElementRenderResult {
         let Ok(node) = web_sys::Comment::new() else {
             debug_panic!("Failed to create comment node");
-            return generate_fallback_node();
+            return ElementRenderResult::Node(generate_fallback_node());
         };
 
-        node.into()
+        ElementRenderResult::Node(node.into())
     }
 }
 
@@ -107,7 +146,7 @@ impl<T: Element<C>, C: Component> Element<C> for Option<T> {
         self: Box<Self>,
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
-    ) -> web_sys::Node {
+    ) -> ElementRenderResult {
         match *self {
             Some(element) => element.render(ctx, render_state),
             None => Element::<C>::render(Comment, ctx, render_state),
@@ -120,7 +159,7 @@ impl<T: Element<C>, E: Element<C>, C: Component> Element<C> for Result<T, E> {
         self: Box<Self>,
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
-    ) -> web_sys::Node {
+    ) -> ElementRenderResult {
         match *self {
             Ok(element) => element.render(ctx, render_state),
             Err(element) => element.render(ctx, render_state),
@@ -136,10 +175,8 @@ macro_rules! string_element {
                 self: Box<Self>,
                 _ctx: &mut State<C>,
                 _render_state: &mut RenderingState,
-            ) -> web_sys::Node {
-                let text = web_sys::Text::new().expect("Failed to make text");
-                text.set_text_content(Some(&self));
-                text.into()
+            ) -> ElementRenderResult {
+                ElementRenderResult::Text((*self).to_string().into_boxed_str())
             }
         }
     };
@@ -160,13 +197,11 @@ macro_rules! int_element {
                 self: Box<Self>,
                 _ctx: &mut State<C>,
                 _render_state: &mut RenderingState,
-            ) -> web_sys::Node {
+            ) -> ElementRenderResult {
                 let mut buffer = $fmt::Buffer::new();
                 let result = buffer.format(*self);
 
-                let text = web_sys::Text::new().expect("Failed to make text");
-                text.set_text_content(Some(result));
-                text.into()
+                ElementRenderResult::Text(result.to_string().into_boxed_str())
             }
         }
     };
@@ -179,14 +214,14 @@ type_macros::numerics!(int_element);
 mod either_element {
     use either::Either;
 
-    use super::{Component, Element, RenderingState, State};
+    use super::{Component, Element, ElementRenderResult, RenderingState, State};
 
     impl<A: Element<C>, B: Element<C>, C: Component> Element<C> for Either<A, B> {
         fn render_box(
             self: Box<Self>,
             ctx: &mut State<C>,
             render_state: &mut RenderingState,
-        ) -> web_sys::Node {
+        ) -> ElementRenderResult {
             match *self {
                 Either::Left(a) => a.render(ctx, render_state),
                 Either::Right(b) => b.render(ctx, render_state),

@@ -28,3 +28,7 @@ The framework only makes use of `debug_assert!`, its our goal that any issues sh
 - **Moving values outside intended scope** - Certain values are intended to only be valid in a given scope.
     - Using interior mutability to move a [`EventToken`](state::EventToken) outside its intended scope will likely lead to bugs if used to call apis in non-event contexts.
     - Using interior mutability to move a [`Guard`](state::Guard), or using it after a `.await`, will invalidate its guarantees.
+
+## What does natrix does in the case of a panic?
+Unlike native rust, a panic in wasm does not prevent the program from continuing. This can lead to unexpected behavior if state is left in a invalid state, or worse lead to undefined behavior.
+Therefor natrix will always do its best to prevent further rust execution after a panic, this is done by checking a panic flag at the start of every event handler, natrix also effectively freezes all async code using a special wrapping future that stops propagation of `.poll` calls on panic. 

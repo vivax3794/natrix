@@ -5,12 +5,12 @@ use std::borrow::Cow;
 use wasm_bindgen::JsCast;
 
 use crate::component::Component;
-use crate::element::{Element, generate_fallback_node};
+use crate::element::{Element, ElementRenderResult, generate_fallback_node};
+use crate::get_document;
 use crate::html_elements::{ToAttribute, ToClass, ToCssValue};
 use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
 use crate::state::{HookKey, KeepAlive, RenderCtx, State};
 use crate::utils::{debug_expect, debug_panic};
-use crate::{get_document, type_macros};
 
 /// A noop hook used to fill the `Rc<RefCell<...>>` while the initial render pass runs so that that
 /// a real hook can be swapped in once initialized
@@ -41,7 +41,7 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
     ///
     /// IMPORTANT: This function works with the assumption what it returns will be put in its
     /// `target_node` field. This function is split out to facilitate `Self::create_initial`
-    fn render(&mut self, ctx: &mut State<C>, you: HookKey) -> web_sys::Node {
+    fn render(&mut self, ctx: &mut State<C>, you: HookKey) -> ElementRenderResult {
         ctx.clear();
 
         let element = (self.callback)(&mut RenderCtx {
@@ -83,7 +83,7 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
             keep_alive: Vec::new(),
             hooks: Vec::new(),
         };
-        let node = this.render(ctx, me);
+        let node = this.render(ctx, me).into_node();
         this.target_node = node.clone();
         ctx.set_hook(me, Box::new(this));
 
@@ -94,6 +94,18 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         let hooks = std::mem::take(&mut self.hooks);
         let new_node = self.render(ctx, you);
+
+        let new_node = match new_node {
+            ElementRenderResult::Node(new_node) => new_node,
+            ElementRenderResult::Text(new_text) => {
+                if let Some(target_node) = self.target_node.dyn_ref::<web_sys::Text>() {
+                    target_node.set_text_content(Some(&new_text));
+                    return UpdateResult::DropHooks(hooks);
+                }
+
+                get_document().create_text_node(&new_text).into()
+            }
+        };
 
         let Some(parent) = self.target_node.parent_node() else {
             debug_panic!("Parent node of target node not found.");
@@ -111,102 +123,14 @@ impl<C: Component, E: Element<C>> ReactiveNode<C, E> {
 }
 
 impl<C: Component, E: Element<C>> ReactiveHook<C> for ReactiveNode<C, E> {
-    #[cfg(not(nightly))]
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         self.update(ctx, you)
-    }
-
-    #[cfg(nightly)]
-    default fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
-        self.update(ctx, you)
-    }
-
-    #[cfg(not(nightly))]
-    fn drop_us(self: Box<Self>) -> Vec<HookKey> {
-        self.hooks
-    }
-
-    #[cfg(nightly)]
-    default fn drop_us(self: Box<Self>) -> Vec<HookKey> {
-        self.hooks
-    }
-}
-
-#[cfg(nightly)]
-impl<C: Component> ReactiveHook<C> for ReactiveNode<C, String> {
-    fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
-        use wasm_bindgen::JsCast;
-
-        let hooks = std::mem::take(&mut self.hooks);
-
-        ctx.clear();
-        self.keep_alive.clear();
-        let element = (self.callback)(&mut RenderCtx {
-            ctx,
-            render_state: RenderingState {
-                keep_alive: &mut self.keep_alive,
-                hooks: &mut self.hooks,
-                parent_dep: you,
-            },
-        });
-        ctx.reg_dep(you);
-
-        if let Some(target_node) = self.target_node.dyn_ref::<web_sys::Text>() {
-            target_node.set_text_content(Some(&element));
-        } else {
-            debug_panic!("`String` Node wasnt a text node");
-        }
-
-        UpdateResult::DropHooks(hooks)
     }
 
     fn drop_us(self: Box<Self>) -> Vec<HookKey> {
         self.hooks
     }
 }
-
-/// generate nightly only optimization for ints and floats
-macro_rules! node_specialize_int {
-    ($type:ty, $fmt:ident) => {
-        #[cfg(nightly)]
-        impl<C: Component> ReactiveHook<C> for ReactiveNode<C, $type> {
-            fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
-                use wasm_bindgen::JsCast;
-
-                let hooks = std::mem::take(&mut self.hooks);
-
-                ctx.clear();
-                self.keep_alive.clear();
-                let element = (self.callback)(&mut RenderCtx {
-                    ctx,
-                    render_state: RenderingState {
-                        keep_alive: &mut self.keep_alive,
-                        hooks: &mut self.hooks,
-                        parent_dep: you,
-                    },
-                });
-                ctx.reg_dep(you);
-
-                let mut buffer = $fmt::Buffer::new();
-                let result = buffer.format(element);
-
-                if let Some(target_node) = self.target_node.dyn_ref::<web_sys::Text>() {
-                    target_node.set_text_content(Some(result));
-                } else {
-                    debug_panic!("Numeric Node wasnt a text node");
-                }
-
-                UpdateResult::DropHooks(hooks)
-            }
-
-            fn drop_us(self: Box<Self>) -> Vec<HookKey> {
-                self.hooks
-            }
-        }
-    };
-}
-
-type_macros::numerics!(node_specialize_int);
 
 /// A trait to allow `SimpleReactive` to deduplicate common reactive logic for attributes, classes,
 /// styles, etc

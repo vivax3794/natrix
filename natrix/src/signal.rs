@@ -16,7 +16,7 @@ pub(crate) struct RenderingState<'s> {
     pub(crate) parent_dep: HookKey,
 }
 
-/// A signal tracks reads and writes, as well as
+/// A signal tracks reads and writes to a value, as well as dependencies.
 pub struct Signal<T> {
     /// The data to be tracked.
     data: T,
@@ -25,7 +25,7 @@ pub struct Signal<T> {
     /// The flag for whether this signal has been read
     /// this is a `Cell` to allow for modification in `Deref`
     read: Cell<bool>,
-    /// A hashset of the dependencies.
+    /// A vector of the dependencies.
     ///
     /// Actually calling said dependencies is the responsibility of the `State` struct.
     /// Dependencies are also lazily removed by the `State` struct, and hence might contain stale
@@ -59,6 +59,9 @@ impl<T> Signal<T> {
         }
     }
 
+    /// Pop this signal's state and clear the read and written flags.
+    ///
+    /// This is `pub` only for use in macro generated `ComponentData` implementations.
     #[doc(hidden)]
     pub fn pop_state(&mut self) -> SignalState {
         let result = SignalState {
@@ -69,6 +72,9 @@ impl<T> Signal<T> {
         result
     }
 
+    /// Set this signal's state..
+    ///
+    /// This is `pub` only for use in macro generated `ComponentData` implementations.
     #[doc(hidden)]
     pub fn set_state(&mut self, state: SignalState) {
         self.written = state.written;

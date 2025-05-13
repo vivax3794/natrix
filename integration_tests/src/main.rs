@@ -1,7 +1,6 @@
 use std::hint::black_box;
 
 use natrix::prelude::*;
-use natrix::{css, global_css, scoped_css, style};
 mod reload_tests;
 
 const HELLO_TEXT: &str = "HELLO WORLD, TEST TEST!";
@@ -11,30 +10,30 @@ const BUTTON_ID: &str = "BUTTON";
 const RELOAD_ID: &str = "RELOAD";
 const IMG_ID: &str = "IMG_ID";
 
-global_css!("
-    h1 {
-        background-color: rgba(1,2,3,1);
-    }
-    .hello_world {
-        width: 100px;
-    }
-
-    @keep dynamic;
-
-    .dynamic {
-        padding: 100px;
-    }
-");
-
-scoped_css!("
-    .hello {
-        height: 300px;
-        font-size: var(--size);
-    }
-    .I_amNotUsed {
-        height: 400px;
-    }
-");
+// global_css!("
+//     h1 {
+//         background-color: rgba(1,2,3,1);
+//     }
+//     .hello_world {
+//         width: 100px;
+//     }
+//
+//     @keep dynamic;
+//
+//     .dynamic {
+//         padding: 100px;
+//     }
+// ");
+//
+// scoped_css!("
+//     .hello {
+//         height: 300px;
+//         font-size: var(--size);
+//     }
+//     .I_amNotUsed {
+//         height: 400px;
+//     }
+// ");
 
 #[derive(Component)]
 struct NotUsed;
@@ -42,7 +41,7 @@ struct NotUsed;
 impl Component for NotUsed {
     fn render() -> impl Element<Self> {
         e::img()
-            .class(I_AM_NOT_USED)
+            // .class(I_AM_NOT_USED)
             .src(natrix::asset!("./src/main.rs"))
     }
 }
@@ -60,11 +59,10 @@ impl Component for HelloWorld {
                     .text(HELLO_TEXT)
                     .id(HELLO_ID)
                     .class("hello_world")
-                    .class(HELLO)
+                    // .class(HELLO)
                     // .class(USE_IMG)
-                    .class(format!("dyn{}", black_box("amic")))
-                    .class(style!("margin: 1px 2px 3px 4px"))
-                    .css_value(SIZE, css::values::Numeric::px(10)),
+                    .class(format!("dyn{}", black_box("amic"))), // .class(style!("margin: 1px 2px 3px 4px"))
+                                                                 // .css_value(SIZE, css::values::Numeric::px(10)),
             )
             .child(SubComponent::new(integration_tests_dependency::DepComp))
             .child(
@@ -80,8 +78,7 @@ impl Component for HelloWorld {
                     .on::<events::Click>(|ctx: E<Self>, _, _| {
                         *ctx.counter += 1;
                     })
-                    .text(|ctx: R<Self>| *ctx.counter)
-                    .class(HELLO),
+                    .text(|ctx: R<Self>| *ctx.counter), // .class(HELLO),
             )
             .child(e::div().id(RELOAD_ID).text(reload_tests::VALUE))
             .child(
@@ -160,37 +157,37 @@ mod driver_tests {
         assert_eq!(text, HELLO_TEXT);
     }
 
-    #[tokio::test]
-    async fn primary_global_css() {
-        let client = create_client().await;
-        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
-        let text = element.css_value("background-color").await.unwrap();
-        assert_eq!(text, "rgba(1, 2, 3, 1)");
-    }
-
-    #[tokio::test]
-    async fn global_css_class() {
-        let client = create_client().await;
-        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
-        let text = element.css_value("width").await.unwrap();
-        assert_eq!(text, "100px");
-    }
-
-    #[tokio::test]
-    async fn scoped_css() {
-        let client = create_client().await;
-        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
-        let text = element.css_value("height").await.unwrap();
-        assert_eq!(text, "300px");
-    }
-
-    #[tokio::test]
-    async fn inline_style() {
-        let client = create_client().await;
-        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
-        let text = element.css_value("margin").await.unwrap();
-        assert_eq!(text, "1px 2px 3px 4px");
-    }
+    // #[tokio::test]
+    // async fn primary_global_css() {
+    //     let client = create_client().await;
+    //     let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+    //     let text = element.css_value("background-color").await.unwrap();
+    //     assert_eq!(text, "rgba(1, 2, 3, 1)");
+    // }
+    //
+    // #[tokio::test]
+    // async fn global_css_class() {
+    //     let client = create_client().await;
+    //     let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+    //     let text = element.css_value("width").await.unwrap();
+    //     assert_eq!(text, "100px");
+    // }
+    //
+    // #[tokio::test]
+    // async fn scoped_css() {
+    //     let client = create_client().await;
+    //     let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+    //     let text = element.css_value("height").await.unwrap();
+    //     assert_eq!(text, "300px");
+    // }
+    //
+    // #[tokio::test]
+    // async fn inline_style() {
+    //     let client = create_client().await;
+    //     let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+    //     let text = element.css_value("margin").await.unwrap();
+    //     assert_eq!(text, "1px 2px 3px 4px");
+    // }
 
     #[tokio::test]
     async fn simple_dep() {
@@ -203,24 +200,24 @@ mod driver_tests {
         assert_eq!(text, integration_tests_dependency::DEP_TEXT);
     }
 
-    #[tokio::test]
-    async fn dep_global_css() {
-        let client = create_client().await;
-        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
-        let text = element.css_value("color").await.unwrap();
-        assert_eq!(text, "rgba(9, 8, 7, 1)");
-    }
-
-    #[tokio::test]
-    async fn dep_scoped_css() {
-        let client = create_client().await;
-        let element = client
-            .find(By::Id(integration_tests_dependency::DEP_ID))
-            .await
-            .unwrap();
-        let text = element.css_value("height").await.unwrap();
-        assert_eq!(text, "600px");
-    }
+    // #[tokio::test]
+    // async fn dep_global_css() {
+    //     let client = create_client().await;
+    //     let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+    //     let text = element.css_value("color").await.unwrap();
+    //     assert_eq!(text, "rgba(9, 8, 7, 1)");
+    // }
+    //
+    // #[tokio::test]
+    // async fn dep_scoped_css() {
+    //     let client = create_client().await;
+    //     let element = client
+    //         .find(By::Id(integration_tests_dependency::DEP_ID))
+    //         .await
+    //         .unwrap();
+    //     let text = element.css_value("height").await.unwrap();
+    //     assert_eq!(text, "600px");
+    // }
 
     #[tokio::test]
     async fn panic_button() {
@@ -242,13 +239,13 @@ mod driver_tests {
         );
     }
 
-    #[tokio::test]
-    async fn dynamic_class() {
-        let client = create_client().await;
-        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
-        let text = element.css_value("padding").await.unwrap();
-        assert_eq!(text, "100px");
-    }
+    // #[tokio::test]
+    // async fn dynamic_class() {
+    //     let client = create_client().await;
+    //     let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+    //     let text = element.css_value("padding").await.unwrap();
+    //     assert_eq!(text, "100px");
+    // }
 
     #[tokio::test]
     async fn assets() {
@@ -260,14 +257,14 @@ mod driver_tests {
         assert!(width >= 100.0, "Img width too small {width}");
     }
 
-    #[tokio::test]
-    async fn dynamic_css_var() {
-        let client = create_client().await;
-        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
-
-        let font_size = element.css_value("font-size").await.unwrap();
-        assert_eq!(font_size, "10px");
-    }
+    // #[tokio::test]
+    // async fn dynamic_css_var() {
+    //     let client = create_client().await;
+    //     let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+    //
+    //     let font_size = element.css_value("font-size").await.unwrap();
+    //     assert_eq!(font_size, "10px");
+    // }
 
     // #[tokio::test]
     // async fn concat_asset_works() {
@@ -347,16 +344,16 @@ mod driver_tests {
 #[cfg(test)]
 #[cfg(feature = "build_test")]
 mod dist_tests {
-    use crate::I_AM_NOT_USED;
+    // use crate::I_AM_NOT_USED;
 
-    #[test]
-    fn unused_css() {
-        let css_file = std::fs::read_to_string("./dist/styles.css").unwrap();
-        assert!(
-            !css_file.contains(I_AM_NOT_USED),
-            "Unused CSS class should not be present in the dist file"
-        );
-    }
+    // #[test]
+    // fn unused_css() {
+    //     let css_file = std::fs::read_to_string("./dist/styles.css").unwrap();
+    //     assert!(
+    //         !css_file.contains(I_AM_NOT_USED),
+    //         "Unused CSS class should not be present in the dist file"
+    //     );
+    // }
 
     #[test]
     fn duplicate_assets_calls() {

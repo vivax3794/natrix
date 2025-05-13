@@ -326,10 +326,7 @@ dist
 
     generate_main_rs(&root, name, nightly)?;
 
-    let rust_fmt = r#"
-skip_macro_invocations = ["global_css", "scoped_css"]
-    "#
-    .trim();
+    let rust_fmt = r"".trim();
     fs::write(root.join("rustfmt.toml"), rust_fmt)?;
 
     std::process::Command::new("git")
@@ -385,22 +382,13 @@ fn generate_main_rs(root: &Path, name: &str, nightly: bool) -> Result<(), anyhow
 
 use natrix::prelude::*;
 
-mod css {{
-    natrix::scoped_css!("
-        .hello_world {{
-            font-size: 6rem;
-            color: red;
-        }}
-    ");
-}}
-
 #[derive(Component)]
 struct HelloWorld;
 
 impl Component for HelloWorld {{
     {nightly_associated_types_are_optional}
     fn render() -> impl Element<Self> {{
-        e::h1().text("Hello {name}").class(css::HELLO_WORLD).id("HELLO")
+        e::h1().text("Hello {name}").id("HELLO")
     }}
 }}
 
@@ -858,30 +846,32 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
     let rustc_version_meta = rustc_version::version_meta()?;
     let rustc_is_nightly = rustc_version_meta.channel == rustc_version::Channel::Nightly;
 
+    let invalidate = if config.invalidate_cache {
+        let time = std::time::SystemTime::now();
+        let eleapsed_time = time.duration_since(std::time::UNIX_EPOCH)?;
+        eleapsed_time.as_secs()
+    } else {
+        0
+    };
+
+    let settings = natrix_shared::macros::Settings {
+        output_dir: config.temp_dir.join(MACRO_OUTPUT_DIR),
+        base_path: config.base_path.to_string(),
+        invalidate,
+    };
+    let settings = natrix_shared::macros::bincode::encode_to_vec(
+        settings,
+        natrix_shared::macros::bincode_config(),
+    )?;
+    let settings = data_encoding::BASE64_NOPAD.encode(&settings);
+
     let mut command = process::Command::new("cargo");
     command
         .arg("build")
         .args(["--color", "always"])
         .args(["--target", "wasm32-unknown-unknown"])
         .args(["--profile", config.profile.cargo()])
-        .env(
-            natrix_shared::MACRO_OUTPUT_ENV,
-            config.temp_dir.join(MACRO_OUTPUT_DIR),
-        )
-        .env(
-            natrix_shared::MACRO_BASE_PATH_ENV,
-            config.base_path.as_ref(),
-        );
-
-    if config.invalidate_cache {
-        let time = std::time::SystemTime::now();
-        let eleapsed_time = time.duration_since(std::time::UNIX_EPOCH)?;
-        let unix_timestamp = eleapsed_time.as_secs();
-        command.env(
-            natrix_shared::MACRO_INVALIDATE_ENV,
-            unix_timestamp.to_string(),
-        );
-    }
+        .env(natrix_shared::MACRO_SETTINGS, settings);
 
     if config.profile == BuildProfile::Release {
         let mut rustc_flags =
@@ -1031,10 +1021,11 @@ fn collect_asset_manifest(asset_files: Vec<PathBuf>) -> Result<AssetManifest> {
     let mut mapping = HashMap::with_capacity(asset_files.len());
     for file in asset_files {
         let mut file_reader = fs::File::open(file)?;
-        let asset: natrix_shared::Asset = natrix_shared::bincode::decode_from_std_read(
-            &mut file_reader,
-            natrix_shared::bincode_config(),
-        )?;
+        let asset: natrix_shared::macros::Asset =
+            natrix_shared::macros::bincode::decode_from_std_read(
+                &mut file_reader,
+                natrix_shared::macros::bincode_config(),
+            )?;
         mapping.insert(asset.emitted_path, asset.path);
     }
 

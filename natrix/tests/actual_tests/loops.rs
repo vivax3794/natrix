@@ -28,20 +28,6 @@ impl Component for ManualLoop {
                         ctx.items.push(len);
                     }),
             )
-            .child(
-                e::button()
-                    .id(REMOVE_BUTTON_ID)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
-                        ctx.items.pop();
-                    }),
-            )
-            .child(
-                e::button()
-                    .id(CHANGE_BUTTON_ID)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
-                        ctx.items[0] = 100;
-                    }),
-            )
             .child(List::new(
                 |ctx: &State<Self>| &ctx.items,
                 |_ctx, getter| {
@@ -60,6 +46,20 @@ impl Component for ManualLoop {
                         })
                 },
             ))
+            .child(
+                e::button()
+                    .id(REMOVE_BUTTON_ID)
+                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                        ctx.items.pop();
+                    }),
+            )
+            .child(
+                e::button()
+                    .id(CHANGE_BUTTON_ID)
+                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                        ctx.items[0] = 100;
+                    }),
+            )
     }
 }
 
@@ -149,4 +149,38 @@ fn change_only_triggers_actual_changed() {
     let item = crate::get("item-2-1");
     change_button.click();
     assert!(item.parent_node().is_some(), "unneeded re-rendered");
+}
+
+#[wasm_bindgen_test]
+fn test_list_order() {
+    crate::mount_test(ManualLoop::default());
+
+    let add_button = crate::get(ADD_BUTTON_ID);
+    let remove_button = crate::get(REMOVE_BUTTON_ID);
+
+    add_button.click();
+    add_button.click();
+    add_button.click();
+
+    let item1 = crate::get("item-parent-0");
+    let item2 = crate::get("item-parent-1");
+    let item3 = crate::get("item-parent-2");
+
+    // we do two next calls to skip over the list comment start marker
+    let add_button_next = add_button
+        .next_sibling()
+        .expect("No sibling for add button")
+        .next_sibling();
+    let item1_next = item1.next_sibling();
+    let item2_next = item2.next_sibling();
+    let item3_next = item3.next_sibling();
+
+    assert_eq!(add_button_next, Some(item1.into()), "list follow add");
+    assert_eq!(item1_next, Some(item2.into()), "item2 follows item1");
+    assert_eq!(item2_next, Some(item3.into()), "item3 follows item2");
+    assert_eq!(
+        item3_next,
+        Some(remove_button.into()),
+        "remove follows item3"
+    );
 }
