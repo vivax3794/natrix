@@ -188,18 +188,26 @@ gh_action:
 license:
     cargo about generate about.hbs > natrix-cli/THIRD_PARTY_LICENSES.html
 
-twiggy:
-    cp target/wasm32-unknown-unknown/release/deps/root-*.wasm target/wasm32-unknown-unknown/release/deps/old.wasm
-    rm -rf target/wasm32-unknown-unknown/release/deps/root-*.wasm
-    # TODO: make this automatically consistent with natrix-cli somehow
-    RUSTFLAGS="-C target-feature=+bulk-memory -C target-feature=+reference-types -Zfmt-debug=none -Zlocation-detail=none" cargo build -p natrix --target wasm32-unknown-unknown --release --tests --all-features -Z build-std=core,std,panic_abort -Zbuild-std-features=optimize_for_size
-    twiggy diff target/wasm32-unknown-unknown/release/deps/old.wasm target/wasm32-unknown-unknown/release/deps/root-*.wasm
-    twiggy diff target/wasm32-unknown-unknown/release/deps/old.wasm target/wasm32-unknown-unknown/release/deps/root-*.wasm -a | rg natrix
-
-[working-directory: './integration_tests']
-compare_integration:
+[working-directory: './stress_test_binary_size']
+stress_size: install_cli
     wc -c dist/code_bg.wasm
     natrix build
     wc -c dist/code_bg.wasm
 
-compare_size: twiggy compare_integration
+[working-directory: './benchmark']
+bench: install_cli
+    #!/usr/bin/bash
+    set -e
+    cleanup() {
+        echo "Cleaning up..."
+        if [ -n "$python_pid" ]; then
+            kill "$python_pid" 2>/dev/null || true
+        fi
+    }
+    trap cleanup EXIT
+
+    natrix build
+    (cd dist && python3 -m http.server 8888 2>/dev/null) &
+    python_pid=$!
+
+    wasm_bench

@@ -1,4 +1,5 @@
 use natrix::prelude::*;
+use natrix::state::EventToken;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
@@ -48,7 +49,7 @@ impl Component for OnMount {
     fn render() -> impl Element<Self> {
         e::div().id(BUTTON_ID).text(|ctx: R<Self>| *ctx.value)
     }
-    fn on_mount(ctx: E<Self>) {
+    fn on_mount(ctx: E<Self>, _token: EventToken) {
         *ctx.value = 10;
     }
 }

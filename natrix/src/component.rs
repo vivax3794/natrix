@@ -118,7 +118,7 @@ pub trait Component: ComponentBase {
         unused_variables,
         reason = "We want the auto-completion for this method to be connvenient"
     )]
-    fn on_mount(ctx: E<Self>) {}
+    fn on_mount(ctx: E<Self>, token: EventToken) {}
 
     /// Handle a incoming message
     /// Default implementation does nothing
@@ -222,10 +222,7 @@ impl<M> Sender<M> {
     #[inline]
     pub fn send(&self, msg: M, _token: EventToken) {
         if self.0.unbounded_send(msg).is_err() {
-            error_log!(
-                "Failed to send message to component, receiver is closed. \
-                This is likely a bug in the framework, please report it"
-            );
+            error_log!("Failed to send message to component, receiver is closed.");
         }
     }
 }
@@ -275,7 +272,7 @@ where
         if let Some(receiver) = self.receiver.get() {
             borrow_data.spawn_receivier_task(receiver);
         }
-        I::on_mount(&mut borrow_data);
+        I::on_mount(&mut borrow_data, EventToken::new());
 
         let mut hooks = Vec::new();
 
@@ -349,7 +346,7 @@ pub fn render_component<C: Component>(
     let element = C::render();
 
     let mut borrow_data = data.borrow_mut();
-    C::on_mount(&mut borrow_data);
+    C::on_mount(&mut borrow_data, EventToken::new());
 
     let mut keep_alive = Vec::new();
     let mut hooks = Vec::new();

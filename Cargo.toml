@@ -7,6 +7,7 @@ members = [
     "natrix-cli",
     "integration_tests",
     "integration_tests_dependency",
+    "stress_test_binary_size", "benchmark",
 ]
 
 [profile.release]
@@ -14,7 +15,7 @@ opt-level = "z"
 codegen-units = 1
 lto = "fat"
 panic = "abort"
-# strip = "symbols"
+strip = "symbols"
 
 [workspace.lints.rust]
 missing_docs = "warn"

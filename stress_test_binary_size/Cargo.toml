@@ -1,0 +1,11 @@
+
+[package]
+name = "stress_test_binary_size"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+natrix = { path="../natrix", features = ["nightly"] }
+
+[package.metadata.natrix]
+cache_bust = "none"

@@ -686,6 +686,7 @@ fn build(config: &BuildConfig) -> Result<AssetManifest> {
     if config.invalidate_cache {
         let _ = fs::remove_dir_all(&config.temp_dir);
     }
+    let _ = fs::create_dir_all(config.temp_dir.join(MACRO_OUTPUT_DIR));
 
     println!(
         "🚧 {} (using profile {})",
@@ -885,7 +886,7 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
             command
                 .args(["-Z", "build-std=core,std,panic_abort"])
                 .arg(format!("-Zbuild-std-features={std_features}"));
-            rustc_flags.push_str("-Zfmt-debug=none -Zlocation-detail=none");
+            rustc_flags.push_str("-Zfmt-debug=none -Zlocation-detail=none -Zshare-generics=y");
         } else {
             println!(
                 "{}",
@@ -947,7 +948,9 @@ fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         .arg("--all-features")
         .arg("--strip-debug")
         .arg("--strip-dwarf")
-        .arg("--strip-producers");
+        .arg("--strip-producers")
+        .arg("--strip-eh")
+        .arg("--strip-target-features");
     command.args(["--converge", "-Oz"]);
 
     let result = command.status()?.success();
