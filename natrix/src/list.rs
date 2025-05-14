@@ -3,7 +3,7 @@
 use std::cmp::Ordering;
 
 use crate::component::Component;
-use crate::element::{Element, ElementRenderResult};
+use crate::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
 use crate::render_callbacks::DummyHook;
 use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
 use crate::state::{HookKey, KeepAlive, R as Ra, RenderCtx, State};
@@ -122,7 +122,7 @@ impl<F> SafeGetter<F> {
 impl<F, R, C, I, E> ReactiveHook<C> for ListState<F, R, C, I, E>
 where
     C: Component,
-    E: Element<C>,
+    E: Element<C> + 'static,
     F: Fn(&State<C>) -> &Vec<I> + 'static,
     F: Clone,
     I: PartialEq + Clone + 'static,
@@ -172,7 +172,10 @@ where
                         parent_dep: you,
                     };
 
-                    let node = hook.render(ctx, &mut render_state).into_node();
+                    let node = hook
+                        .into_generic()
+                        .render(ctx, &mut render_state)
+                        .into_node();
                     let previous = self
                         .existing_hooks
                         .last()
@@ -207,7 +210,7 @@ where
     }
 }
 
-impl<F, R, C, I, E> Element<C> for List<F, R, C, I, E>
+impl<F, R, C, I, E> DynElement<C> for List<F, R, C, I, E>
 where
     C: Component,
     F: Fn(&State<C>) -> &Vec<I> + 'static,
@@ -215,9 +218,9 @@ where
     I: PartialEq + Clone + 'static,
     R: Fn(Ra<C>, SafeGetter<F>) -> E + 'static,
     R: Clone,
-    E: Element<C>,
+    E: Element<C> + 'static,
 {
-    fn render_box(
+    fn render(
         self: Box<Self>,
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
@@ -243,5 +246,20 @@ where
         render_state.hooks.push(you);
 
         ElementRenderResult::Node(fragment.into())
+    }
+}
+
+impl<F, R, C, I, E> Element<C> for List<F, R, C, I, E>
+where
+    C: Component,
+    F: Fn(&State<C>) -> &Vec<I> + 'static,
+    F: Clone,
+    I: PartialEq + Clone + 'static,
+    R: Fn(Ra<C>, SafeGetter<F>) -> E + 'static,
+    R: Clone,
+    E: Element<C> + 'static,
+{
+    fn into_generic(self) -> MaybeStaticElement<C> {
+        MaybeStaticElement::Dynamic(Box::new(self))
     }
 }

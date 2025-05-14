@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use futures_channel::mpsc::{UnboundedReceiver, UnboundedSender};
 
-use crate::element::{Element, ElementRenderResult};
+use crate::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
 use crate::get_document;
 use crate::html_elements::{ToAttribute, ToClass, ToCssValue};
 use crate::signal::{RenderingState, SignalMethods};
@@ -247,14 +247,14 @@ impl<I: Component, Im> SubComponent<I, Im, ()> {
     }
 }
 
-impl<I, P, H, R> Element<P> for SubComponent<I, H, R>
+impl<I, P, H, R> DynElement<P> for SubComponent<I, H, R>
 where
     I: Component,
     P: Component,
     H: MaybeHandler<P, I::EmitMessage> + 'static,
     R: MaybeRecv<I::ReceiveMessage> + 'static,
 {
-    fn render_box(
+    fn render(
         self: Box<Self>,
         ctx: &mut State<P>,
         render_state: &mut RenderingState,
@@ -282,10 +282,22 @@ where
             parent_dep: HookKey::default(),
         };
 
-        let node = element.render(&mut borrow_data, &mut state);
+        let node = element.into_generic().render(&mut borrow_data, &mut state);
         drop(borrow_data);
         render_state.keep_alive.push(Box::new(data));
         node
+    }
+}
+
+impl<I, P, H, R> Element<P> for SubComponent<I, H, R>
+where
+    I: Component,
+    P: Component,
+    H: MaybeHandler<P, I::EmitMessage> + 'static,
+    R: MaybeRecv<I::ReceiveMessage> + 'static,
+{
+    fn into_generic(self) -> MaybeStaticElement<P> {
+        MaybeStaticElement::Dynamic(Box::new(self))
     }
 }
 
@@ -356,7 +368,10 @@ pub fn render_component<C: Component>(
         hooks: &mut hooks,
         parent_dep: HookKey::default(),
     };
-    let node = element.render(&mut borrow_data, &mut state).into_node();
+    let node = element
+        .into_generic()
+        .render(&mut borrow_data, &mut state)
+        .into_node();
 
     let document = get_document();
     let target = document
@@ -434,13 +449,21 @@ impl Component for () {
 /// ```
 pub struct NonReactive<E>(pub E);
 
-impl<E: Element<()>, C: Component> Element<C> for NonReactive<E> {
-    fn render_box(
+impl<E: Element<()> + 'static, C: Component> Element<C> for NonReactive<E> {
+    fn into_generic(self) -> MaybeStaticElement<C> {
+        MaybeStaticElement::Dynamic(Box::new(self))
+    }
+}
+
+impl<E: Element<()>, C: Component> DynElement<C> for NonReactive<E> {
+    fn render(
         self: Box<Self>,
         _ctx: &mut State<C>,
         render_state: &mut RenderingState,
     ) -> ElementRenderResult {
-        self.0.render(&mut State::create_base(()), render_state)
+        self.0
+            .into_generic()
+            .render(&mut State::create_base(()), render_state)
     }
 }
 

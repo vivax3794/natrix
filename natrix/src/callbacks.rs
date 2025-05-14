@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 
 use crate::component::Component;
-use crate::element::{Element, ElementRenderResult};
+use crate::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
 use crate::events::Event;
 use crate::html_elements::{ToAttribute, ToClass, ToCssValue};
 use crate::render_callbacks::{
@@ -16,22 +16,33 @@ use crate::render_callbacks::{
 use crate::signal::RenderingState;
 use crate::state::{EventToken, RenderCtx, State};
 
-impl<F, C, R> Element<C> for F
+impl<F, C, R> DynElement<C> for F
 where
     F: Fn(&mut RenderCtx<C>) -> R + 'static,
     R: Element<C> + 'static,
     C: Component,
 {
-    fn render_box(
+    fn render(
         self: Box<Self>,
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
     ) -> ElementRenderResult {
         let this = *self;
         let (me, node) =
-            ReactiveNode::create_initial(Box::new(move |ctx| Box::new(this(ctx))), ctx);
+            ReactiveNode::create_initial(Box::new(move |ctx| this(ctx).into_generic()), ctx);
         render_state.hooks.push(me);
         ElementRenderResult::Node(node)
+    }
+}
+
+impl<F, C, R> Element<C> for F
+where
+    F: Fn(&mut RenderCtx<C>) -> R + 'static,
+    R: Element<C> + 'static,
+    C: Component,
+{
+    fn into_generic(self) -> MaybeStaticElement<C> {
+        MaybeStaticElement::Dynamic(Box::new(self))
     }
 }
 

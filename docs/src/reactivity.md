@@ -20,13 +20,6 @@ See below for tools to mitigate this.
 > and will likely lead to panics or desynced state.
 > For example using interior mutability to hold onto a [`Guard`](state::Guard) outside its intended scope will invalidate its guarantees.
 
-### Returning multiple types
-
-Very often a callback might branch, and each branch would want its own return value.
-In this case you can use the [`.into_box`](element::Element::into_box) method to convert the return value into a [`Box<dyn Element>`](std::boxed::Box).
-
-Alternatively you can use a [Result](std::result::Result) or [Either](either::Either) (behind the `either` feature) to return multiple types.
-
 ### Execution Guarantees
 Natrix *only* makes the following guarantees about when a callback will be called:
 * It will not be called if a parent is dirty.
@@ -113,9 +106,9 @@ e::div()
             let value = ctx.option.unwrap();
             e::h1()
                 .text(format!("Value: {}", value))
-                .into_box()
+                .into_generic()
         } else {
-            "None".into_box()
+            "None".into_generic()
         }
     })
 #      }
@@ -139,9 +132,9 @@ e::div()
         if ctx.watch(|ctx| ctx.option.is_some()) {
             e::h1()
                 .text(|ctx: R<Self>| ctx.option.unwrap())
-                .into_box()
+                .into_generic()
         } else {
-            "None".into_box()
+            "None".into_generic()
         }
     })
 #      }
@@ -174,9 +167,9 @@ e::div()
         if let Some(guard) = guard_option!(|ctx| ctx.option.as_ref()) {
             e::h1()
                 .text(move |ctx: R<Self>| *ctx.get(&guard))
-                .into_box()
+                .into_generic()
         } else {
-            "None".into_box()
+            "None".into_generic()
         }
     })
 #      }

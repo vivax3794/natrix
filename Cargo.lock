@@ -1232,7 +1232,6 @@ dependencies = [
 name = "natrix"
 version = "1.0.0"
 dependencies = [
- "either",
  "futures-channel",
  "futures-core",
  "futures-util",

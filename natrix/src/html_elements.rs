@@ -21,7 +21,13 @@ use wasm_bindgen::{JsCast, intern};
 
 use crate::callbacks::EventHandler;
 use crate::component::Component;
-use crate::element::{Element, ElementRenderResult, generate_fallback_node};
+use crate::element::{
+    DynElement,
+    Element,
+    ElementRenderResult,
+    MaybeStaticElement,
+    generate_fallback_node,
+};
 use crate::events::Event;
 use crate::signal::RenderingState;
 use crate::state::{DeferredCtx, EventToken, State};
@@ -226,7 +232,7 @@ pub struct HtmlElement<C: Component, T = ()> {
     /// The name of the tag
     tag: &'static str,
     /// List of child elements
-    children: Vec<Box<dyn Element<C>>>,
+    children: Vec<MaybeStaticElement<C>>,
     /// Events to be registered on the element
     events: Vec<(
         &'static str,
@@ -331,13 +337,13 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// ```
     #[inline]
     pub fn child<E: Element<C> + 'static>(mut self, child: E) -> Self {
-        self.children.push(Box::new(child));
+        self.children.push(child.into_generic());
         self
     }
 
     /// This is a simple alias for `child`
     #[inline]
-    pub fn text<E: Element<C>>(self, text: E) -> Self {
+    pub fn text<E: Element<C> + 'static>(self, text: E) -> Self {
         self.child(text)
     }
 
@@ -385,7 +391,11 @@ impl<C: Component> HtmlElement<C, ()> {
         };
 
         for child in children {
-            let child = child.render_box(ctx, render_state).into_node();
+            let child = match child {
+                MaybeStaticElement::Static(node) => node,
+                MaybeStaticElement::Dynamic(node) => node.render(ctx, render_state),
+            }
+            .into_node();
             debug_expect!(element.append_child(&child), "Failed to append child");
         }
 
@@ -418,13 +428,19 @@ impl<C: Component> HtmlElement<C, ()> {
     }
 }
 
-impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
-    fn render_box(
+impl<C: Component, T: 'static> DynElement<C> for HtmlElement<C, T> {
+    fn render(
         self: Box<Self>,
         ctx: &mut State<C>,
         render_state: &mut RenderingState,
     ) -> ElementRenderResult {
         ElementRenderResult::Node(self.generic().render(ctx, render_state))
+    }
+}
+
+impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
+    fn into_generic(self) -> MaybeStaticElement<C> {
+        MaybeStaticElement::Dynamic(Box::new(self))
     }
 }
 

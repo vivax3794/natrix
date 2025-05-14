@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use wasm_bindgen::JsCast;
 
 use crate::component::Component;
-use crate::element::{Element, ElementRenderResult, generate_fallback_node};
+use crate::element::{ElementRenderResult, MaybeStaticElement, generate_fallback_node};
 use crate::get_document;
 use crate::html_elements::{ToAttribute, ToClass, ToCssValue};
 use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
@@ -27,7 +27,7 @@ impl<C: Component> ReactiveHook<C> for DummyHook {
 /// Reactive hook for swapping out a entire dom node.
 pub(crate) struct ReactiveNode<C: Component> {
     /// The callback to produce nodes
-    callback: Box<dyn Fn(&mut RenderCtx<C>) -> Box<dyn Element<C>>>,
+    callback: Box<dyn Fn(&mut RenderCtx<C>) -> MaybeStaticElement<C>>,
     /// The current rendered node to replace
     target_node: web_sys::Node,
     /// Vector of various objects to be kept alive for the duration of the rendered content
@@ -66,7 +66,7 @@ impl<C: Component> ReactiveNode<C> {
     /// Create a new `ReactiveNode` registering the initial dependencies and returning both the `Rc`
     /// reference to it and the initial node (Which should be inserted in the dom)
     pub(crate) fn create_initial(
-        callback: Box<dyn Fn(&mut RenderCtx<C>) -> Box<dyn Element<C>>>,
+        callback: Box<dyn Fn(&mut RenderCtx<C>) -> MaybeStaticElement<C>>,
         ctx: &mut State<C>,
     ) -> (HookKey, web_sys::Node) {
         let me = ctx.insert_hook(Box::new(DummyHook));
