@@ -27,9 +27,6 @@ const BINDGEN_OUTPUT_NAME: &str = "code";
 /// Name of the collected css
 const CSS_OUTPUT_NAME: &str = "styles.css";
 
-/// The license of the framework
-const LICENSE: &str = include_str!("../THIRD_PARTY_LICENSES.html");
-
 /// The toml config
 #[derive(Deserialize)]
 #[serde(default)]
@@ -78,8 +75,6 @@ impl NatrixConfig {
 /// Natrix CLI
 #[derive(Parser)]
 enum Cli {
-    /// Spawn a web server to serve licenses
-    License,
     /// Create a new project
     New {
         /// The name of the project
@@ -255,11 +250,6 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli {
-        Cli::License => {
-            spawn_static_server(8000, LICENSE)?;
-
-            Ok(())
-        }
         Cli::New { name, stable } => generate_project(&name, stable),
         Cli::Dev(args) => do_dev(&args),
         Cli::Build(args) => {
@@ -647,37 +637,6 @@ fn spawn_server(
     }
 }
 
-/// Spawn a server to serve a single static string
-fn spawn_static_server(port: u16, content: &'static str) -> Result<()> {
-    let port = get_free_port(port)?;
-    let server =
-        Server::http(("127.0.0.1", port)).map_err(|_| anyhow!("Failed to start server"))?;
-
-    println!(
-        "{}{}",
-        "🚀 Server running on http://localhost:".green(),
-        port.to_string().bright_red()
-    );
-
-    for request in server.incoming_requests() {
-        let is_root = request.url() == "/";
-
-        if !is_root {
-            let response = Response::from_string("🚫 404 Not Found!").with_status_code(404);
-            let _ = request.respond(response);
-            continue;
-        }
-
-        let response = Response::from_string(content).with_header(
-            #[expect(clippy::expect_used, reason = "Hardcoded header for the content type")]
-            Header::from_bytes(b"Content-Type", b"text/html").expect("Invalid header"),
-        );
-        let _ = request.respond(response);
-    }
-
-    Ok(())
-}
-
 /// Build a project
 fn build(config: &BuildConfig) -> Result<AssetManifest> {
     println!("🧹 {}", "Cleaning dist".bright_black(),);
@@ -879,8 +838,7 @@ fn build_wasm(config: &BuildConfig) -> Result<PathBuf> {
         .env(natrix_shared::MACRO_SETTINGS, settings);
 
     if config.profile == BuildProfile::Release {
-        let mut rustc_flags =
-            String::from("-C target-feature=+bulk-memory -C target-feature=+reference-types ");
+        let mut rustc_flags = String::from("-C target-feature=+bulk-memory,+reference-types ");
         if rustc_is_nightly {
             let std_features = String::from("optimize_for_size");
             command

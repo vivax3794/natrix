@@ -3,7 +3,7 @@ name = "natrix-cli"
 version = "1.0.0"
 edition = "2024"
 description = "Natrix CLI tool."
-license = "MIT"
+license-file = "../LICENSE.md"
 include = ["src", "THIRD_PARTY_LICENSES*"]
 
 [lints]
