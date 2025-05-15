@@ -26,11 +26,11 @@ impl<const N: u32> Component for Buttons<N> {
 }
 
 #[derive(Component, Default)]
-struct ToogleNode<const N: u32> {
+struct ToggleNode<const N: u32> {
     state: bool,
 }
 
-impl<const N: u32> Component for ToogleNode<N> {
+impl<const N: u32> Component for ToggleNode<N> {
     fn render() -> impl Element<Self> {
         let mut res = e::div().child(e::button().id("BUTTON").on::<events::Click>(
             |ctx: E<Self>, _, _| {
@@ -188,7 +188,7 @@ fn main() {
             })
             .await;
 
-        natrix::test_utils::mount_test(ToogleNode::<10000>::default());
+        natrix::test_utils::mount_test(ToggleNode::<10000>::default());
         bencher
             .bench("toggle nodes", 0, |_| {
                 let button = natrix::test_utils::get("BUTTON");

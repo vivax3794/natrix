@@ -3,7 +3,7 @@ name = "natrix-cli"
 version = "1.0.0"
 edition = "2024"
 description = "Natrix CLI tool."
-license-file = "../LICENSE.md"
+license = "MIT"
 include = ["src", "THIRD_PARTY_LICENSES*"]
 
 [lints]
@@ -18,7 +18,7 @@ indicatif = "0.17.11"
 owo-colors = { version = "4.2.0", default-features = false }
 notify = "8.0.0"
 tiny_http = "0.12.0"
-oxc = {version="0.69.0", default-features=false, features=["minifier", "codegen"]}
+oxc = {version="0.70.0", default-features=false, features=["minifier", "codegen"]}
 lightningcss = { version = "1.0.0-alpha.66", default-features = false, features = ["visitor"] }
 wasmparser = "0.230"
 rustc_version = "0.4.1"
