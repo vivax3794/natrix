@@ -18,9 +18,7 @@ fn log() {
 
 /// Should we log stuff to the console?
 #[cfg(not(any(debug_assertions, feature = "keep_console_in_release")))]
-fn log() {
-    println!("cargo::rustc-cfg=console_log");
-}
+fn log() {}
 
 fn main() {
     nightly();

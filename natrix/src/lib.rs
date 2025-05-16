@@ -63,7 +63,8 @@ pub(crate) fn get_window() -> web_sys::Window {
 /// Panic handling
 pub mod panics {
     /// Mark that a panic has happened
-    static PANIC_HAPPENED: std::sync::Once = std::sync::Once::new();
+    static PANIC_HAPPENED: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
 
     /// Has a panic occurred
     /// This is only needed for you to call if you are using custom callbacks passed to js.
@@ -71,7 +72,7 @@ pub mod panics {
     /// And all uses of `ctx.use_async` uses some magic to insert a check to this *after every*
     /// await.
     pub fn has_panicked() -> bool {
-        let result = PANIC_HAPPENED.is_completed();
+        let result = PANIC_HAPPENED.load(std::sync::atomic::Ordering::Relaxed);
         #[cfg(console_log)]
         if result {
             web_sys::console::warn_1(
@@ -90,10 +91,10 @@ If you which to allow execution after a panic (not recommended) you can disable 
     /// Set the panic hook to mark that a panic has happened
     pub fn set_panic_hook() {
         #[cfg(target_arch = "wasm32")]
+        #[allow(clippy::allow_attributes, reason = "only applies sometimes")]
+        #[allow(unused_variables, reason = "Only used when console_log is enabled")]
         std::panic::set_hook(Box::new(|info| {
-            PANIC_HAPPENED.call_once(|| {
-                // This is a no-op, we just want to mark that a panic has happened
-            });
+            PANIC_HAPPENED.store(true, std::sync::atomic::Ordering::Relaxed);
 
             #[cfg(console_log)]
             {
