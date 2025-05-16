@@ -1230,7 +1230,7 @@ dependencies = [
 
 [[package]]
 name = "natrix"
-version = "1.0.0"
+version = "0.3.0"
 dependencies = [
  "futures-channel",
  "futures-core",
@@ -1253,7 +1253,7 @@ dependencies = [
 
 [[package]]
 name = "natrix-cli"
-version = "1.0.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "cargo_metadata",
@@ -1276,7 +1276,7 @@ dependencies = [
 
 [[package]]
 name = "natrix_macros"
-version = "1.0.0"
+version = "0.3.0"
 dependencies = [
  "data-encoding",
  "natrix_shared",
@@ -1287,7 +1287,7 @@ dependencies = [
 
 [[package]]
 name = "natrix_shared"
-version = "1.0.0"
+version = "0.3.0"
 dependencies = [
  "bincode",
 ]

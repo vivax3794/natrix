@@ -1,6 +1,6 @@
 [package]
 name = "natrix_macros"
-version = "1.0.0"
+version = "0.3.0"
 edition = "2024"
 
 description = "Macros for natrix"
@@ -14,10 +14,10 @@ workspace = true
 proc-macro = true
 
 [build-dependencies]
-natrix_shared = {path = "../natrix_shared", version="1.0.0"}
+natrix_shared = {path = "../natrix_shared", version="0.3.0"}
 
 [dependencies]
-natrix_shared = {path = "../natrix_shared", version="1.0.0", features=["macros"]}
+natrix_shared = {path = "../natrix_shared", version="0.3.0", features=["macros"]}
 
 data-encoding = {version="2.9.0", default-features = false, features = ["alloc"]}
 

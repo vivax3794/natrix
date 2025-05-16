@@ -1,6 +1,6 @@
 [package]
 name = "natrix"
-version = "1.0.0"
+version = "0.3.0"
 edition = "2024"
 
 description = "Rust-First frontend framework."
@@ -16,8 +16,8 @@ exclude = ["tests"]
 workspace = true
 
 [dependencies]
-natrix_macros = {path = "../natrix_macros", version="1.0.0"}
-natrix_shared = {path = "../natrix_shared", version="1.0.0"}
+natrix_macros = {path = "../natrix_macros", version="0.3.0"}
+natrix_shared = {path = "../natrix_shared", version="0.3.0"}
 
 # Default
 wasm-bindgen = {version= "0.2.100", features=["enable-interning"]}
@@ -52,7 +52,7 @@ wasm-bindgen-test = {version="0.3.50"}
 
 [build-dependencies]
 rustversion = "1.0.19"
-natrix_shared = {path = "../natrix_shared", version="1.0.0"}
+natrix_shared = {path = "../natrix_shared", version="0.3.0"}
 
 [dependencies.web-sys]
 version = "0.3.77"
