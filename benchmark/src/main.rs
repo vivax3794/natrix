@@ -100,6 +100,35 @@ impl<const N: u32> Component for ToggleExist<N> {
     }
 }
 
+#[derive(Component, Default)]
+struct ToggleAtOnce<const N: u32> {
+    state: bool,
+}
+
+impl<const N: u32> Component for ToggleAtOnce<N> {
+    fn render() -> impl Element<Self> {
+        e::div()
+            .child(
+                e::button()
+                    .id("BUTTON")
+                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                        *ctx.state = !*ctx.state;
+                    }),
+            )
+            .child(|ctx: R<Self>| {
+                if *ctx.state {
+                    let mut res = e::div();
+                    for _ in 0..N {
+                        res = res.child(e::div().text("ON"));
+                    }
+                    Some(res)
+                } else {
+                    None
+                }
+            })
+    }
+}
+
 macro_rules! define_large_fields {
     ($($field:ident),*) => {
         #[derive(Component, Default)]
@@ -176,7 +205,12 @@ fn main() {
                 // WARNING: This does include the `mount_test` cleaning up the previous dom tree.
                 // But at least on the rust side that should be minimal in comparison to the
                 // mounting.
-                natrix::test_utils::mount_test(Buttons::<10000>::default());
+                natrix::test_utils::setup();
+                natrix::reactivity::component::mount_at(
+                    Buttons::<10000>::default(),
+                    natrix::test_utils::MOUNT_POINT,
+                )
+                .unwrap();
             })
             .await;
 
@@ -207,6 +241,14 @@ fn main() {
         natrix::test_utils::mount_test(ToggleExist::<10000>::default());
         bencher
             .bench("toggle exist", 0, |_| {
+                let button = natrix::test_utils::get("BUTTON");
+                button.click();
+            })
+            .await;
+
+        natrix::test_utils::mount_test(ToggleAtOnce::<10000>::default());
+        bencher
+            .bench("toggle at once", 0, |_| {
                 let button = natrix::test_utils::get("BUTTON");
                 button.click();
             })
