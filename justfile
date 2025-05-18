@@ -3,7 +3,9 @@ alias t := test
 alias f := full
 
 # Run the default set of quick tests
-default: test_native test_web
+default:
+    cargo +nightly nextest run --all-features -p natrix
+    cd natrix && rustup run nightly wasm-pack test --headless --chrome --all-features
 
 # Run the full set of tests and checks
 full: test check check_docs check_deps

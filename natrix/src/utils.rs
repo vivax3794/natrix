@@ -173,22 +173,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(debug_assertions, should_panic(expected = "Error in release mode"))]
-    fn test_debug_expect_release_mode() {
-        debug_expect!(Err::<(), _>("error"), "Error in release mode");
-    }
-
-    #[test]
-    #[cfg_attr(
-        debug_assertions,
-        should_panic(expected = "This won't panic in release")
-    )]
-    fn test_debug_panic_release_mode() {
-        // Should not panic in release mode
-        debug_panic!("This won't panic in release");
-    }
-
-    #[test]
     fn test_nested_drop_guards() {
         let counter = Cell::new(0);
 
@@ -205,5 +189,21 @@ mod tests {
         }
 
         assert_eq!(counter.get(), 11); // 1 + 10
+    }
+
+    #[test]
+    #[cfg_attr(debug_assertions, should_panic(expected = "Error in release mode"))]
+    fn test_debug_expect() {
+        debug_expect!(Err::<(), _>("error"), "Error in release mode");
+    }
+
+    #[test]
+    #[cfg_attr(
+        debug_assertions,
+        should_panic(expected = "This won't panic in release")
+    )]
+    fn test_debug_panic() {
+        // Should not panic in release mode
+        debug_panic!("This won't panic in release");
     }
 }

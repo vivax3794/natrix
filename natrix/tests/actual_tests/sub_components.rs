@@ -212,3 +212,80 @@ async fn on_change() {
     natrix::async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("2".to_owned()));
 }
+
+const RC_CHILD_ID: &str = "RC_CHILD";
+const START_ID: &str = "START";
+const RESULT_ID: &str = "RESULT";
+
+#[derive(Component)]
+struct RecursiveChild {
+    value: u8,
+}
+
+impl Component for RecursiveChild {
+    type EmitMessage = u8;
+    type ReceiveMessage = u8;
+
+    fn render() -> impl Element<Self> {
+        e::button().id(RC_CHILD_ID).text(|ctx: R<Self>| *ctx.value)
+    }
+
+    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage, token: EventToken) {
+        *ctx.value = msg;
+        ctx.emit(msg, token);
+    }
+}
+
+#[derive(Component)]
+struct RootRecursive {
+    max_rounds: u8,
+    last: u8,
+}
+
+impl Component for RootRecursive {
+    type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
+
+    fn render() -> impl Element<Self> {
+        |ctx: R<Self>| {
+            let (child, sender) = SubComponent::new(RecursiveChild { value: 0 }).sender();
+            let child_sender = sender.clone();
+
+            e::div()
+                .child(child.on(move |ctx: E<Self>, msg, token| {
+                    *ctx.last = msg;
+                    if msg < *ctx.max_rounds {
+                        child_sender.send(msg + 1, token);
+                    }
+                }))
+                .child(e::div().id(RESULT_ID).text(|ctx: R<Self>| *ctx.last))
+                .child(e::button().id(START_ID).text("Start").on::<events::Click>(
+                    move |_ctx: E<Self>, token, _| {
+                        sender.send(1, token);
+                    },
+                ))
+        }
+    }
+}
+
+#[wasm_bindgen_test]
+async fn recursive_message_test() {
+    use natrix::async_utils;
+    crate::mount_test(RootRecursive {
+        max_rounds: 3,
+        last: 0,
+    });
+
+    let start = crate::get(START_ID);
+    let child = crate::get(RC_CHILD_ID);
+    let result = crate::get(RESULT_ID);
+
+    assert_eq!(child.text_content(), Some("0".to_owned()));
+    assert_eq!(result.text_content(), Some("0".to_owned()));
+
+    start.click();
+    async_utils::next_animation_frame().await;
+
+    assert_eq!(child.text_content(), Some("3".to_owned()));
+    assert_eq!(result.text_content(), Some("3".to_owned()));
+}
