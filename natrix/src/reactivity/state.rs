@@ -11,9 +11,9 @@ use ouroboros::self_referencing;
 use slotmap::{SlotMap, new_key_type};
 
 use crate::async_utils;
-use crate::component::Component;
-use crate::render_callbacks::DummyHook;
-use crate::signal::{ReactiveHook, RenderingState, SignalMethods, UpdateResult};
+use crate::reactivity::component::Component;
+use crate::reactivity::render_callbacks::DummyHook;
+use crate::reactivity::signal::{ReactiveHook, RenderingState, SignalMethods, UpdateResult};
 use crate::utils::{debug_expect, debug_panic};
 
 /// Trait automatically implemented on reactive structs by the derive macro.

@@ -1,8 +1,8 @@
 //! Implementation of the `Element` trait for various abstract types.
 
-use crate::component::Component;
-use crate::signal::RenderingState;
-use crate::state::State;
+use crate::reactivity::component::Component;
+use crate::reactivity::signal::RenderingState;
+use crate::reactivity::state::State;
 use crate::type_macros;
 use crate::utils::debug_panic;
 

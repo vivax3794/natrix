@@ -1,6 +1,6 @@
-use natrix::list::List;
+use natrix::dom::List;
 use natrix::prelude::*;
-use natrix::state::State;
+use natrix::reactivity::State;
 use wasm_bindgen_test::wasm_bindgen_test;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);

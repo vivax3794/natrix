@@ -1,9 +1,9 @@
 # Testing
 
 Testing is a important part of any project. Natrix doesnt have a dedicated testing framework, instead we recommend you use [wasm-pack](https://rustwasm.github.io/wasm-pack/) to run your tests.
-But natrix does provide the [`test_utils`](test_utils) module to help with testing, which is enabled with the `test_utils` feature flag.
+But natrix does provide the [`test_utils`](crate::test_utils) module to help with testing, which is enabled with the `test_utils` feature flag.
 
-The primary functions are [`mount_test`](test_utils::mount_test) and [`get`](test_utils::get).
+The primary functions are [`mount_test`](crate::test_utils::mount_test) and [`get`](crate::test_utils::get).
 
 ## Example
 
@@ -52,15 +52,16 @@ wasm-pack test --headless --chrome --firefox
 > From out experience the firefox webdriver is very slow to spin up, and even fails at semmingly random times.
 
 ## Message Passing
+
 Due to the fact message passing between components uses async, you will need to make your test async as well to observe the changes.
 Luckily `wasm-bindgen-test` already natively supports async tests, so you can just use the `async` keyword in your test function.
-To wait until all messages have been processed, you can use [`next_animation_frame`](async_utils::next_animation_frame) from the `async_utils` feature flag.
+To wait until all messages have been processed, you can use [`next_animation_frame`](crate::async_utils::next_animation_frame) from the `async_utils` feature flag.
 
 ```rust
 # extern crate natrix;
 # extern crate wasm_bindgen_test;
 # use natrix::prelude::*;
-# 
+#
 # #[derive(Component)]
 # struct Child;
 #
@@ -72,12 +73,12 @@ To wait until all messages have been processed, you can use [`next_animation_fra
 #         })
 #     }
 # }
-# 
+#
 # #[derive(Component)]
 # struct Parent {
 #     state: u8,
 # }
-# 
+#
 # impl Component for Parent {
 #     fn render() -> impl Element<Self> {
 #         e::div()
@@ -87,13 +88,13 @@ To wait until all messages have been processed, you can use [`next_animation_fra
 #             }))
 #     }
 # }
-# 
+#
 # mod tests {
 #     use super::*;
 #     use natrix::test_utils;
 use natrix::async_utils;
 #     use wasm_bindgen_test::wasm_bindgen_test;
-# 
+#
 #     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
 #[wasm_bindgen_test]

@@ -19,18 +19,18 @@ use std::borrow::Cow;
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, intern};
 
-use crate::callbacks::EventHandler;
-use crate::component::Component;
-use crate::element::{
+use crate::dom::element::{
     DynElement,
     Element,
     ElementRenderResult,
     MaybeStaticElement,
     generate_fallback_node,
 };
-use crate::events::Event;
-use crate::signal::RenderingState;
-use crate::state::{DeferredCtx, EventToken, State};
+use crate::dom::events::Event;
+use crate::reactivity::callbacks::EventHandler;
+use crate::reactivity::component::Component;
+use crate::reactivity::signal::RenderingState;
+use crate::reactivity::state::{DeferredCtx, EventToken, State};
 use crate::utils::{debug_expect, debug_panic};
 use crate::{get_document, type_macros};
 

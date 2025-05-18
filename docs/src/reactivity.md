@@ -6,9 +6,9 @@ You have already seen `|ctx: R<Self>| ...` used in the varying examples in the b
 Lets go into some more detail about what this does.
 
 > [!TIP]
-> If you're looking to create components without state that still leverage natrix's reactivity system, see the [Stateless Components](stateless-components.md) documentation.
+> If you're looking to create components without state that still leverage natrix's reactivity system, see the [Stateless Components](reactivity::stateless-components.md) documentation.
 
-The callbacks return a value that implements [`Element`](element::Element), internally the framework will register which fields you accessed.
+The callbacks return a value that implements [`Element`](dom::element::Element), internally the framework will register which fields you accessed.
 And when those fields change, the framework will recall the callback and update the element with the result.
 
 Natrix does **_not_** use a virtual dom, meaning when a callback is re-called the framework will swap out the entire associated element.
@@ -18,11 +18,13 @@ See below for tools to mitigate this.
 > Natrix assumes render callbacks are pure, meaning they do not have side effects.
 > If you use stuff like interior mutability it will break framework assumptions,
 > and will likely lead to panics or desynced state.
-> For example using interior mutability to hold onto a [`Guard`](state::Guard) outside its intended scope will invalidate its guarantees.
+> For example using interior mutability to hold onto a [`Guard`](reactivity::state::Guard) outside its intended scope will invalidate its guarantees.
 
 ### Execution Guarantees
-Natrix *only* makes the following guarantees about when a callback will be called:
-* It will not be called if a parent is dirty.
+
+Natrix _only_ makes the following guarantees about when a callback will be called:
+
+- It will not be called if a parent is dirty.
 
 Thats, natrix does not make any guarantees about the order of sibling callbacks.
 Natrix guarantees around how often a value is called is... complex because of features such as `.watch`, in general the reactive features below should be mainly treated as very strong hints to the framework, and optimizations might cause various use cases to result in more or less calls.
@@ -50,7 +52,7 @@ e::div()
 
 This will work, but it will cause the callback to be called every time `counter` changes, even if it causes no change to the dom.
 In this case thats fine, its not a expensive update, but imagine if this was a expensive operation.
-This is where [`.watch`](state::RenderCtx::watch) comes in.
+This is where [`.watch`](reactivity::state::RenderCtx::watch) comes in.
 
 What it does is cache the result of a callback, and then it calls it on any change, but will compare the new value to the old value.
 And only re-runs the surrounding callback if the value has changed.
@@ -175,22 +177,24 @@ e::div()
 #      }
 # }
 ```
+
 This will work exactly the same as the previous example, but hides the `.unwrap()` from the user.
 
 > [!WARNING]
-> Similarly to [`DeferredRef`](state::DeferredRef) you should not hold this across a yield point.
+> Similarly to [`DeferredRef`](reactivity::state::DeferredRef) you should not hold this across a yield point.
 > `guard_option` does in fact still use `.unwrap()` internally, meaning its effectively the same as the "bad" code above.
 > It is simply a nice api that enforces the invariant that you only `.unwrap` in a context where you have done the `.is_some()` check in a parent hook.
 
-## [`List`](list::List)
+## [`List`](dom::list::List)
+
 You often have to render a list of items, and doing that in a reactive way is a bit tricky.
-The [`List`](list::List) element is a way to do this.
+The [`List`](dom::list::List) element is a way to do this.
 
 ```rust
 # extern crate natrix;
 use natrix::prelude::*;
-use natrix::state::State;
-use natrix::list::List;
+use natrix::reactivity::State;
+use natrix::dom::List;
 
 #[derive(Component)]
 struct HelloWorld {
@@ -210,16 +214,17 @@ impl Component for HelloWorld {
 }
 ```
 
-See the docs in the [`List`](list::List) module for more details.
+See the docs in the [`List`](dom::list::List) module for more details.
 
 ## Reacting to Reactive changes
+
 > [!NOTE]
 > This is for informing external code about changes to the state.
 > Such as child or parent components.
-> It should *not* be used to update internal state.
+> It should _not_ be used to update internal state.
 > For that you should instead encapsulate state updates in a method.
 
-You can use the [`.on_change`](state::RenderCtx::on_change) method to react to changes in the state.
+You can use the [`.on_change`](reactivity::state::RenderCtx::on_change) method to react to changes in the state.
 This takes two closures, one that registers the reactive state you are interested in,
 The other is the callback that will be called when the state changes.
 

@@ -2,10 +2,10 @@
 //!
 //! This is the only part of the css system that should be invoked at runtime.
 
-use crate::component::Component;
-use crate::html_elements::ToCssValue;
-use crate::signal::RenderingState;
-use crate::state::State;
+use crate::dom::html_elements::ToCssValue;
+use crate::reactivity::component::Component;
+use crate::reactivity::signal::RenderingState;
+use crate::reactivity::state::State;
 use crate::type_macros;
 use crate::utils::debug_expect;
 

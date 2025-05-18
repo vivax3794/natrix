@@ -3,8 +3,8 @@
 use std::cell::Cell;
 use std::ops::{Deref, DerefMut};
 
-use crate::component::Component;
-use crate::state::{HookKey, KeepAlive, State};
+use crate::reactivity::component::Component;
+use crate::reactivity::state::{HookKey, KeepAlive, State};
 
 /// State passed to rendering callbacks
 pub(crate) struct RenderingState<'s> {

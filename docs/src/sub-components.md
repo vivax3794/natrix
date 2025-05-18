@@ -1,6 +1,6 @@
 # Sub Components
 
-Components wouldnt be very useful if we could not compose them. Due to trait limitations we cant use components as [`Element`](element::Element)s directly. But there is a simple [`SubComponent`](component::SubComponent) wrapper to facilitate this.
+Components wouldnt be very useful if we could not compose them. Due to trait limitations we cant use components as [`Element`](dom::element::Element)s directly. But there is a simple [`SubComponent`](reactivity::component::SubComponent) wrapper to facilitate this.
 
 ```rust
 # extern crate natrix;
@@ -35,11 +35,11 @@ impl Component for MyParent {
 
 ## Message Passing
 
-A common requirement is communication between components. This is where the [`EmitMessage`](component::Component::EmitMessage) and [`ReceiveMessage`](component::Component::ReceiveMessage) associated types come in. These are used to declare what type is used for message passing to and from the component. The `NoMessages` type is a enum with no variants (i.e similar to [`Infallible`](std::convert::Infallible)) and is used when you do not need to pass messages.
+A common requirement is communication between components. This is where the [`EmitMessage`](reactivity::component::Component::EmitMessage) and [`ReceiveMessage`](reactivity::component::Component::ReceiveMessage) associated types come in. These are used to declare what type is used for message passing to and from the component. The `NoMessages` type is a enum with no variants (i.e similar to [`Infallible`](std::convert::Infallible)) and is used when you do not need to pass messages.
 
 ### Child to Parent
 
-Define the `EmitMessage` type to the type of the message you will be emitting and then use [`ctx.emit`](state::State::emit), you can then use [`.on`](component::SubComponent::on) to listen for the message in the parent component.
+Define the `EmitMessage` type to the type of the message you will be emitting and then use [`ctx.emit`](reactivity::state::State::emit), you can then use [`.on`](reactivity::component::SubComponent::on) to listen for the message in the parent component.
 
 ```rust
 # extern crate natrix;
@@ -76,12 +76,12 @@ impl Component for MyParent {
 
 ### Parent to Child
 
-Similaryly you can use [`ReceiveMessage`](component::Component::ReceiveMessage) to listen for messages from the parent component. You overwrite the default [`handle_message`](component::Component::handle_message) method to handle the message. In the parent you use [`.sender`](component::SubComponent::sender) to get a sender for the child component.
+Similaryly you can use [`ReceiveMessage`](reactivity::component::Component::ReceiveMessage) to listen for messages from the parent component. You overwrite the default [`handle_message`](reactivity::component::Component::handle_message) method to handle the message. In the parent you use [`.sender`](reactivity::component::SubComponent::sender) to get a sender for the child component.
 
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
-use natrix::state::EventToken;
+use natrix::reactivity::state::EventToken;
 
 #[derive(Component, Default)]
 struct MyChild {
@@ -117,7 +117,7 @@ impl Component for MyParent {
 }
 ```
 
-As you see this generally requires you to use a `let` binding to split the return of `.sender`. The [`Sender`](component::Sender) is also cloneable.
+As you see this generally requires you to use a `let` binding to split the return of `.sender`. The [`Sender`](reactivity::component::Sender) is also cloneable.
 
 ### When do messages get processed?
 
@@ -129,10 +129,12 @@ Theres two main ways to style a sub-component in a way the parent can control.
 Which one you should use depends on how many values you have, and how often you expect a parent to modify them.
 
 ### `css_value` in child
-Simply have reactive state for the various styling options and have message passing to update them, and then use [`.css_value`](html_elements::HtmlElement::css_value).
+
+Simply have reactive state for the various styling options and have message passing to update them, and then use [`.css_value`](dom::html_elements::HtmlElement::css_value).
 
 > [!TIP]
 > See the [HTML documentation on Inline CSS](html.md#inline-css) and the [CSS documentation](css.md) for more information about styling approaches.
 
 ### `css_value` in parent
+
 Instead you can re-export the css vars from a `scoped_css` and let a parent use them to set them on a wrapper. The downside here is that it requires wrapping the component in another element.

@@ -5,16 +5,9 @@
 #![cfg_attr(nightly, feature(cold_path))]
 
 pub mod async_utils;
-pub mod callbacks;
-pub mod component;
 pub mod css;
-pub mod element;
-pub mod events;
-pub mod html_elements;
-pub mod list;
-mod render_callbacks;
-mod signal;
-pub mod state;
+pub mod dom;
+pub mod reactivity;
 pub mod test_utils;
 mod type_macros;
 mod utils;
@@ -126,21 +119,20 @@ pub(crate) use return_if_panic;
 pub mod prelude {
     pub use natrix_macros::Component;
 
-    pub use super::component::{Component, NoMessages, SubComponent};
-    pub use super::element::Element;
-    pub use super::state::{E, R};
-    pub use super::{events, html_elements as e};
+    pub use super::dom::{Element, events, html_elements as e};
+    pub use super::reactivity::component::{Component, NoMessages, SubComponent};
+    pub use super::reactivity::state::{E, R};
 }
-pub use component::{Component, NoMessages, SubComponent, mount};
-pub use element::Element;
-pub use list::List;
+pub use dom::Element;
+pub use dom::list::List;
 pub use natrix_macros::{Component, asset, data};
-pub use state::{RenderCtx, State};
+pub use reactivity::component::{Component, NoMessages, SubComponent, mount};
+pub use reactivity::state::{RenderCtx, State};
 
 /// Public exports of internal data structures for `natrix_macros` to use in generated code.
 #[doc(hidden)]
 pub mod macro_ref {
-    pub use super::component::ComponentBase;
-    pub use super::signal::{Signal, SignalMethods, SignalState};
-    pub use super::state::{ComponentData, E, Guard, State};
+    pub use super::reactivity::component::ComponentBase;
+    pub use super::reactivity::signal::{Signal, SignalMethods, SignalState};
+    pub use super::reactivity::state::{ComponentData, E, Guard, State};
 }

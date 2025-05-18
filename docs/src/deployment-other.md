@@ -1,7 +1,7 @@
 # Usage in other frameworks
 
-The [`mount_at`](component::mount_at) function can be used to mount a natrix component at a custom location.
-This function will return a [`RenderResult`](component::RenderResult) that should be kept alive until the component is unmounted.
+The [`mount_at`](reactivity::component::mount_at) function can be used to mount a natrix component at a custom location.
+This function will return a [`RenderResult`](reactivity::component::RenderResult) that should be kept alive until the component is unmounted.
 And ideally dropped when the component is unmounted.
 
 > [!IMPORTANT]

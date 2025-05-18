@@ -2,19 +2,19 @@
 
 use std::borrow::Cow;
 
-use crate::component::Component;
-use crate::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
-use crate::events::Event;
-use crate::html_elements::{ToAttribute, ToClass, ToCssValue};
-use crate::render_callbacks::{
+use crate::dom::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
+use crate::dom::events::Event;
+use crate::dom::html_elements::{ToAttribute, ToClass, ToCssValue};
+use crate::reactivity::component::Component;
+use crate::reactivity::render_callbacks::{
     ReactiveAttribute,
     ReactiveClass,
     ReactiveCss,
     ReactiveNode,
     SimpleReactive,
 };
-use crate::signal::RenderingState;
-use crate::state::{EventToken, RenderCtx, State};
+use crate::reactivity::signal::RenderingState;
+use crate::reactivity::state::{EventToken, RenderCtx, State};
 
 impl<F, C, R> DynElement<C> for F
 where
@@ -125,7 +125,7 @@ where
 ///
 /// ```
 /// # use natrix::prelude::*;
-/// # use natrix::callbacks::EventHandler;
+/// # use natrix::reactivity::EventHandler;
 /// fn my_button<C: Component>(click: impl EventHandler<C, events::Click>) -> impl Element<C> {
 ///     e::button().on::<events::Click>(click)
 /// }

@@ -1,13 +1,12 @@
 # features
 
-
 ## opt-in features
 
 ### `nightly`
 
 this feature enables nightly only features. this includes:
 
-#### Default types for [`EmitMessage`](component::Component::EmitMessage) and [`ReceiveMessage`](component::Component::ReceiveMessage)
+#### Default types for [`EmitMessage`](reactivity::component::Component::EmitMessage) and [`ReceiveMessage`](reactivity::component::Component::ReceiveMessage)
 
 this allows you to omit these in your trait implementation, which is really nice.
 
@@ -38,18 +37,6 @@ this annotates certain framework structs as [`must_not_suspend`](https://github.
 > #![warn(must_not_suspend)]
 > ```
 
-### `async_utils`
-
-adds the [`async_utils`] module which contains stuff like a wasm compatible [`sleep`](async_utils::sleep) function.
-
-```rust
-# extern crate natrix;
-use std::time::Duration;
-async fn foo() {
-    natrix::async_utils::sleep(Duration::from_secs(1)).await;
-}
-```
-
 ### `ergonomic_ops`
 
 Implements `AddAssign`, `SubAssign`, etc on signals, allowing you to omit the dereference in certain situations.
@@ -76,14 +63,12 @@ ctx.counter += 1;
 
 Notice how we still need the dereference for a plain assignment and addition? This inconsistency is why this feature is disabled by default as many might find this confusing.
 
-### `either`
-
-Implements [`Component`](component::Component) and [`ToAttribute`](html_elements::ToAttribute) for [`Either`](https://docs.rs/either/latest/either/enum.either.html) from the `either` crate.
-
 ### `keep_console_in_release`
+
 By default natrix strips out all console logs, including your own, in release builds. (including from panics)
 This feature disables that, allowing you to see the console logs in release builds.
 
 ## default features
+
 For most complex applications you will likely need all the default features.
 But they can be disabled if you want to reduce compile times or binary size.

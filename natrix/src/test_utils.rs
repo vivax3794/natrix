@@ -5,9 +5,9 @@
 use wasm_bindgen::JsCast;
 use web_sys::HtmlElement;
 
-use crate::component::mount_at;
 use crate::get_document;
 use crate::prelude::Component;
+use crate::reactivity::component::mount_at;
 
 /// The parent of the testing env
 const MOUNT_PARENT: &str = "__TESTING_PARENT";

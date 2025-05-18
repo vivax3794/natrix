@@ -1,6 +1,6 @@
-use natrix::component::NonReactive;
-use natrix::html_elements::ToAttribute;
+use natrix::dom::ToAttribute;
 use natrix::prelude::*;
+use natrix::reactivity::NonReactive;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 wasm_bindgen_test_configure!(run_in_browser);
 

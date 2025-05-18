@@ -5,11 +5,11 @@ use std::rc::Rc;
 
 use futures_channel::mpsc::{UnboundedReceiver, UnboundedSender};
 
-use crate::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
+use crate::dom::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
+use crate::dom::html_elements::{ToAttribute, ToClass, ToCssValue};
 use crate::get_document;
-use crate::html_elements::{ToAttribute, ToClass, ToCssValue};
-use crate::signal::{RenderingState, SignalMethods};
-use crate::state::{ComponentData, E, EventToken, HookKey, KeepAlive, State};
+use crate::reactivity::signal::{RenderingState, SignalMethods};
+use crate::reactivity::state::{ComponentData, E, EventToken, HookKey, KeepAlive, State};
 use crate::utils::{debug_panic, error_log};
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
@@ -408,7 +408,7 @@ impl Component for () {
     type ReceiveMessage = NoMessages;
 
     fn render() -> impl Element<Self> {
-        crate::element::generate_fallback_node()
+        crate::dom::element::generate_fallback_node()
     }
 }
 
@@ -435,7 +435,7 @@ impl Component for () {
 ///
 /// ```rust
 /// # use natrix::prelude::*;
-/// # use natrix::component::NonReactive;
+/// # use natrix::reactivity::NonReactive;
 /// #[derive(Component)]
 /// struct MyStruct<T>(T);
 ///

@@ -4,12 +4,12 @@ use std::borrow::Cow;
 
 use wasm_bindgen::JsCast;
 
-use crate::component::Component;
-use crate::element::{ElementRenderResult, MaybeStaticElement, generate_fallback_node};
+use crate::dom::element::{ElementRenderResult, MaybeStaticElement, generate_fallback_node};
+use crate::dom::html_elements::{ToAttribute, ToClass, ToCssValue};
 use crate::get_document;
-use crate::html_elements::{ToAttribute, ToClass, ToCssValue};
-use crate::signal::{ReactiveHook, RenderingState, UpdateResult};
-use crate::state::{HookKey, KeepAlive, RenderCtx, State};
+use crate::reactivity::component::Component;
+use crate::reactivity::signal::{ReactiveHook, RenderingState, UpdateResult};
+use crate::reactivity::state::{HookKey, KeepAlive, RenderCtx, State};
 use crate::utils::{debug_expect, debug_panic};
 
 /// A noop hook used to fill the `Rc<RefCell<...>>` while the initial render pass runs so that that

@@ -90,7 +90,7 @@ impl Component for HelloWorld {
 }
 
 fn main() {
-    natrix::component::mount(HelloWorld { counter: 0 });
+    natrix::mount(HelloWorld { counter: 0 });
 }
 
 #[cfg(test)]
