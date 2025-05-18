@@ -1,0 +1,164 @@
+//! Bundle and optimize css
+
+use std::collections::HashSet;
+use std::fs;
+use std::io::Read;
+use std::path::{Path, PathBuf};
+
+use lightningcss::visitor::Visit;
+
+use super::{CSS_OUTPUT_NAME, options, utils, wasm_js};
+use crate::prelude::*;
+
+/// Collect css from the macro files
+pub(crate) fn collect_css(
+    config: &options::BuildConfig,
+    css_files: Vec<PathBuf>,
+    wasm_file: &Path,
+) -> Result<PathBuf> {
+    let spinner = utils::create_spinner("🎨 Bundling css")?;
+
+    let mut css_content = String::new();
+    for file in css_files {
+        fs::File::open(file)?.read_to_string(&mut css_content)?;
+    }
+
+    if config.profile == options::BuildProfile::Release {
+        css_content = optimize_css(&css_content, wasm_file)?;
+    }
+
+    let output_path = config.dist.join(CSS_OUTPUT_NAME);
+    fs::write(&output_path, css_content)?;
+
+    spinner.finish();
+    Ok(output_path)
+}
+
+/// Optimize the given css string
+pub(crate) fn optimize_css(css_content: &str, wasm_file: &Path) -> Result<String> {
+    let mut styles = lightningcss::stylesheet::StyleSheet::parse(
+        css_content,
+        lightningcss::stylesheet::ParserOptions {
+            filename: String::from("<BUNDLED CSS>.css"),
+            css_modules: None,
+            source_index: 0,
+            error_recovery: false,
+            warnings: None,
+            flags: lightningcss::stylesheet::ParserFlags::empty(),
+        },
+    )
+    .map_err(|err| anyhow!("Failed to parse css {err}"))?;
+
+    let wasm_strings = wasm_js::get_wasm_strings(wasm_file)?;
+    let mut unused_symbols = get_symbols(&mut styles);
+    // `wasm_strings` is a vec of data sections, so we need to check if the symbol is in any of
+    // them as wasm optimizes multiple string literals to the same section
+    unused_symbols.retain(|symbol| wasm_strings.iter().all(|x| !x.contains(symbol)));
+
+    let targets = lightningcss::targets::Targets::default();
+    styles.minify(lightningcss::stylesheet::MinifyOptions {
+        targets,
+        unused_symbols,
+    })?;
+
+    let css_content = styles.to_css(lightningcss::printer::PrinterOptions {
+        analyze_dependencies: None,
+        minify: true,
+        project_root: None,
+        pseudo_classes: None,
+        targets,
+    })?;
+
+    let css_content = css_content.code;
+
+    Ok(css_content)
+}
+
+/// Visitor to extract symbosl from a stylesheet
+pub(crate) struct SymbolVisitor {
+    /// The collected symbols
+    pub(crate) symbols: HashSet<String>,
+    /// Symbols the should always be kept
+    pub(crate) keep: HashSet<String>,
+}
+
+impl<'i> lightningcss::visitor::Visitor<'i> for SymbolVisitor {
+    type Error = std::convert::Infallible;
+    fn visit_types(&self) -> lightningcss::visitor::VisitTypes {
+        lightningcss::visit_types!(SELECTORS | RULES)
+    }
+
+    fn visit_rule(
+        &mut self,
+        rule: &mut lightningcss::rules::CssRule<'i>,
+    ) -> std::result::Result<(), Self::Error> {
+        if let lightningcss::rules::CssRule::Unknown(unknown_rule) = rule {
+            if unknown_rule.name == "keep" {
+                let tokens = &unknown_rule.prelude.0;
+                if let Some(token) = tokens.first() {
+                    match token {
+                        lightningcss::properties::custom::TokenOrValue::Token(
+                            lightningcss::properties::custom::Token::Ident(ident),
+                        ) => {
+                            let ident = ident.to_string();
+                            self.keep.insert(ident);
+                        }
+                        lightningcss::properties::custom::TokenOrValue::DashedIdent(ident) => {
+                            let ident = ident.to_string();
+                            self.keep.insert(ident);
+                        }
+                        _ => (),
+                    }
+                }
+                *rule = lightningcss::rules::CssRule::Ignored;
+            }
+        }
+        rule.visit_children(self)
+    }
+
+    fn visit_selector(
+        &mut self,
+        selector: &mut lightningcss::selector::Selector<'i>,
+    ) -> std::result::Result<(), Self::Error> {
+        use lightningcss::selector::Component;
+        for part in selector.iter_mut_raw_match_order() {
+            match part {
+                Component::Class(class) => {
+                    self.symbols.insert(class.to_string());
+                }
+                Component::ID(id) => {
+                    self.symbols.insert(id.to_string());
+                }
+                Component::Negation(lst) | Component::Is(lst) | Component::Where(lst) => {
+                    for selector in lst.iter_mut() {
+                        self.visit_selector(selector)?;
+                    }
+                }
+                _ => (),
+            }
+        }
+        Ok(())
+    }
+
+    fn visit_selector_list(
+        &mut self,
+        selectors: &mut lightningcss::selector::SelectorList<'i>,
+    ) -> std::result::Result<(), Self::Error> {
+        for selector in &mut selectors.0 {
+            self.visit_selector(selector)?;
+        }
+        Ok(())
+    }
+}
+
+/// Get the symbols to DCE in a style sheet
+pub(crate) fn get_symbols(
+    stylesheet: &mut lightningcss::stylesheet::StyleSheet,
+) -> HashSet<String> {
+    let mut visitor = SymbolVisitor {
+        symbols: HashSet::new(),
+        keep: HashSet::new(),
+    };
+    let _ = stylesheet.visit(&mut visitor);
+    visitor.symbols.difference(&visitor.keep).cloned().collect()
+}
