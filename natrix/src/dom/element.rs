@@ -1,8 +1,9 @@
 //! Implementation of the `Element` trait for various abstract types.
 
 use crate::reactivity::component::Component;
+use crate::reactivity::render_callbacks::ReactiveNode;
 use crate::reactivity::signal::RenderingState;
-use crate::reactivity::state::State;
+use crate::reactivity::state::{RenderCtx, State};
 use crate::type_macros;
 use crate::utils::debug_panic;
 
@@ -180,5 +181,35 @@ impl<C: Component> Element<C> for MaybeStaticElement<C> {
     #[inline]
     fn into_generic(self) -> MaybeStaticElement<C> {
         self
+    }
+}
+
+impl<F, C, R> DynElement<C> for F
+where
+    F: Fn(&mut RenderCtx<C>) -> R + 'static,
+    R: Element<C> + 'static,
+    C: Component,
+{
+    fn render(
+        self: Box<Self>,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+    ) -> ElementRenderResult {
+        let this = *self;
+        let (me, node) =
+            ReactiveNode::create_initial(Box::new(move |ctx| this(ctx).into_generic()), ctx);
+        render_state.hooks.push(me);
+        ElementRenderResult::Node(node)
+    }
+}
+
+impl<F, C, R> Element<C> for F
+where
+    F: Fn(&mut RenderCtx<C>) -> R + 'static,
+    R: Element<C> + 'static,
+    C: Component,
+{
+    fn into_generic(self) -> MaybeStaticElement<C> {
+        MaybeStaticElement::Dynamic(Box::new(self))
     }
 }

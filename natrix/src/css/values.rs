@@ -2,12 +2,49 @@
 //!
 //! This is the only part of the css system that should be invoked at runtime.
 
-use crate::dom::html_elements::ToCssValue;
 use crate::reactivity::component::Component;
+use crate::reactivity::render_callbacks::{ReactiveCss, SimpleReactive};
 use crate::reactivity::signal::RenderingState;
-use crate::reactivity::state::State;
+use crate::reactivity::state::{RenderCtx, State};
 use crate::type_macros;
 use crate::utils::debug_expect;
+
+/// A trait for converting a value to a CSS var value.
+pub trait ToCssValue<C: Component> {
+    /// Apply the css value
+    fn apply_css(
+        self: Box<Self>,
+        name: &'static str,
+        node: &web_sys::HtmlElement,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+    );
+}
+
+impl<C, F, T> ToCssValue<C> for F
+where
+    C: Component,
+    T: ToCssValue<C> + 'static,
+    F: Fn(&mut RenderCtx<C>) -> T + 'static,
+{
+    fn apply_css(
+        self: Box<Self>,
+        name: &'static str,
+        node: &web_sys::HtmlElement,
+        ctx: &mut State<C>,
+        render_state: &mut RenderingState,
+    ) {
+        let hook = SimpleReactive::init_new(
+            Box::new(move |ctx| ReactiveCss {
+                property: name,
+                data: self(ctx),
+            }),
+            node.clone().into(),
+            ctx,
+        );
+        render_state.hooks.push(hook);
+    }
+}
 
 /// A numeric css value
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

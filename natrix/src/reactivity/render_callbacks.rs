@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use wasm_bindgen::JsCast;
 
 use crate::dom::element::{ElementRenderResult, MaybeStaticElement, generate_fallback_node};
-use crate::dom::html_elements::{ToAttribute, ToClass, ToCssValue};
+use crate::dom::{ToAttribute, ToClass, ToCssValue};
 use crate::get_document;
 use crate::reactivity::component::Component;
 use crate::reactivity::signal::{ReactiveHook, RenderingState, UpdateResult};

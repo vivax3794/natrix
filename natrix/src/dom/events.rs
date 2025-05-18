@@ -2,12 +2,35 @@
 
 use wasm_bindgen::JsCast;
 
+use crate::reactivity::state::{EventToken, State};
+
 /// Trait for converting a struct to needed event info.
 pub(crate) trait Event {
     /// The js event the handler gets
     type JsEvent: JsCast;
     /// The actual name
     const EVENT_NAME: &str;
+}
+/// Utility trait for use in stateless components
+///
+/// When defining a stateless component it is much easier to use `impl Event<C>` than writing out
+/// the whole function trait yourself.
+///
+/// ```
+/// # use natrix::prelude::*;
+/// # use natrix::dom::EventHandler;
+/// fn my_button<C: Component>(click: impl EventHandler<C, events::Click>) -> impl Element<C> {
+///     e::button().on::<events::Click>(click)
+/// }
+/// ```
+pub trait EventHandler<C, E: Event> {
+    /// Return a boxed version of the function in this event
+    fn func(self) -> impl Fn(&mut State<C>, EventToken, E::JsEvent) + 'static;
+}
+impl<C, E: Event, F: Fn(&mut State<C>, EventToken, E::JsEvent) + 'static> EventHandler<C, E> for F {
+    fn func(self) -> impl Fn(&mut State<C>, EventToken, E::JsEvent) + 'static {
+        self
+    }
 }
 
 /// Implement `Event`
