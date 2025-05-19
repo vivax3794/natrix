@@ -182,7 +182,6 @@ pub(crate) fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         .arg("--strip-debug")
         .arg("--strip-dwarf")
         .arg("--strip-producers")
-        .arg("--strip-eh")
         .arg("--strip-target-features");
     command.args(["--converge", "-Oz"]);
 
