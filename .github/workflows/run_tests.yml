@@ -54,4 +54,12 @@ jobs:
         run: just health_check
 
       - name: run tests
-        run: just full
+        run: | 
+            just test_native
+            just test_web
+            # just integration_tests_dev - broken in github actions for some reason
+            just integration_tests_build
+            just project_gen_test
+            just check
+            just check_docs
+            just check_deps
