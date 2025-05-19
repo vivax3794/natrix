@@ -173,7 +173,7 @@ health_check:
     command -v wasm-bindgen || (echo "wasm-bindgen not found, required for building wasm" && exit 1)
     command -v cargo-deny || (echo "cargo-deny not found, required for security checks" && exit 1)
     command -v cargo-about || (echo "cargo-about not found, required for license generation" && exit 1)
-    command -v cargo-udeps || (echo "cargo-udeps not found, required for depdency checks" && exit 1)
+    command -v cargo-udeps || (echo "cargo-udeps not found, required for dependency checks" && exit 1)
 
 # Generate and open public docs
 docs:
