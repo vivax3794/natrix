@@ -36,6 +36,8 @@ allow_attributes = "deny"
 allow_attributes_without_reason = "deny"
 arithmetic_side_effects = "deny"
 missing_docs_in_private_items = "warn"
-type_complexity = { level = "allow" }
+type_complexity = "allow"
 panic = { level = "deny", priority = 0 }
 
+# https://github.com/rust-lang/rust-clippy/issues/14825
+collapsible-if = "allow"
