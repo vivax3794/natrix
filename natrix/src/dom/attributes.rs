@@ -1,16 +1,17 @@
 //! Convert various values to html attributes
 
+use std::borrow::Cow;
+
 use super::html_elements::DeferredFunc;
 use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::{ReactiveAttribute, SimpleReactive};
 use crate::reactivity::state::RenderCtx;
 use crate::type_macros;
-use crate::utils::debug_expect;
 
 /// The result of apply attribute
 pub(crate) enum AttributeResult<C: Component> {
     /// The attribute was set
-    SetIt,
+    SetIt(Option<Cow<'static, str>>),
     /// The attribute was dynamic
     IsDynamic(DeferredFunc<C>),
 }
@@ -25,49 +26,39 @@ pub trait ToAttribute<C: Component>: 'static {
     ///
     /// We use this apply system instead of returning the value as some types will also need to
     /// conditionally remove the attribute
-    fn apply_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C>;
+    fn calc_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C>;
 }
 
 /// generate a `ToAttribute` implementation for a string type
 macro_rules! attribute_string {
-    ($t:ty) => {
+    ($t:ty, $cow:expr) => {
         impl<C: Component> ToAttribute<C> for $t {
-            fn apply_attribute(
+            fn calc_attribute(
                 self,
-                name: &'static str,
-                node: &web_sys::Element,
+                _name: &'static str,
+                _node: &web_sys::Element,
             ) -> AttributeResult<C> {
-                debug_expect!(
-                    node.set_attribute(name, &self),
-                    "Failed to set attribute {name}"
-                );
-
-                AttributeResult::SetIt
+                AttributeResult::SetIt(Some(($cow)(self)))
             }
         }
     };
 }
 
-type_macros::strings!(attribute_string);
+type_macros::strings_cow!(attribute_string);
 
 /// generate `ToAttribute` for a int using itoa
 macro_rules! attribute_int {
     ($t:ident, $fmt:ident) => {
         impl<C: Component> ToAttribute<C> for $t {
-            fn apply_attribute(
+            fn calc_attribute(
                 self,
-                name: &'static str,
-                node: &web_sys::Element,
+                _name: &'static str,
+                _node: &web_sys::Element,
             ) -> AttributeResult<C> {
                 let mut buffer = $fmt::Buffer::new();
                 let result = buffer.format(self);
 
-                debug_expect!(
-                    node.set_attribute(name, result),
-                    "Failed to set attribute {name}"
-                );
-
-                AttributeResult::SetIt
+                AttributeResult::SetIt(Some(Cow::from(result.to_string())))
             }
         }
     };
@@ -76,43 +67,26 @@ macro_rules! attribute_int {
 type_macros::numerics!(attribute_int);
 
 impl<C: Component> ToAttribute<C> for bool {
-    fn apply_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
-        if self {
-            debug_expect!(
-                node.set_attribute(name, ""),
-                "Failed to set attribute {name}"
-            );
-        } else {
-            debug_expect!(
-                node.remove_attribute(name),
-                "Failed to remove attribute {name}"
-            );
-        }
-
-        AttributeResult::SetIt
+    fn calc_attribute(self, _name: &'static str, _node: &web_sys::Element) -> AttributeResult<C> {
+        AttributeResult::SetIt(self.then(|| Cow::from("")))
     }
 }
 
 impl<C: Component, T: ToAttribute<C>> ToAttribute<C> for Option<T> {
-    fn apply_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
+    fn calc_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
         if let Some(inner) = self {
-            Box::new(inner).apply_attribute(name, node)
+            inner.calc_attribute(name, node)
         } else {
-            debug_expect!(
-                node.remove_attribute(name),
-                "Failed to remove attribute {name}"
-            );
-
-            AttributeResult::SetIt
+            AttributeResult::SetIt(None)
         }
     }
 }
 
 impl<C: Component, T: ToAttribute<C>, E: ToAttribute<C>> ToAttribute<C> for Result<T, E> {
-    fn apply_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
+    fn calc_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
         match self {
-            Ok(inner) => Box::new(inner).apply_attribute(name, node),
-            Err(inner) => Box::new(inner).apply_attribute(name, node),
+            Ok(inner) => inner.calc_attribute(name, node),
+            Err(inner) => inner.calc_attribute(name, node),
         }
     }
 }
@@ -123,7 +97,7 @@ where
     R: ToAttribute<C>,
     C: Component,
 {
-    fn apply_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
+    fn calc_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
         let node = node.clone();
 
         AttributeResult::IsDynamic(Box::new(move |ctx, render_state| {

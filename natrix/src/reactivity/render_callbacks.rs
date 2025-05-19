@@ -242,8 +242,19 @@ impl<C: Component, T: ToAttribute<C>> ReactiveValue<C> for ReactiveAttribute<T> 
         node: &web_sys::Element,
         _state: &mut Self::State,
     ) {
-        match self.data.apply_attribute(self.name, node) {
-            AttributeResult::SetIt => {}
+        match self.data.calc_attribute(self.name, node) {
+            AttributeResult::SetIt(Some(res)) => {
+                debug_expect!(
+                    node.set_attribute(self.name, &res),
+                    "Failed to update attribute"
+                );
+            }
+            AttributeResult::SetIt(None) => {
+                debug_expect!(
+                    node.remove_attribute(self.name),
+                    "Failed to remove attribute"
+                );
+            }
             AttributeResult::IsDynamic(apply) => apply(ctx, render_state),
         }
     }
@@ -274,8 +285,10 @@ impl<C: Component, T: ToClass<C>> ReactiveValue<C> for ReactiveClass<T> {
             );
         }
 
-        let new = match self.data.apply_class(node) {
-            ClassResult::AppliedIt(res) => res,
+        let new = match self.data.calc_class(node) {
+            ClassResult::AppliedIt(res) => res.inspect(|res| {
+                debug_expect!(class_list.add_1(res), "Failed to add class");
+            }),
             ClassResult::Dynamic(dynamic) => {
                 dynamic(ctx, render_state);
                 None

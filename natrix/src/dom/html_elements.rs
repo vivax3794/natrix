@@ -190,8 +190,15 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// Add a attribute to the node.
     #[inline]
     pub fn attr(mut self, key: &'static str, value: impl ToAttribute<C>) -> Self {
-        match value.apply_attribute(key, &self.element) {
-            AttributeResult::SetIt => {}
+        match value.calc_attribute(key, &self.element) {
+            AttributeResult::SetIt(res) => {
+                if let Some(res) = res {
+                    debug_expect!(
+                        self.element.set_attribute(key, &res),
+                        "Failed to set attribute"
+                    );
+                }
+            }
             AttributeResult::IsDynamic(dynamic) => {
                 self.deferred.push(Box::new(dynamic));
             }
@@ -203,8 +210,12 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// Add a class to the element.
     #[inline]
     pub fn class(mut self, class: impl ToClass<C> + 'static) -> Self {
-        match class.apply_class(&self.element) {
-            ClassResult::AppliedIt(_) => {}
+        match class.calc_class(&self.element) {
+            ClassResult::AppliedIt(res) => {
+                if let Some(res) = res {
+                    debug_expect!(self.element.class_list().add_1(&res), "Failed to add class");
+                }
+            }
             ClassResult::Dynamic(dynamic) => {
                 self.deferred.push(Box::new(dynamic));
             }
@@ -215,6 +226,7 @@ impl<C: Component, T> HtmlElement<C, T> {
 }
 
 impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
+    #[inline]
     fn into_generic(self) -> MaybeStaticElement<C> {
         MaybeStaticElement::Html(self.generic())
     }

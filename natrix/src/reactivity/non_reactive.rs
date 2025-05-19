@@ -91,15 +91,20 @@ impl<E: Element<()>, C: Component> DynElement<C> for NonReactive<E> {
 }
 
 impl<A: ToAttribute<()>, C: Component> ToAttribute<C> for NonReactive<A> {
-    fn apply_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
-        self.0.apply_attribute(name, node);
-        AttributeResult::SetIt
+    fn calc_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
+        match self.0.calc_attribute(name, node) {
+            AttributeResult::SetIt(res) => AttributeResult::SetIt(res),
+            AttributeResult::IsDynamic(_) => {
+                debug_panic!("Dynamic attribute in `NonReactive` context");
+                AttributeResult::SetIt(None)
+            }
+        }
     }
 }
 
 impl<A: ToClass<()>, C: Component> ToClass<C> for NonReactive<A> {
-    fn apply_class(self, node: &web_sys::Element) -> ClassResult<C> {
-        match self.0.apply_class(node) {
+    fn calc_class(self, node: &web_sys::Element) -> ClassResult<C> {
+        match self.0.calc_class(node) {
             ClassResult::AppliedIt(res) => ClassResult::AppliedIt(res),
             ClassResult::Dynamic(_) => {
                 debug_panic!("Dynamic class in `NonReactive` context");

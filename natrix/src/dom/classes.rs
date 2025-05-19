@@ -7,7 +7,6 @@ use crate::reactivity::Component;
 use crate::reactivity::render_callbacks::{ReactiveClass, SimpleReactive};
 use crate::reactivity::state::RenderCtx;
 use crate::type_macros;
-use crate::utils::debug_expect;
 
 /// The result of applying a class
 pub(crate) enum ClassResult<C: Component> {
@@ -20,16 +19,14 @@ pub(crate) enum ClassResult<C: Component> {
 /// A trait for converting a value to a class name
 pub trait ToClass<C: Component> {
     /// Convert the value to a class name
-    fn apply_class(self, node: &web_sys::Element) -> ClassResult<C>;
+    fn calc_class(self, node: &web_sys::Element) -> ClassResult<C>;
 }
 
 /// Generate a `ToClass` implementation for a string type
 macro_rules! class_string {
     ($type:ty, $cow:expr) => {
         impl<C: Component> ToClass<C> for $type {
-            fn apply_class(self, node: &web_sys::Element) -> ClassResult<C> {
-                let class_list = node.class_list();
-                debug_expect!(class_list.add_1(&self), "Failed to add class {self}");
+            fn calc_class(self, _node: &web_sys::Element) -> ClassResult<C> {
                 ClassResult::AppliedIt(Some(($cow)(self)))
             }
         }
@@ -38,9 +35,9 @@ macro_rules! class_string {
 type_macros::strings_cow!(class_string);
 
 impl<C: Component, T: ToClass<C>> ToClass<C> for Option<T> {
-    fn apply_class(self, node: &web_sys::Element) -> ClassResult<C> {
+    fn calc_class(self, node: &web_sys::Element) -> ClassResult<C> {
         if let Some(inner) = self {
-            Box::new(inner).apply_class(node)
+            inner.calc_class(node)
         } else {
             ClassResult::AppliedIt(None)
         }
@@ -48,10 +45,10 @@ impl<C: Component, T: ToClass<C>> ToClass<C> for Option<T> {
 }
 
 impl<C: Component, T: ToClass<C>, E: ToClass<C>> ToClass<C> for Result<T, E> {
-    fn apply_class(self, node: &web_sys::Element) -> ClassResult<C> {
+    fn calc_class(self, node: &web_sys::Element) -> ClassResult<C> {
         match self {
-            Ok(inner) => Box::new(inner).apply_class(node),
-            Err(inner) => Box::new(inner).apply_class(node),
+            Ok(inner) => inner.calc_class(node),
+            Err(inner) => inner.calc_class(node),
         }
     }
 }
@@ -62,7 +59,7 @@ where
     R: ToClass<C> + 'static,
     C: Component,
 {
-    fn apply_class(self, node: &web_sys::Element) -> ClassResult<C> {
+    fn calc_class(self, node: &web_sys::Element) -> ClassResult<C> {
         let node = node.clone();
         ClassResult::Dynamic(Box::new(move |ctx, rendering_state| {
             let hook = SimpleReactive::init_new(
