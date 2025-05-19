@@ -4,6 +4,8 @@ use std::borrow::Cow;
 
 use wasm_bindgen::JsCast;
 
+use crate::dom::attributes::AttributeResult;
+use crate::dom::classes::ClassResult;
 use crate::dom::element::{ElementRenderResult, MaybeStaticElement, generate_fallback_node};
 use crate::dom::{ToAttribute, ToClass, ToCssValue};
 use crate::get_document;
@@ -240,7 +242,10 @@ impl<C: Component, T: ToAttribute<C>> ReactiveValue<C> for ReactiveAttribute<T> 
         node: &web_sys::Element,
         _state: &mut Self::State,
     ) {
-        Box::new(self.data).apply_attribute(self.name, node, ctx, render_state);
+        match self.data.apply_attribute(self.name, node) {
+            AttributeResult::SetIt => {}
+            AttributeResult::IsDynamic(apply) => apply(ctx, render_state),
+        }
     }
 }
 
@@ -269,7 +274,13 @@ impl<C: Component, T: ToClass<C>> ReactiveValue<C> for ReactiveClass<T> {
             );
         }
 
-        let new = Box::new(self.data).apply_class(node, ctx, render_state);
+        let new = match self.data.apply_class(node) {
+            ClassResult::AppliedIt(res) => res,
+            ClassResult::Dynamic(dynamic) => {
+                dynamic(ctx, render_state);
+                None
+            }
+        };
         *state = new;
     }
 }

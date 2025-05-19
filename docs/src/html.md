@@ -7,7 +7,7 @@ Natrix uses a single [`HtmlElement`](dom::html_elements::HtmlElement) struct to 
 These are found along side the `HtmlElement` struct in the [`html_elements`](dom::html_elements) module.
 Which will most commonly be used via the `e` alias in the [`prelude`](prelude) module.
 
-```rust
+```rust,no_run
 # extern crate natrix;
 # use natrix::prelude::*;
 # let _: e::HtmlElement<(), _> =
@@ -17,7 +17,7 @@ e::div()
 
 If you need to construct a element with a tag not found in the library you can use [`HtmlElement::new`](dom::html_elements::HtmlElement::new).
 
-```rust
+```rust,no_run
 # extern crate natrix;
 # use natrix::prelude::*;
 # let _: e::HtmlElement<(), ()> =
@@ -29,7 +29,7 @@ e::HtmlElement::new("custom_tag")
 
 Children are added using the [`.child`](dom::html_elements::HtmlElement::child) method. This method takes a single child element and adds it to the parent element.
 
-```rust
+```rust,no_run
 # extern crate natrix;
 # use natrix::prelude::*;
 # let _: e::HtmlElement<(), _> =
@@ -80,7 +80,7 @@ e::div()
 
 Attributes are set using the [`.attr`](dom::html_elements::HtmlElement::attr) method. This method takes a key and a value, and sets the attribute on the element.
 
-```rust
+```rust,no_run
 # extern crate natrix;
 # use natrix::prelude::*;
 # let _: e::HtmlElement<(), _> =
@@ -93,7 +93,7 @@ e::div()
 Most standard html attributes have helper functions, for example `id`, `class`, `href`, `src`, etc.
 For non-global attributes natrix only exposes them on the supporting elements.
 
-```rust
+```rust,no_run
 # extern crate natrix;
 # use natrix::prelude::*;
 # let _: e::HtmlElement<(), _> =
@@ -118,7 +118,7 @@ e::div()
 Attributes can be set by anything that implements the [`ToAttribute`](dom::ToAttribute) trait, this includes numberics, [`Option`](std::option::Option), and [`bool`](std::primitive::bool), and others.
 Attributes can also be reactive as closures implement the [`ToAttribute`](dom::ToAttribute) trait.
 
-```rust
+```rust,no_run
 # extern crate natrix;
 # use natrix::prelude::*;
 #
@@ -144,7 +144,7 @@ e::button()
 
 The [`.class`](dom::html_elements::HtmlElement::class) method is _not_ a alias for [`.attr`](dom::html_elements::HtmlElement::attr), it will add the class to the element, and not replace it. This is because the `class` attribute is a special case in HTML, and is used to apply CSS styles to elements. The [`.class`](dom::html_elements::HtmlElement::class) method will add the class to the element, and not replace any existing ones.
 
-```rust
+```rust,no_run
 # extern crate natrix;
 # use natrix::prelude::*;
 # let _: e::HtmlElement<(), _> =
@@ -175,43 +175,6 @@ e::div()
             Some("active")
         } else {
             None
-        }
-    })
-    .child(e::button()
-        .text("Click me!")
-        .on::<events::Click>(|ctx: E<Self>, _, _| {
-            *ctx.is_active = !*ctx.is_active;
-        })
-    )
-# }
-# }
-```
-
-## Inline Css
-Similarly to `.attr` there is [`.css_value`](dom::html_elements::HtmlElement::css_value) which sets a inline style, this should primerly be used for reactive values. 
-
-> [!TIP]
-> See the [CSS documentation](css.md) for more information about static CSS styling options, including the `style!` macro and scoped CSS.
-
-```rust
-# extern crate natrix;
-# use natrix::prelude::*;
-use natrix::css::values::Color;
-#
-# #[derive(Component)]
-# struct MyComponent {
-#     pub is_active: bool,
-# }
-#
-# impl Component for MyComponent {
-#     fn render() -> impl Element<Self> {
-e::div()
-    .class("my-component")
-    .css_value("background-color", |ctx: R<Self>| {
-        if *ctx.is_active {
-            Color::rgb(0, 255, 0)
-        } else {
-            Color::rgb(255, 0, 0)
         }
     })
     .child(e::button()

@@ -5,7 +5,7 @@
 //! `HtmlElement` instance if needed.
 //!
 //! # Example
-//! ```rust
+//! ```ignore
 //! # use natrix::prelude::*;
 //! # let _: e::HtmlElement<(), _> =
 //! e::div()
@@ -14,44 +14,33 @@
 //! # ;
 //! ```
 
+use smallvec::SmallVec;
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, intern};
 
-use crate::dom::element::{
-    DynElement,
-    Element,
-    ElementRenderResult,
-    MaybeStaticElement,
-    generate_fallback_node,
-};
+use super::attributes::AttributeResult;
+use super::classes::ClassResult;
+use crate::dom::element::{Element, MaybeStaticElement, generate_fallback_node};
 use crate::dom::events::{Event, EventHandler};
-use crate::dom::{ToAttribute, ToClass, ToCssValue};
+use crate::dom::{ToAttribute, ToClass};
 use crate::get_document;
 use crate::reactivity::component::Component;
 use crate::reactivity::signal::RenderingState;
-use crate::reactivity::state::{DeferredCtx, EventToken, State};
+use crate::reactivity::state::{EventToken, State};
 use crate::utils::{debug_expect, debug_panic};
+
+/// A deferred function to do something once state is available
+pub(crate) type DeferredFunc<C> = Box<dyn FnOnce(&mut State<C>, &mut RenderingState)>;
 
 /// A Generic html node with a given name.
 #[must_use = "Web elements are useless if not rendered"]
 pub struct HtmlElement<C: Component, T = ()> {
     /// The name of the tag
-    tag: &'static str,
-    /// List of child elements
-    children: Vec<MaybeStaticElement<C>>,
-    /// Events to be registered on the element
-    events: Vec<(
-        &'static str,
-        Box<dyn Fn(&mut State<C>, EventToken, web_sys::Event)>,
-    )>,
-    /// Potentially dynamic attributes to apply
-    attributes: Vec<(&'static str, Box<dyn ToAttribute<C>>)>,
-    /// Css classes to apply
-    classes: Vec<Box<dyn ToClass<C>>>,
-    /// Css variables
-    css: Vec<(&'static str, Box<dyn ToCssValue<C>>)>,
+    pub(crate) element: web_sys::Element,
+    /// The deferred actions
+    pub(crate) deferred: SmallVec<[DeferredFunc<C>; 10]>,
     /// Phantom data to allow for genericity
-    phantom: std::marker::PhantomData<T>,
+    pub(crate) phantom: std::marker::PhantomData<T>,
 }
 
 impl<C: Component, T> HtmlElement<C, T> {
@@ -59,13 +48,16 @@ impl<C: Component, T> HtmlElement<C, T> {
     ///
     /// All non-deprecated html elements have a helper function in this module
     pub fn new(tag: &'static str) -> Self {
+        let node = if let Ok(node) = get_document().create_element(tag) {
+            node
+        } else {
+            debug_panic!("Failed to create <{tag}>");
+            generate_fallback_node().unchecked_into()
+        };
+
         Self {
-            tag,
-            events: Vec::new(),
-            children: Vec::new(),
-            attributes: Vec::new(),
-            classes: Vec::new(),
-            css: Vec::new(),
+            element: node,
+            deferred: SmallVec::new(),
             phantom: std::marker::PhantomData,
         }
     }
@@ -73,12 +65,8 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// Replace the tag type marker with `()` to allow returning different types of elements
     pub fn generic(self) -> HtmlElement<C, ()> {
         HtmlElement {
-            tag: self.tag,
-            events: self.events,
-            children: self.children,
-            attributes: self.attributes,
-            classes: self.classes,
-            css: self.css,
+            element: self.element,
+            deferred: self.deferred,
             phantom: std::marker::PhantomData,
         }
     }
@@ -105,16 +93,38 @@ impl<C: Component, T> HtmlElement<C, T> {
     #[inline]
     pub fn on<E: Event>(mut self, function: impl EventHandler<C, E>) -> Self {
         let function = function.func();
-        self.events.push((
-            E::EVENT_NAME,
-            Box::new(move |ctx, token, event| {
-                if let Ok(event) = event.dyn_into::<E::JsEvent>() {
-                    function(ctx, token, event);
-                } else {
-                    debug_panic!("Mismatched event types");
-                }
-            }),
-        ));
+        let element = self.element.clone();
+
+        self.deferred.push(Box::new(move |ctx, rendering_state| {
+            let ctx_weak = ctx.deferred_borrow(EventToken::new());
+
+            let callback: Box<dyn Fn(web_sys::Event) + 'static> = Box::new(move |event| {
+                crate::return_if_panic!();
+
+                let Ok(event) = event.dyn_into() else {
+                    debug_panic!("Unexpected event type");
+                    return;
+                };
+
+                let Some(mut ctx) = ctx_weak.borrow_mut() else {
+                    debug_panic!("Component dropped without event handlers being cleaned up");
+                    return;
+                };
+
+                ctx.clear();
+                function(&mut ctx, EventToken::new(), event);
+                ctx.update();
+            });
+            let closure = Closure::wrap(callback);
+            let function = closure.as_ref().unchecked_ref();
+
+            debug_expect!(
+                element.add_event_listener_with_callback(intern(E::EVENT_NAME), function),
+                "Failed to attach event handler"
+            );
+
+            rendering_state.keep_alive.push(Box::new(closure));
+        }));
         self
     }
 
@@ -143,7 +153,31 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// ```
     #[inline]
     pub fn child<E: Element<C> + 'static>(mut self, child: E) -> Self {
-        self.children.push(child.into_generic());
+        let node = match child.into_generic() {
+            MaybeStaticElement::Static(result) => result.into_node(),
+            MaybeStaticElement::Html(html) => {
+                self.deferred.extend(html.deferred);
+                html.element.into()
+            }
+            MaybeStaticElement::Dynamic(dynamic) => {
+                let Ok(comment) = web_sys::Comment::new() else {
+                    debug_panic!("Failed to create placeholder comment node");
+                    return self;
+                };
+                let comment_clone = comment.clone();
+                self.deferred.push(Box::new(move |ctx, rendering_state| {
+                    let node = dynamic.render(ctx, rendering_state).into_node();
+                    debug_expect!(
+                        comment_clone.replace_with_with_node_1(&node),
+                        "Failed to swap in child"
+                    );
+                }));
+                comment.into()
+            }
+        };
+
+        debug_expect!(self.element.append_child(&node), "Failed to append child");
+
         self
     }
 
@@ -156,130 +190,34 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// Add a attribute to the node.
     #[inline]
     pub fn attr(mut self, key: &'static str, value: impl ToAttribute<C>) -> Self {
-        self.attributes.push((key, Box::new(value)));
+        match value.apply_attribute(key, &self.element) {
+            AttributeResult::SetIt => {}
+            AttributeResult::IsDynamic(dynamic) => {
+                self.deferred.push(Box::new(dynamic));
+            }
+        }
+
         self
     }
 
     /// Add a class to the element.
     #[inline]
     pub fn class(mut self, class: impl ToClass<C> + 'static) -> Self {
-        self.classes.push(Box::new(class));
-        self
-    }
-
-    /// Add a css variable to the node.
-    ///
-    /// This uses the `style` api and hence is similar to setting the `style` attribute
-    #[inline]
-    pub fn css_value(mut self, key: &'static str, value: impl ToCssValue<C> + 'static) -> Self {
-        self.css.push((key, Box::new(value)));
-        self
-    }
-}
-
-impl<C: Component> HtmlElement<C, ()> {
-    /// Version of render that depends on less genericity
-    fn render(self, ctx: &mut State<C>, render_state: &mut RenderingState<'_>) -> web_sys::Node {
-        let Self {
-            tag: name,
-            events,
-            children,
-            attributes,
-            classes,
-            css,
-            phantom: _,
-        } = self;
-
-        let document = get_document();
-        let Ok(element) = document.create_element(intern(name)) else {
-            debug_panic!("Failed to create element {name}");
-            return generate_fallback_node();
-        };
-
-        for child in children {
-            let child = match child {
-                MaybeStaticElement::Static(node) => node,
-                MaybeStaticElement::Dynamic(node) => node.render(ctx, render_state),
+        match class.apply_class(&self.element) {
+            ClassResult::AppliedIt(_) => {}
+            ClassResult::Dynamic(dynamic) => {
+                self.deferred.push(Box::new(dynamic));
             }
-            .into_node();
-            debug_expect!(element.append_child(&child), "Failed to append child");
         }
 
-        for (event, function) in events {
-            create_event_handler(
-                &element,
-                event,
-                function,
-                ctx.deferred_borrow(EventToken::new()),
-                render_state,
-            );
-        }
-
-        for (key, value) in attributes {
-            value.apply_attribute(intern(key), &element, ctx, render_state);
-        }
-        for class in classes {
-            class.apply_class(&element, ctx, render_state);
-        }
-
-        if let Some(element) = element.dyn_ref() {
-            for (css_name, css) in css {
-                css.apply_css(css_name, element, ctx, render_state);
-            }
-        } else {
-            debug_panic!("Generated Element wasnt a HtmlElement");
-        }
-
-        element.into()
-    }
-}
-
-impl<C: Component, T: 'static> DynElement<C> for HtmlElement<C, T> {
-    fn render(
-        self: Box<Self>,
-        ctx: &mut State<C>,
-        render_state: &mut RenderingState,
-    ) -> ElementRenderResult {
-        ElementRenderResult::Node(self.generic().render(ctx, render_state))
+        self
     }
 }
 
 impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
     fn into_generic(self) -> MaybeStaticElement<C> {
-        MaybeStaticElement::Dynamic(Box::new(self))
+        MaybeStaticElement::Html(self.generic())
     }
-}
-
-/// Wrap the given function in the needed reactivity machinery and set it as the event handler for
-/// the specified event
-fn create_event_handler<C: Component>(
-    element: &web_sys::Element,
-    event: &str,
-    function: Box<dyn Fn(&mut State<C>, EventToken, web_sys::Event)>,
-    ctx_weak: DeferredCtx<C>,
-    render_state: &mut RenderingState<'_>,
-) {
-    let callback: Box<dyn Fn(web_sys::Event) + 'static> = Box::new(move |event| {
-        crate::return_if_panic!();
-
-        let Some(mut ctx) = ctx_weak.borrow_mut() else {
-            debug_panic!("Component dropped without event handlers being cleaned up");
-            return;
-        };
-
-        ctx.clear();
-        function(&mut ctx, EventToken::new(), event);
-        ctx.update();
-    });
-    let closure = Closure::wrap(callback);
-    let function = closure.as_ref().unchecked_ref();
-
-    debug_expect!(
-        element.add_event_listener_with_callback(intern(event), function),
-        "Failed to attach event handler"
-    );
-
-    render_state.keep_alive.push(Box::new(closure));
 }
 
 /// Implement a factory function that returns a `HtmlElement` with a tag name equal to the

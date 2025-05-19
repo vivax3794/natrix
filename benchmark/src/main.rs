@@ -262,7 +262,7 @@ fn main() {
             })
             .await;
 
-        natrix::test_utils::mount_test(UpdateNested::<100>::default());
+        natrix::test_utils::mount_test(UpdateNested::<300>::default());
         bencher
             .bench("update nested", 0, |_| {
                 let button = natrix::test_utils::get("BUTTON");
@@ -272,7 +272,12 @@ fn main() {
 
         bencher
             .bench("deep static", 0, |_| {
-                natrix::test_utils::mount_test(DeepStatic::<1000>);
+                natrix::test_utils::setup();
+                natrix::reactivity::component::mount_at(
+                    DeepStatic::<1000>,
+                    natrix::test_utils::MOUNT_POINT,
+                )
+                .unwrap();
             })
             .await;
     });

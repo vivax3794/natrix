@@ -122,19 +122,3 @@ As you see this generally requires you to use a `let` binding to split the retur
 ### When do messages get processed?
 
 Messages passing uses async channels internally, this means the messages will be processed once the current components reactivity cycle is finished. This will still run before the next reflow of the browser, and all messages are batched for efficiency.
-
-## Styling
-
-Theres two main ways to style a sub-component in a way the parent can control.
-Which one you should use depends on how many values you have, and how often you expect a parent to modify them.
-
-### `css_value` in child
-
-Simply have reactive state for the various styling options and have message passing to update them, and then use [`.css_value`](dom::html_elements::HtmlElement::css_value).
-
-> [!TIP]
-> See the [HTML documentation on Inline CSS](html.md#inline-css) and the [CSS documentation](css.md) for more information about styling approaches.
-
-### `css_value` in parent
-
-Instead you can re-export the css vars from a `scoped_css` and let a parent use them to set them on a wrapper. The downside here is that it requires wrapping the component in another element.

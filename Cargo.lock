@@ -1245,6 +1245,7 @@ dependencies = [
  "rustversion",
  "ryu",
  "slotmap",
+ "smallvec",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",

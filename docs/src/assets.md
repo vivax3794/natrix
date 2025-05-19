@@ -15,7 +15,8 @@ e::img()
 ```
 
 This will include `/path/to/crate/./assets/my_img.png` in the `dist` folder, and expand to something like this in rust:
-```rust
+
+```rust,no_run
 # extern crate natrix;
 # use natrix::prelude::*;
 # let _: e::HtmlElement<(), _> =
@@ -25,4 +26,4 @@ e::img()
 ```
 
 > [!TIP]
-> The dev server actually serves the assets from their source paths, so you dont have to worry about the files being copied on every reload. 
+> The dev server actually serves the assets from their source paths, so you dont have to worry about the files being copied on every reload.

@@ -1,5 +1,6 @@
 //! Implementation of the `Element` trait for various abstract types.
 
+use super::HtmlElement;
 use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::ReactiveNode;
 use crate::reactivity::signal::RenderingState;
@@ -39,9 +40,11 @@ pub(crate) trait StaticElement {
 }
 
 /// A element that might or might not depend on state.
-pub enum MaybeStaticElement<C> {
+pub enum MaybeStaticElement<C: Component> {
     /// A already statically rendered element.
     Static(ElementRenderResult),
+    /// A html element
+    Html(HtmlElement<C, ()>),
     /// A element that needs to be rendered.
     Dynamic(Box<dyn DynElement<C>>),
 }
@@ -55,13 +58,26 @@ impl<C: Component> MaybeStaticElement<C> {
     ) -> ElementRenderResult {
         match self {
             MaybeStaticElement::Static(element) => element,
+            MaybeStaticElement::Html(html) => {
+                let HtmlElement {
+                    element,
+                    deferred,
+                    phantom: _,
+                } = html;
+
+                for modification in deferred {
+                    modification(ctx, render_state);
+                }
+
+                ElementRenderResult::Node(element.into())
+            }
             MaybeStaticElement::Dynamic(element) => element.render(ctx, render_state),
         }
     }
 }
 
 /// Convert a element into a `MaybeStaticElement`.
-pub trait Element<C>: 'static {
+pub trait Element<C: Component>: 'static {
     /// Convert the element into a `MaybeStaticElement`.
     fn into_generic(self) -> MaybeStaticElement<C>;
 }

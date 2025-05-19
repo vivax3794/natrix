@@ -1,10 +1,13 @@
 //! Contains the non-reactive type
 
+use crate::dom::attributes::AttributeResult;
+use crate::dom::classes::ClassResult;
 use crate::dom::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
 use crate::dom::{ToAttribute, ToClass, ToCssValue};
 use crate::reactivity::component::{Component, ComponentBase, NoMessages};
 use crate::reactivity::signal::{RenderingState, SignalMethods};
 use crate::reactivity::state::{ComponentData, State};
+use crate::utils::debug_panic;
 
 impl ComponentData for () {
     type FieldRef<'a> = [&'a mut dyn SignalMethods; 0];
@@ -88,25 +91,21 @@ impl<E: Element<()>, C: Component> DynElement<C> for NonReactive<E> {
 }
 
 impl<A: ToAttribute<()>, C: Component> ToAttribute<C> for NonReactive<A> {
-    fn apply_attribute(
-        self: Box<Self>,
-        name: &'static str,
-        node: &web_sys::Element,
-        _ctx: &mut State<C>,
-        rendering_state: &mut RenderingState,
-    ) {
-        Box::new(self.0).apply_attribute(name, node, &mut State::create_base(()), rendering_state);
+    fn apply_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
+        self.0.apply_attribute(name, node);
+        AttributeResult::SetIt
     }
 }
 
 impl<A: ToClass<()>, C: Component> ToClass<C> for NonReactive<A> {
-    fn apply_class(
-        self: Box<Self>,
-        node: &web_sys::Element,
-        _ctx: &mut State<C>,
-        rendering_state: &mut RenderingState,
-    ) -> Option<std::borrow::Cow<'static, str>> {
-        Box::new(self.0).apply_class(node, &mut State::create_base(()), rendering_state)
+    fn apply_class(self, node: &web_sys::Element) -> ClassResult<C> {
+        match self.0.apply_class(node) {
+            ClassResult::AppliedIt(res) => ClassResult::AppliedIt(res),
+            ClassResult::Dynamic(_) => {
+                debug_panic!("Dynamic class in `NonReactive` context");
+                ClassResult::AppliedIt(None)
+            }
+        }
     }
 }
 

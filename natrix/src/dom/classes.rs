@@ -2,37 +2,35 @@
 
 use std::borrow::Cow;
 
+use super::html_elements::DeferredFunc;
+use crate::reactivity::Component;
 use crate::reactivity::render_callbacks::{ReactiveClass, SimpleReactive};
-use crate::reactivity::signal::RenderingState;
 use crate::reactivity::state::RenderCtx;
-use crate::reactivity::{Component, State};
 use crate::type_macros;
 use crate::utils::debug_expect;
+
+/// The result of applying a class
+pub(crate) enum ClassResult<C: Component> {
+    /// The class was applied immedtialy, along with its value
+    AppliedIt(Option<Cow<'static, str>>),
+    /// The class needs access to state
+    Dynamic(DeferredFunc<C>),
+}
 
 /// A trait for converting a value to a class name
 pub trait ToClass<C: Component> {
     /// Convert the value to a class name
-    fn apply_class(
-        self: Box<Self>,
-        node: &web_sys::Element,
-        ctx: &mut State<C>,
-        rendering_state: &mut RenderingState,
-    ) -> Option<Cow<'static, str>>;
+    fn apply_class(self, node: &web_sys::Element) -> ClassResult<C>;
 }
 
 /// Generate a `ToClass` implementation for a string type
 macro_rules! class_string {
     ($type:ty, $cow:expr) => {
         impl<C: Component> ToClass<C> for $type {
-            fn apply_class(
-                self: Box<Self>,
-                node: &web_sys::Element,
-                _ctx: &mut State<C>,
-                _rendering_state: &mut RenderingState,
-            ) -> Option<Cow<'static, str>> {
+            fn apply_class(self, node: &web_sys::Element) -> ClassResult<C> {
                 let class_list = node.class_list();
                 debug_expect!(class_list.add_1(&self), "Failed to add class {self}");
-                Some(($cow)(*self))
+                ClassResult::AppliedIt(Some(($cow)(self)))
             }
         }
     };
@@ -40,30 +38,20 @@ macro_rules! class_string {
 type_macros::strings_cow!(class_string);
 
 impl<C: Component, T: ToClass<C>> ToClass<C> for Option<T> {
-    fn apply_class(
-        self: Box<Self>,
-        node: &web_sys::Element,
-        ctx: &mut State<C>,
-        rendering_state: &mut RenderingState,
-    ) -> Option<Cow<'static, str>> {
-        if let Some(inner) = *self {
-            Box::new(inner).apply_class(node, ctx, rendering_state)
+    fn apply_class(self, node: &web_sys::Element) -> ClassResult<C> {
+        if let Some(inner) = self {
+            Box::new(inner).apply_class(node)
         } else {
-            None
+            ClassResult::AppliedIt(None)
         }
     }
 }
 
 impl<C: Component, T: ToClass<C>, E: ToClass<C>> ToClass<C> for Result<T, E> {
-    fn apply_class(
-        self: Box<Self>,
-        node: &web_sys::Element,
-        ctx: &mut State<C>,
-        rendering_state: &mut RenderingState,
-    ) -> Option<Cow<'static, str>> {
-        match *self {
-            Ok(inner) => Box::new(inner).apply_class(node, ctx, rendering_state),
-            Err(inner) => Box::new(inner).apply_class(node, ctx, rendering_state),
+    fn apply_class(self, node: &web_sys::Element) -> ClassResult<C> {
+        match self {
+            Ok(inner) => Box::new(inner).apply_class(node),
+            Err(inner) => Box::new(inner).apply_class(node),
         }
     }
 }
@@ -74,18 +62,15 @@ where
     R: ToClass<C> + 'static,
     C: Component,
 {
-    fn apply_class(
-        self: Box<Self>,
-        node: &web_sys::Element,
-        ctx: &mut State<C>,
-        rendering_state: &mut RenderingState,
-    ) -> Option<Cow<'static, str>> {
-        let hook = SimpleReactive::init_new(
-            Box::new(move |ctx| ReactiveClass { data: self(ctx) }),
-            node.clone(),
-            ctx,
-        );
-        rendering_state.hooks.push(hook);
-        None
+    fn apply_class(self, node: &web_sys::Element) -> ClassResult<C> {
+        let node = node.clone();
+        ClassResult::Dynamic(Box::new(move |ctx, rendering_state| {
+            let hook = SimpleReactive::init_new(
+                Box::new(move |ctx| ReactiveClass { data: self(ctx) }),
+                node.clone(),
+                ctx,
+            );
+            rendering_state.hooks.push(hook);
+        }))
     }
 }
