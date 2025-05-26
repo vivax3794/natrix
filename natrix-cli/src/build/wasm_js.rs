@@ -9,7 +9,7 @@ use crate::prelude::*;
 use crate::project_gen::FEATURE_RUNTIME_CSS;
 use crate::{options, utils};
 
-/// Run wasmbindgen to generate the clue
+/// Run wasmbindgen to generate the glue
 pub(crate) fn wasm_bindgen(
     config: &options::BuildConfig,
     wasm_file: &PathBuf,
