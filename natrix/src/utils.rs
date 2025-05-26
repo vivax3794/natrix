@@ -42,7 +42,7 @@ macro_rules! debug_expect {
 /// is a reasonable way to recover from it in release builds.
 macro_rules! debug_panic {
     ($($msg:expr),*) => {
-        crate::utils::cold_path();
+        $crate::utils::cold_path();
 
 
         if cfg!(debug_assertions) {

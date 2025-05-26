@@ -1,7 +1,7 @@
 //! Various utility functions
 
 use std::borrow::Cow;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process;
 use std::time::Duration;
@@ -27,14 +27,19 @@ pub(crate) fn create_spinner(msg: &str) -> Result<ProgressBar> {
     clippy::needless_pass_by_value,
     reason = "The spinner isnt usable after this"
 )]
-pub(crate) fn run_with_spinner(mut command: process::Command, spinner: ProgressBar) -> Result<()> {
+pub(crate) fn run_with_spinner(
+    mut command: process::Command,
+    spinner: ProgressBar,
+) -> Result<String> {
     command
-        .stdout(process::Stdio::null())
+        .stdout(process::Stdio::piped())
         .stderr(process::Stdio::piped());
 
     let mut child = command.spawn()?;
 
     let stderr = child.stderr.take().ok_or(anyhow!("Stderr gone"))?;
+    let mut stdout = child.stdout.take().ok_or(anyhow!("stdout gone"))?;
+
     let stderr = BufReader::new(stderr);
 
     let mut full_output = String::new();
@@ -49,7 +54,11 @@ pub(crate) fn run_with_spinner(mut command: process::Command, spinner: ProgressB
 
     if status.success() {
         spinner.finish_with_message("");
-        Ok(())
+
+        let mut result = String::new();
+        stdout.read_to_string(&mut result)?;
+
+        Ok(result)
     } else {
         spinner.finish_with_message("ERROR".red().to_string());
         println!("{full_output}");

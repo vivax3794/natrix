@@ -4,7 +4,9 @@ use std::path::{Path, PathBuf};
 use std::{fs, process};
 
 use super::{BINDGEN_OUTPUT_NAME, MACRO_OUTPUT_DIR};
+use crate::options::BuildProfile;
 use crate::prelude::*;
+use crate::project_gen::FEATURE_RUNTIME_CSS;
 use crate::{options, utils};
 
 /// Run wasmbindgen to generate the clue
@@ -109,23 +111,28 @@ pub(crate) fn build_wasm(config: &options::BuildConfig) -> Result<PathBuf> {
         .args(["--profile", config.profile.cargo()])
         .env(natrix_shared::MACRO_SETTINGS, settings);
 
-    if config.profile == options::BuildProfile::Release {
-        let mut rustc_flags = String::from("-C target-feature=+bulk-memory,+reference-types ");
-        if rustc_is_nightly {
-            let std_features = String::from("optimize_for_size");
-            command
-                .args(["-Z", "build-std=core,std,panic_abort"])
-                .arg(format!("-Zbuild-std-features={std_features}"));
-            rustc_flags.push_str("-Zfmt-debug=none -Zlocation-detail=none -Zshare-generics=y");
-        } else {
-            println!(
-                "{}",
-                "⚠️ Using stable rust, nightly rust allows for better optimizations and smaller wasm files"
-                    .yellow()
-                    .bold()
-            );
+    match config.profile {
+        BuildProfile::Release => {
+            let mut rustc_flags = String::from("-C target-feature=+bulk-memory,+reference-types ");
+            if rustc_is_nightly {
+                let std_features = String::from("optimize_for_size");
+                command
+                    .args(["-Z", "build-std=core,std,panic_abort"])
+                    .arg(format!("-Zbuild-std-features={std_features}"));
+                rustc_flags.push_str("-Zfmt-debug=none -Zlocation-detail=none -Zshare-generics=y");
+            } else {
+                println!(
+                        "{}",
+                        "⚠️ Using stable rust, nightly rust allows for better optimizations and smaller wasm files"
+                            .yellow()
+                            .bold()
+                    );
+            }
+            command.env("RUSTFLAGS", rustc_flags);
         }
-        command.env("RUSTFLAGS", rustc_flags);
+        BuildProfile::Dev => {
+            command.args(["--features", FEATURE_RUNTIME_CSS]);
+        }
     }
     utils::run_with_spinner(command, utils::create_spinner("⚙️ wasm")?).context("Running cargo")?;
 

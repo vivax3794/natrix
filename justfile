@@ -36,7 +36,7 @@ check:
     cargo +nightly hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --tests --release -- -Dwarnings
 
 check_deps:
-    cargo hack udeps --each-feature --ignore-private
+    cargo hack udeps --each-feature --ignore-private --all-targets
     cargo outdated -R --workspace --exit-code 1
     cd natrix && cargo deny check all --exclude-dev
     cd natrix-cli && cargo deny check all --exclude-dev --hide-inclusion-graph
@@ -148,7 +148,6 @@ dev_deps: book_deps
     command -v wasm-pack || cargo binstall -y wasm-pack
     command -v wasm-bindgen || cargo binstall -y wasm-bindgen-cli
     command -v cargo-deny || cargo binstall -y cargo-deny
-    command -v cargo-about || cargo binstall -y cargo-about
     command -v cargo-udeps || cargo binstall -y cargo-udeps
     command -v cargo-outdated || cargo binstall -y cargo-outdated
 
@@ -173,7 +172,6 @@ health_check:
     command -v mdbook-rustdoc-link || (echo "mdbook-rustdoc-link not found, required for documentation" && exit 1)
     command -v wasm-bindgen || (echo "wasm-bindgen not found, required for building wasm" && exit 1)
     command -v cargo-deny || (echo "cargo-deny not found, required for security checks" && exit 1)
-    command -v cargo-about || (echo "cargo-about not found, required for license generation" && exit 1)
     command -v cargo-udeps || (echo "cargo-udeps not found, required for dependency checks" && exit 1)
     command -v cargo-outdated || (echo "cargo-outdated not found, required for dependency checks" && exit 1)
 
@@ -190,9 +188,6 @@ clean:
 gh_action:
     act -P ubuntu-latest=catthehacker/ubuntu:full-latest -W .github/workflows/run_tests.yml
 
-
-license:
-    cargo about generate about.hbs > natrix-cli/THIRD_PARTY_LICENSES.html
 
 [working-directory: './stress_test_binary_size']
 stress_size: install_cli

@@ -269,7 +269,7 @@ impl<T: Component> State<T> {
     {
         let this = self.deferred_borrow(EventToken::new());
         wasm_bindgen_futures::spawn_local(async move {
-            while let Some(messages) = async_utils::drain_available(&mut rx).await {
+            while let Some(messages) = async_utils::recv_batch(&mut rx).await {
                 let Some(mut this) = this.borrow_mut() else {
                     return;
                 };
@@ -284,7 +284,7 @@ impl<T: Component> State<T> {
     pub(crate) fn spawn_receivier_task(&mut self, mut rx: UnboundedReceiver<T::ReceiveMessage>) {
         let this = self.deferred_borrow(EventToken::new());
         wasm_bindgen_futures::spawn_local(async move {
-            while let Some(messages) = async_utils::drain_available(&mut rx).await {
+            while let Some(messages) = async_utils::recv_batch(&mut rx).await {
                 let Some(mut this) = this.borrow_mut() else {
                     return;
                 };

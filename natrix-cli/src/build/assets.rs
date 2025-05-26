@@ -2,9 +2,8 @@
 
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use super::css::collect_css;
 use super::{MACRO_OUTPUT_DIR, options, utils};
 use crate::prelude::*;
 
@@ -16,30 +15,24 @@ pub(crate) struct AssetManifest {
 }
 
 /// Collect the outputs of the macros
-pub(crate) fn collect_macro_output(
-    config: &options::BuildConfig,
-    wasm_file: &Path,
-) -> Result<(PathBuf, AssetManifest)> {
-    let mut css_files = Vec::new();
+pub(crate) fn collect_macro_output(config: &options::BuildConfig) -> Result<AssetManifest> {
     let mut asset_files = Vec::new();
 
     for file in get_macro_output_files(config)? {
         let extension = file.extension().map(|ext| ext.to_string_lossy());
         match extension.as_ref().map(AsRef::as_ref) {
-            Some("css") => css_files.push(file),
             Some("asset") => asset_files.push(file),
             _ => return Err(anyhow!("Invalid file extension found in macro output")),
         }
     }
 
-    let css_file = collect_css(config, css_files, wasm_file)?;
     let manifest = collect_asset_manifest(asset_files)?;
 
     if !config.should_direct_serve_files() {
         copy_assets_to_dist(config, &manifest)?;
     }
 
-    Ok((css_file, manifest))
+    Ok(manifest)
 }
 
 /// Copy asset manifest to dist

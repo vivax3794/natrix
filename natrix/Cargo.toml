@@ -31,13 +31,15 @@ futures-channel = { version = "0.3.31" }
 futures-util = { version = "0.3.31", default-features = false}
 futures-core = { version = "0.3.31", default-features = false}
 ouroboros = { version = "0.18.0" }
+
 # Other
 paste = "1.0.15"
 pin-project = { version = "1.1.10" }
 smallvec = "1.15.0"
+const_base = "0.2.0"
+const-sha1 = { version = "0.3.0", default-features = false }
 
-[target.'cfg(natrix_ssg)'.dependencies]
-inventory = "0.3"
+inventory = {version="0.3", optional = true}
 
 [features]
 default = []
@@ -48,8 +50,19 @@ ergonomic_ops = []
 
 test_utils = []
 
+_internal_collect_css = ["dep:inventory"]
+_internal_runtime_css = ["_internal_collect_css"]
+_internal_extract_css = ["_internal_collect_css"]
+
 [dev-dependencies]
-wasm-bindgen-test = {version="0.3.50"}
+wasm-bindgen-test ="0.3.50"
+
+[target.'cfg(not(target_arch="wasm32"))'.dev-dependencies]
+lightningcss = { version = "1.0.0-alpha.66", default-features = false }
+proptest = "1.6"
+
+[package.metadata.cargo-udeps.ignore]
+development = ["wasm-bindgen-test"]
 
 [build-dependencies]
 rustversion = "1.0.19"

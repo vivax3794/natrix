@@ -5,6 +5,12 @@ use std::path::{Path, PathBuf};
 
 use crate::prelude::*;
 
+/// Flag for extracting css
+pub const FEATURE_EXTRACT_CSS: &str = "__natrix_internal_extract_css";
+///
+/// Flag for runtime css
+pub const FEATURE_RUNTIME_CSS: &str = "__natrix_internal_runtime_css";
+
 /// Generate a new project
 pub(crate) fn generate_project(name: &str, stable: bool) -> std::result::Result<(), anyhow::Error> {
     let root = PathBuf::from(name);
@@ -49,6 +55,13 @@ codegen-units = 1
 lto = "fat"
 panic = "abort"
 strip = "symbols"
+
+[features]
+# IMPORTANT: 
+# These are feature forwards for internal compilation flags used by the bundler
+# DO NOT RENAME OR REMOVE THESE
+{FEATURE_EXTRACT_CSS} = ["natrix/_internal_extract_css"]
+{FEATURE_RUNTIME_CSS} = ["natrix/_internal_runtime_css"]
         "#
     );
     fs::write(root.join("Cargo.toml"), cargo_toml)?;

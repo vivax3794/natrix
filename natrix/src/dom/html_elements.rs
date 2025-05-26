@@ -243,6 +243,7 @@ macro_rules! elements {
                 pub struct [< _$name >];
 
                 #[doc = concat!("`<", stringify!($name), ">`")]
+                #[inline]
                 pub fn $name<C: Component>() -> HtmlElement<C, [< _$name >]> {
                     HtmlElement::new(stringify!($name))
                 }
@@ -259,6 +260,7 @@ macro_rules! attr_helpers {
                 impl<C: Component> HtmlElement<C, [< _$tag >]> {
                     $(
                         #[doc = concat!("Set the `", stringify!($attr), "` attribute")]
+                        #[inline]
                         pub fn $attr(self, value: impl ToAttribute<C>) -> Self {
                             self.attr(stringify!($attr), value)
                         }
@@ -275,6 +277,7 @@ macro_rules! global_attrs {
         impl<C: Component, T> HtmlElement<C, T> {
             $(
                 #[doc = concat!("Set the `", stringify!($attr), "` attribute")]
+                #[inline]
                 pub fn $attr(self, value: impl ToAttribute<C>) -> Self {
                     self.attr(stringify!($attr), value)
                 }
@@ -290,6 +293,7 @@ macro_rules! aria_attrs {
             $(
             paste::paste! {
                 #[doc = concat!("Set the `aria-", stringify!($attr), "` attribute")]
+                #[inline]
                 pub fn [<aria_$attr>](self, value: impl ToAttribute<C>) -> Self {
                     self.attr(concat!("aria-", stringify!($attr)), value)
                 }

@@ -4,6 +4,7 @@ use std::fs;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
 
+use crate::options::BuildProfile;
 use crate::prelude::*;
 use crate::{options, utils};
 
@@ -44,10 +45,17 @@ pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManife
     let wasm_file = cache_bust_file(config, wasm_file)?;
     let js_file = cache_bust_file(config, js_file)?;
 
-    let (css_file, asset_manifest) = assets::collect_macro_output(config, &wasm_file)?;
-    let css_file = cache_bust_file(config, css_file)?;
+    let asset_manifest = assets::collect_macro_output(config)?;
 
-    generate_html(config, &wasm_file, &js_file, &css_file)?;
+    let css_file = if config.profile == BuildProfile::Release {
+        let css_file = css::collect_css(config, &wasm_file)?;
+        let css_file = cache_bust_file(config, css_file)?;
+        Some(css_file)
+    } else {
+        None
+    };
+
+    generate_html(config, &wasm_file, &js_file, css_file)?;
 
     println!(
         "📦 {} {}",
@@ -63,13 +71,20 @@ pub(crate) fn generate_html(
     config: &options::BuildConfig,
     wasm_file: &Path,
     js_file: &Path,
-    css_file: &Path,
+    css_file: Option<PathBuf>,
 ) -> Result<()> {
-    let html_file = config.dist.join("index.html");
+    let base_path = &config.base_path;
 
+    let html_file = config.dist.join("index.html");
     let js_file = utils::get_filename(js_file)?;
     let wasm_file = utils::get_filename(wasm_file)?;
-    let css_file = utils::get_filename(css_file)?;
+
+    let style_link = if let Some(css_file) = css_file {
+        let css_file = utils::get_filename(&css_file)?;
+        format!(r#"<link rel="stylesheet" href="{base_path}/{css_file}"/>"#)
+    } else {
+        String::new()
+    };
 
     let js_reload = if let Some(port) = config.live_reload {
         format!(
@@ -84,13 +99,12 @@ pub(crate) fn generate_html(
         String::new()
     };
 
-    let base_path = &config.base_path;
     let content = format!(
         r#"
 <!doctype html>
 <html>
     <head>
-        <link rel="stylesheet" href="{base_path}/{css_file}"/>
+        {style_link}
     </head>
     <body>
         <div id="{}">This website requires Javascript and Wasm support.</div>

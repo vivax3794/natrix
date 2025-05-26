@@ -318,6 +318,9 @@ pub struct RenderResult<C: Component> {
 /// Mount the specified component at natrixses default location.
 /// This is what should be used when building with the natrix cli.
 ///
+/// IMPORTANT: This is the intended entry point for `natrix-cli` build applications, and the natrix
+/// cli build system expects this to be called.
+///
 /// **WARNING:** This method implicitly leaks the memory of the root component
 /// # Panics
 /// If the mount point is not found, which should never happen if using `natrix build`
@@ -327,6 +330,13 @@ pub struct RenderResult<C: Component> {
 )]
 pub fn mount<C: Component>(component: C) {
     crate::panics::set_panic_hook();
+
+    #[cfg(feature = "_internal_collect_css")]
+    crate::css::css_collect();
+
+    if cfg!(feature = "_internal_extract_css") {
+        return;
+    }
 
     mount_at(component, natrix_shared::MOUNT_POINT).expect("Failed to mount");
 }

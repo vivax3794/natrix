@@ -159,6 +159,12 @@ pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
     };
 
     let Ok(settings) = std::env::var(natrix_shared::MACRO_SETTINGS) else {
+        // This is not a hard error because running without the bundler is a expected situation
+        // (cargo check, ides, etc)
+        //
+        // But all those situations are also situations where a accurate path is not required as
+        // its no runtime (building a natrix application with just `cargo build` is not supported)
+        // so we return this path that if it ends up in runtime should hopefully be helpful.
         return quote!("/warn_no_bundler/this_expansion_was_not_via_the_natrix_bundler/as_such_a_proper_path_cant_be_given").into();
     };
 

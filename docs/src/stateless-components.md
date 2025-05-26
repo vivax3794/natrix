@@ -106,12 +106,12 @@ And now only the name part will be recreated when `name` changes.
 
 ## Events
 
-Natrix provides the [`EventHandler`](reactivity::callbacks::EventHandler) trait which makes taking event handlers in stateless components easier, in reality this trait is only implement for closures of the appropriate signature.
+Natrix provides the [`EventHandler`](dom::events::EventHandler) trait which makes taking event handlers in stateless components easier, in reality this trait is only implement for closures of the appropriate signature.
 
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
-use natrix::reactivity::callbacks::EventHandler;
+use natrix::dom::EventHandler;
 
 fn fancy_button<C: Component>(
     on_click: impl EventHandler<C, events::Click>,
@@ -127,7 +127,7 @@ This can be used like this:
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
-# use natrix::reactivity::callbacks::EventHandler;
+# use natrix::dom::EventHandler;
 # fn fancy_button<C: Component>(
 #     on_click: impl EventHandler<C, events::Click>,
 # ) -> impl Element<C> {

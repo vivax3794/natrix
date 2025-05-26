@@ -3,7 +3,7 @@
 use crate::dom::attributes::AttributeResult;
 use crate::dom::classes::ClassResult;
 use crate::dom::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
-use crate::dom::{ToAttribute, ToClass, ToCssValue};
+use crate::dom::{ToAttribute, ToClass};
 use crate::reactivity::component::{Component, ComponentBase, NoMessages};
 use crate::reactivity::signal::{RenderingState, SignalMethods};
 use crate::reactivity::state::{ComponentData, State};
@@ -111,17 +111,5 @@ impl<A: ToClass<()>, C: Component> ToClass<C> for NonReactive<A> {
                 ClassResult::AppliedIt(None)
             }
         }
-    }
-}
-
-impl<Css: ToCssValue<()>, C: Component> ToCssValue<C> for NonReactive<Css> {
-    fn apply_css(
-        self: Box<Self>,
-        name: &'static str,
-        node: &web_sys::HtmlElement,
-        _ctx: &mut State<C>,
-        render_state: &mut RenderingState,
-    ) {
-        Box::new(self.0).apply_css(name, node, &mut State::create_base(()), render_state);
     }
 }

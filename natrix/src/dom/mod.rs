@@ -13,5 +13,3 @@ pub use element::{Element, MaybeStaticElement};
 pub use events::EventHandler;
 pub use html_elements::HtmlElement;
 pub use list::List;
-
-pub use crate::css::values::ToCssValue;

@@ -9,8 +9,8 @@
 
 - [Features](features.md)
 - [Panic Policy](panics.md)
-- [Components](reactivity::components.md)
-  - [State Less Components](reactivity::stateless-components.md)
+- [Components](components.md)
+  - [State Less Components](stateless-components.md)
   - [Sub Components](sub-components.md)
   - [Generic Components](generic-components.md)
   - [Async](async-components.md)

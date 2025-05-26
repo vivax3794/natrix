@@ -2,26 +2,18 @@
 
 use std::collections::HashSet;
 use std::fs;
-use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use lightningcss::visitor::Visit;
 
 use super::{CSS_OUTPUT_NAME, options, utils, wasm_js};
 use crate::prelude::*;
+use crate::project_gen::FEATURE_EXTRACT_CSS;
 
 /// Collect css from the macro files
-pub(crate) fn collect_css(
-    config: &options::BuildConfig,
-    css_files: Vec<PathBuf>,
-    wasm_file: &Path,
-) -> Result<PathBuf> {
-    let spinner = utils::create_spinner("🎨 Bundling css")?;
-
-    let mut css_content = String::new();
-    for file in css_files {
-        fs::File::open(file)?.read_to_string(&mut css_content)?;
-    }
+pub(crate) fn collect_css(config: &options::BuildConfig, wasm_file: &Path) -> Result<PathBuf> {
+    let mut css_content = extract_css()?;
 
     if config.profile == options::BuildProfile::Release {
         css_content = optimize_css(&css_content, wasm_file)?;
@@ -30,12 +22,24 @@ pub(crate) fn collect_css(
     let output_path = config.dist.join(CSS_OUTPUT_NAME);
     fs::write(&output_path, css_content)?;
 
-    spinner.finish();
     Ok(output_path)
 }
 
+/// Extract the css from the binary
+fn extract_css() -> Result<String> {
+    let spinner = utils::create_spinner("🎨 Extracting css")?;
+
+    let mut command = Command::new("cargo");
+    command
+        .arg("run")
+        .args(["--features", FEATURE_EXTRACT_CSS])
+        .args(["--color", "always"]);
+
+    utils::run_with_spinner(command, spinner)
+}
+
 /// Optimize the given css string
-pub(crate) fn optimize_css(css_content: &str, wasm_file: &Path) -> Result<String> {
+fn optimize_css(css_content: &str, wasm_file: &Path) -> Result<String> {
     let mut styles = lightningcss::stylesheet::StyleSheet::parse(
         css_content,
         lightningcss::stylesheet::ParserOptions {

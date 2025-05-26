@@ -132,6 +132,13 @@ pub use reactivity::state::{RenderCtx, State};
 /// Public exports of internal data structures for `natrix_macros` to use in generated code.
 #[doc(hidden)]
 pub mod macro_ref {
+    #[cfg(feature = "_internal_collect_css")]
+    pub use inventory;
+    pub use {const_base, const_sha1};
+
+    #[cfg(feature = "_internal_collect_css")]
+    pub use super::css::CssEmit;
+    pub use super::css::stylesheet::StyleSheet;
     pub use super::reactivity::component::ComponentBase;
     pub use super::reactivity::signal::{Signal, SignalMethods, SignalState};
     pub use super::reactivity::state::{ComponentData, E, Guard, State};
