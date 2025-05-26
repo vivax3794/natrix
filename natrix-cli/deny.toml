@@ -6,7 +6,7 @@ all-features = true
 
 [advisories]
 ignore = [
-    { id="RUSTSEC-2024-0436", reason="Used by lightningcss, so we might as well use it as well."}
+    { id="RUSTSEC-2024-0436", reason="Used by lightningcss"}
 ]
 
 [licenses]
