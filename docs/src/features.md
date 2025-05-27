@@ -68,7 +68,10 @@ Notice how we still need the dereference for a plain assignment and addition? Th
 By default natrix strips out all console logs, including your own, in release builds. (including from panics)
 This feature disables that, allowing you to see the console logs in release builds.
 
-## default features
+## Internal features
 
-For most complex applications you will likely need all the default features.
-But they can be disabled if you want to reduce compile times or binary size.
+You might notice a few `_internal_*` features listed for `natrix` itself, and you'll also see `_natrix_internal_*` proxy features in your own crate's `Cargo.toml`. These are internal features, and as such, we won't be documenting their specific functionalities in detail.
+
+These features are primarily used by `natrix-cli` to build special versions of your application for bundling reasons, such as CSS extraction or Static Site Generation (SSG). The `_natrix_internal_*` entries in your `Cargo.toml` act as "feature proxies," allowing the bundler to correctly apply these configurations during the build process without needing to modify your project's manifest directly.
+
+If you are migrating an existing project to a newer Natrix version, it's recommended to generate a new Natrix project. You can then copy over any new `_natrix_internal_*` feature proxies from the generated `Cargo.toml` into your existing project to ensure compatibility with the latest bundler requirements.

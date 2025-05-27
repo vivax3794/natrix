@@ -129,7 +129,7 @@ pub use natrix_macros::{Component, asset, data};
 pub use reactivity::component::{Component, NoMessages, SubComponent, mount};
 pub use reactivity::state::{RenderCtx, State};
 
-/// Public exports of internal data structures for `natrix_macros` to use in generated code.
+/// Public exports of internal data structures for `natrix_macros` (and `macro_rules`) to use in generated code.
 #[doc(hidden)]
 pub mod macro_ref {
     #[cfg(feature = "_internal_collect_css")]

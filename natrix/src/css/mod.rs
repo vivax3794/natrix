@@ -1,5 +1,10 @@
 //! Create css styles
 
+// DESIGN NOTE:
+// This module does not generally need to be efficent, it just needs to be ergonomic.
+// The code in this module is inteded to be used at bundling time, and hence will not be included
+// in production applications.
+
 pub mod stylesheet;
 pub mod values;
 
