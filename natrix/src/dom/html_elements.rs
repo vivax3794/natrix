@@ -20,6 +20,7 @@ use wasm_bindgen::{JsCast, intern};
 
 use super::attributes::AttributeResult;
 use super::classes::ClassResult;
+use crate::css::selectors::{CompoundSelector, IntoCompoundSelector, SimpleSelector};
 use crate::dom::element::{Element, MaybeStaticElement, generate_fallback_node};
 use crate::dom::events::{Event, EventHandler};
 use crate::dom::{ToAttribute, ToClass};
@@ -211,7 +212,7 @@ impl<C: Component, T> HtmlElement<C, T> {
     #[inline]
     pub fn class(mut self, class: impl ToClass<C> + 'static) -> Self {
         match class.calc_class(&self.element) {
-            ClassResult::AppliedIt(res) => {
+            ClassResult::SetIt(res) => {
                 if let Some(res) = res {
                     debug_expect!(self.element.class_list().add_1(&res), "Failed to add class");
                 }
@@ -238,13 +239,18 @@ macro_rules! elements {
     ($($name:ident),*) => {
         $(
             paste::paste! {
-                #[doc(hidden)]
-                #[expect(non_camel_case_types, reason="We dont want to bother pulling in a case fold")]
-                pub struct [< _$name >];
+                #[doc = concat!("`<", stringify!($name), ">`")]
+                pub struct [< Tag $name:camel >];
+
+                impl IntoCompoundSelector for [< Tag $name:camel >] {
+                    fn into_compound(self) -> CompoundSelector {
+                        CompoundSelector(vec![SimpleSelector::Tag(stringify!($name).into())])
+                    }
+                }
 
                 #[doc = concat!("`<", stringify!($name), ">`")]
                 #[inline]
-                pub fn $name<C: Component>() -> HtmlElement<C, [< _$name >]> {
+                pub fn $name<C: Component>() -> HtmlElement<C, [< Tag $name:camel >]> {
                     HtmlElement::new(stringify!($name))
                 }
             }
@@ -257,7 +263,7 @@ macro_rules! attr_helpers {
     ($($tag:ident => $($attr:ident),+;)*) => {
         $(
             paste::paste! {
-                impl<C: Component> HtmlElement<C, [< _$tag >]> {
+                impl<C: Component> HtmlElement<C, [< Tag $tag:camel >]> {
                     $(
                         #[doc = concat!("Set the `", stringify!($attr), "` attribute")]
                         #[inline]

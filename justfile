@@ -19,8 +19,7 @@ test_native:
     cargo +nightly nextest run --all-features -p natrix --release
 
 insta:
-    cargo insta test --package natrix --unreferenced delete --test-runner nextest --all-features
-    cargo insta review 
+    cargo insta test --review --package natrix --unreferenced delete --test-runner nextest --all-features
 
 # Run tests that are dependent on the web
 [working-directory: './natrix']

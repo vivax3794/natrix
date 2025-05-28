@@ -119,6 +119,12 @@ pub(crate) use return_if_panic;
 pub mod prelude {
     pub use natrix_macros::Component;
 
+    pub use super::css::selectors::{
+        Class,
+        IntoComplexSelector,
+        IntoCompoundSelector,
+        IntoFinalizedSelector,
+    };
     pub use super::dom::{Element, events, html_elements as e};
     pub use super::reactivity::component::{Component, NoMessages, SubComponent};
     pub use super::reactivity::state::{E, R};

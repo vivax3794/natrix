@@ -286,7 +286,7 @@ impl<C: Component, T: ToClass<C>> ReactiveValue<C> for ReactiveClass<T> {
         }
 
         let new = match self.data.calc_class(node) {
-            ClassResult::AppliedIt(res) => res.inspect(|res| {
+            ClassResult::SetIt(res) => res.inspect(|res| {
                 debug_expect!(class_list.add_1(res), "Failed to add class");
             }),
             ClassResult::Dynamic(dynamic) => {

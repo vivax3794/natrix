@@ -1,0 +1,5 @@
+---
+source: natrix/src/css/selectors.rs
+expression: TagDiv.after()
+---
+div::after

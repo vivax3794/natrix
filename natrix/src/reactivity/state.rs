@@ -834,7 +834,6 @@ impl<T: Component> DeferredCtx<T> {
     /// foo().await;
     /// let Some(mut borrow) = ctx.borrow_mut() else {return;};
     /// // ...
-    /// };
     /// ```
     ///
     /// # Reactivity

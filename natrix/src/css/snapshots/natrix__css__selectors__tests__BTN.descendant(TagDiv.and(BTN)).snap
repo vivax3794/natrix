@@ -1,0 +1,5 @@
+---
+source: natrix/src/css/selectors.rs
+expression: BTN.descendant(TagDiv.and(BTN))
+---
+.btn>div.btn

@@ -1,0 +1,582 @@
+//! Css selectors
+
+/// A list of selectors (`,`)
+#[derive(Debug)]
+pub struct SelectorList(pub Vec<FinalizedSelector>);
+
+/// Create a Selector list of the given elements
+#[macro_export]
+macro_rules! selector_list {
+    [$($element:expr),*] => {
+        $crate::css::selectors::SelectorList(vec![
+            $(
+                $element.into_finalized()
+            ),*
+        ])
+    };
+}
+
+impl SelectorList {
+    /// Convert to css
+    pub(crate) fn into_css(self) -> String {
+        let result: Vec<_> = self
+            .0
+            .into_iter()
+            .map(FinalizedSelector::into_css)
+            .collect();
+
+        result.join(",")
+    }
+}
+
+#[derive(Debug)]
+/// A finalized selector that cant be modified more
+pub struct FinalizedSelector {
+    /// The selector
+    pub head: ComplexSelector,
+    /// The pseudo element
+    pub element: Option<Box<str>>,
+}
+
+impl FinalizedSelector {
+    /// Convert this into css
+    fn into_css(self) -> String {
+        let mut result = self.head.into_css();
+        if let Some(element) = self.element {
+            result.push_str("::");
+            result.push_str(&element);
+        }
+        result
+    }
+}
+
+/// A combination of various selectors (`h1 h2 > h3`)
+#[derive(Debug)]
+pub struct ComplexSelector {
+    /// The first selector
+    pub first: CompoundSelector,
+    /// The rest with their combinators
+    pub tail: Vec<(Combinator, CompoundSelector)>,
+}
+
+impl ComplexSelector {
+    /// Convert into css
+    fn into_css(self) -> String {
+        let Self { first, tail } = self;
+
+        let mut result = first.into_css();
+        for (combinator, selector) in tail {
+            result.push_str(combinator.into_css());
+            result.push_str(&selector.into_css());
+        }
+
+        result
+    }
+}
+
+/// A combinator
+/// <https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_selectors#combinators_and_separators>
+#[derive(Debug, Copy, Clone)]
+pub enum Combinator {
+    /// +
+    NextSibling,
+    /// >
+    DirectChild,
+    /// ~
+    SubsequentSibling,
+    /// ` `
+    Descendant,
+}
+
+impl Combinator {
+    /// Convert this combinator to css version
+    fn into_css(self) -> &'static str {
+        match self {
+            Self::NextSibling => "+",
+            Self::DirectChild => ">",
+            Self::SubsequentSibling => "~",
+            Self::Descendant => " ",
+        }
+    }
+}
+
+/// A compound selector
+#[derive(Debug)]
+pub struct CompoundSelector(pub Vec<SimpleSelector>);
+
+impl CompoundSelector {
+    /// Convert this to css
+    fn into_css(self) -> String {
+        self.0.into_iter().map(SimpleSelector::into_css).collect()
+    }
+}
+
+/// A simple selector
+#[derive(Debug, Clone)]
+pub enum SimpleSelector {
+    /// A css tag
+    Tag(Box<str>),
+    /// Class
+    Class(Box<str>),
+    /// Pseudo Class
+    Pseudo(Box<str>),
+}
+
+impl SimpleSelector {
+    /// Convert this to css
+    fn into_css(self) -> String {
+        match self {
+            Self::Tag(value) => value.into(),
+            Self::Class(value) => format!(".{value}"),
+            Self::Pseudo(value) => format!(":{value}"),
+        }
+    }
+}
+
+/// Define `PseudoClass`
+macro_rules! define_pseudo_class {
+    (
+        $($simple:ident),*;
+        $($a_rust:ident => $a_name:literal),*;
+        $($c_def:ident($($c_arg:ty),*): $c_pat:pat => $c_expr:expr, $c_doc:literal);*;
+    ) => {
+        paste::paste! {
+            /// Pseudo classes
+            pub enum PseudoClass {
+                $(
+                    #[doc = concat!("<https://developer.mozilla.org/en-US/docs/Web/CSS/:", stringify!($simple),">")]
+                    [< $simple:camel >]
+                ),*,
+                $(
+                    #[doc = concat!("<https://developer.mozilla.org/en-US/docs/Web/CSS/:", $a_name,">")]
+                    $a_rust
+                ),*,
+                $(
+                    #[doc = concat!("<https://developer.mozilla.org/en-US/docs/Web/CSS/:", $c_doc,">")]
+                    $c_def($($c_arg),*)
+                ),*,
+            }
+
+            impl PseudoClass {
+                /// Convert to css
+                fn into_css(self) -> String {
+                    match self {
+                        $(
+                            Self::[< $simple:camel >] => stringify!($simple).into()
+                        ),*,
+                        $(
+                            Self::$a_rust => $a_name.into()
+                        ),*,
+                        $(
+                            Self::$c_pat => $c_expr
+                        ),*,
+                    }
+                }
+            }
+        }
+    };
+}
+
+/// Direction of text
+pub enum Direction {
+    /// Left to right
+    LeftToRight,
+    /// Right to left
+    RightToLeft,
+}
+
+impl Direction {
+    /// The short version
+    fn short(self) -> &'static str {
+        match self {
+            Self::LeftToRight => "ltr",
+            Self::RightToLeft => "rtl",
+        }
+    }
+}
+
+/// The argument for the `nth-...` pseudo classes
+/// <https://developer.mozilla.org/en-US/docs/Web/CSS/:nth-child#syntax>
+#[must_use]
+pub struct NthArgument {
+    /// The step
+    pub step: i32,
+    /// The offset
+    pub offset: u32,
+    /// The optional `of` selector list
+    pub selector: Option<ComplexSelector>,
+}
+
+impl NthArgument {
+    /// The even version
+    pub const EVEN: Self = NthArgument {
+        step: 2,
+        offset: 0,
+        selector: None,
+    };
+    /// The odd version
+    pub const ODD: Self = NthArgument {
+        step: 2,
+        offset: 1,
+        selector: None,
+    };
+
+    /// Create a new `NthArgument`
+    pub fn new(step: i32, offset: u32) -> Self {
+        Self {
+            step,
+            offset,
+            selector: None,
+        }
+    }
+
+    /// Set the selector to use
+    pub fn of(mut self, selector: impl IntoComplexSelector) -> Self {
+        debug_assert!(
+            self.selector.is_none(),
+            "`selector` of NthArgument already set"
+        );
+
+        self.selector = Some(selector.into_complex());
+
+        self
+    }
+
+    /// Convert to css
+    fn into_css(self) -> String {
+        let mut result = format!("{}n+{}", self.step, self.offset);
+        if let Some(selector) = self.selector {
+            result.push_str(" of ");
+            result.push_str(&selector.into_css());
+        }
+        result
+    }
+}
+
+// TODO: `has` - needs a ComplexSelector without `first`
+// TODO: `not` - doesnt allow pseudo elements
+// (do `has`, `where`, `is` do? `not` mentioned specifically it didnt)
+
+define_pseudo_class!(
+    active, autofill, checked, default, defined, disabled, empty, enabled, first, focus,
+    hover, indeterminate, invalid, link, modal, optional, required, root, scope, target,
+    valid, visited;
+
+    AnyLink => "any-link",
+    FirstChild => "first-child", FirstOfType => "first-of-type",
+    FocusVisible => "focus-visible", FocusWithin => "focus-within",
+    InRange => "in-range", OutOfRange => "out-of-range",
+    LastChild => "last-child", LastOfType => "last-of-type",
+    OnlyChild => "only-child", OnlyOfType => "only-of-type",
+    PlaceholderShown => "placeholder-shown", PopoverOpen => "popover-open",
+    ReadOnly => "read-only", ReadWrite => "read-write",
+    UserInvalid => "user-invalid", UserValid => "user-valid";
+
+    Dir(Direction): Dir(dir) => format!("dir({})", dir.short()), "dir";
+    Has(SelectorList): Has(list) => format!("has({})", list.into_css()), "has";
+    Is(SelectorList): Is(list) => format!("is({})", list.into_css()), "is";
+    Lang(&'static str): Lang(lang) => format!("lang({lang})"), "lang";
+    Not(SelectorList): Not(list) => format!("not({})", list.into_css()), "not";
+    NthChild(NthArgument): NthChild(arg) => format!("nth-child({})", arg.into_css()), "nth-child";
+    NthLastChild(NthArgument): NthLastChild(arg) => format!("nth-last-child({})", arg.into_css()), "nth-last-child";
+    NthLastOfType(NthArgument): NthLastOfType(arg) => format!("nth-last-of-type({})", arg.into_css()), "nth-last-of-type";
+    NthOfType(NthArgument): NthOfType(arg) => format!("nth-of-type({})", arg.into_css()), "nth-of-type";
+    Where(SelectorList): Where(list) => format!("where({})", list.into_css()), "where";
+);
+
+impl IntoSimpleSelector for PseudoClass {
+    fn into_simple(self) -> SimpleSelector {
+        SimpleSelector::Pseudo(self.into_css().into())
+    }
+}
+
+/// Convert to a simple selector
+#[diagnostic::on_unimplemented(
+    message = "{Self} is not a simple selector",
+    note = "If you tried to pass a string, use the specific constructors like `class!()`"
+)]
+pub(crate) trait IntoSimpleSelector {
+    /// Into a simple selector
+    fn into_simple(self) -> SimpleSelector;
+}
+
+impl IntoSimpleSelector for SimpleSelector {
+    fn into_simple(self) -> SimpleSelector {
+        self
+    }
+}
+
+/// A class generated from the `class` macro
+pub struct Class(pub &'static str);
+
+impl<C: crate::reactivity::Component> crate::dom::ToClass<C> for Class {
+    fn calc_class(self, _node: &web_sys::Element) -> crate::dom::classes::ClassResult<C> {
+        crate::dom::classes::ClassResult::SetIt(Some(self.0.into()))
+    }
+}
+
+impl IntoSimpleSelector for Class {
+    fn into_simple(self) -> SimpleSelector {
+        SimpleSelector::Class(self.0.into())
+    }
+}
+
+/// For items that can be converted into compound selectors
+///
+/// This also implements all of the compound selector methods, this lets you do
+/// `my_class.and(...).and(...)`
+pub trait IntoCompoundSelector: Sized {
+    /// Convert into a compound selector
+    fn into_compound(self) -> CompoundSelector;
+
+    /// Add another selector to this one *for the same element*
+    /// This is equivalent to not having a space in css.
+    ///
+    /// ```rust
+    /// # use natrix::prelude::*;
+    /// # use natrix::class;
+    /// const BTN: Class = class!();
+    /// // div.btn
+    /// let _ = e::TagDiv.and(BTN);
+    /// ```
+    ///
+    /// This also enforces the invariant that you tags come first!
+    /// ```compile_fail
+    /// # use natrix::prelude::*;
+    /// # use natrix::class;
+    /// const BTN: Class = class!();
+    /// // div.btn
+    /// let _ = BTN.and(e::TagDiv);
+    /// ```
+    fn and(self, new: impl IntoSimpleSelector) -> CompoundSelector {
+        let mut this = self.into_compound();
+        this.0.push(new.into_simple());
+        this
+    }
+}
+
+impl IntoCompoundSelector for CompoundSelector {
+    fn into_compound(self) -> CompoundSelector {
+        self
+    }
+}
+
+impl<T: IntoSimpleSelector> IntoCompoundSelector for T {
+    fn into_compound(self) -> CompoundSelector {
+        CompoundSelector(vec![self.into_simple()])
+    }
+}
+
+/// Define a pseudo element method
+macro_rules! pseudo_element {
+    ($element:ident) => {
+        #[doc = concat!("<https://developer.mozilla.org/en-US/docs/Web/CSS/::", stringify!($element), ">")]
+        fn $element(self) -> FinalizedSelector {
+            FinalizedSelector {
+                head: self.into_complex(),
+                element: Some(stringify!($element).into())
+            }
+        }
+    };
+    ($element:literal, $method:ident) => {
+        #[doc = concat!("<https://developer.mozilla.org/en-US/docs/Web/CSS/::", stringify!($element), ">")]
+        fn $method(self) -> FinalizedSelector {
+            FinalizedSelector {
+                head: self.into_complex(),
+                element: Some(stringify!($element).into())
+            }
+        }
+    };
+}
+
+/// For items that can be converted into complex selectors
+///
+/// This also implements all of the complex selector methods, this lets you do
+/// `my_class.child(...).child(...)`
+pub trait IntoComplexSelector: Sized {
+    /// Convert into a complex selector
+    fn into_complex(self) -> ComplexSelector;
+
+    /// Match a direct child of this selector
+    /// i.e css `>`
+    /// ```rust
+    /// # use natrix::prelude::*;
+    /// // p > button
+    /// let _ = e::TagP.child(e::TagButton);
+    /// ```
+    ///
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/Child_combinator>
+    fn child(self, child: impl IntoCompoundSelector) -> ComplexSelector {
+        let mut this = self.into_complex();
+        this.tail
+            .push((Combinator::DirectChild, child.into_compound()));
+        this
+    }
+
+    /// Match any child of this selector.
+    /// i.e css space
+    /// ```rust
+    /// # use natrix::prelude::*;
+    /// // p button
+    /// let _ = e::TagP.descendant(e::TagButton);
+    /// ```
+    ///
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/Descendant_combinator>
+    fn descendant(self, descendant: impl IntoCompoundSelector) -> ComplexSelector {
+        let mut this = self.into_complex();
+        this.tail
+            .push((Combinator::DirectChild, descendant.into_compound()));
+        this
+    }
+
+    /// Match next sibling of this selector.
+    /// i.e css `+`
+    /// ```rust
+    /// # use natrix::prelude::*;
+    /// // p + button
+    /// let _ = e::TagP.next_sibling(e::TagButton);
+    /// ```
+    ///
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/Next-sibling_combinator>
+    fn next_sibling(self, sibling: impl IntoCompoundSelector) -> ComplexSelector {
+        let mut this = self.into_complex();
+        this.tail
+            .push((Combinator::NextSibling, sibling.into_compound()));
+        this
+    }
+
+    /// Match any following sibling of this selector.
+    /// i.e css `~`
+    /// ```rust
+    /// # use natrix::prelude::*;
+    /// // p ~ button
+    /// let _ = e::TagP.subsequent_sibling(e::TagButton);
+    /// ```
+    ///
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/Subsequent-sibling_combinator>
+    fn subsequent_sibling(self, sibling: impl IntoCompoundSelector) -> ComplexSelector {
+        let mut this = self.into_complex();
+        this.tail
+            .push((Combinator::SubsequentSibling, sibling.into_compound()));
+        this
+    }
+
+    pseudo_element!(after);
+    pseudo_element!(before);
+    pseudo_element!(backdrop);
+    pseudo_element!("file-selector-button", file_selector_button);
+    pseudo_element!(placeholder);
+    pseudo_element!("target-text", target_text);
+    pseudo_element!("first-line", first_line);
+    pseudo_element!("first-letter", first_letter);
+    pseudo_element!(cue);
+}
+
+impl IntoComplexSelector for ComplexSelector {
+    fn into_complex(self) -> ComplexSelector {
+        self
+    }
+}
+
+impl<T: IntoCompoundSelector> IntoComplexSelector for T {
+    fn into_complex(self) -> ComplexSelector {
+        ComplexSelector {
+            first: self.into_compound(),
+            tail: Vec::new(),
+        }
+    }
+}
+
+/// Convert a selector into a finalized one
+pub trait IntoFinalizedSelector {
+    /// Convert into a finalized one
+    fn into_finalized(self) -> FinalizedSelector;
+}
+
+impl IntoFinalizedSelector for FinalizedSelector {
+    fn into_finalized(self) -> FinalizedSelector {
+        self
+    }
+}
+
+impl<T: IntoComplexSelector> IntoFinalizedSelector for T {
+    fn into_finalized(self) -> FinalizedSelector {
+        FinalizedSelector {
+            head: self.into_complex(),
+            element: None,
+        }
+    }
+}
+
+/// Generate a unique class names
+#[macro_export]
+macro_rules! class {
+    () => {
+        $crate::prelude::Class($crate::unique_str!())
+    };
+}
+
+#[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
+mod tests {
+    use insta::assert_snapshot;
+    use static_assertions::{assert_impl_all, assert_not_impl_any};
+
+    use super::*;
+    use crate::css::assert_valid_css;
+    use crate::dom::html_elements::TagDiv;
+
+    assert_impl_all!(TagDiv: IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector);
+    assert_impl_all!(Class: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector);
+    assert_impl_all!(PseudoClass: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector);
+    assert_impl_all!(SimpleSelector: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector);
+    assert_impl_all!(CompoundSelector: IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector);
+    assert_impl_all!(ComplexSelector: IntoComplexSelector, IntoFinalizedSelector);
+    assert_impl_all!(FinalizedSelector: IntoFinalizedSelector);
+
+    // Tags can only be the start of a compound selector, so should not be valid to be inserted in
+    // the middle of one.
+    assert_not_impl_any!(TagDiv: IntoSimpleSelector);
+    assert_not_impl_any!(CompoundSelector: IntoSimpleSelector);
+    assert_not_impl_any!(ComplexSelector: IntoSimpleSelector, IntoCompoundSelector);
+    assert_not_impl_any!(FinalizedSelector: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector);
+
+    macro_rules! assert_valid_and_snapsot {
+        ($expr:expr) => {
+            let selector = $expr.into_finalized(); // Ensure its correct from the top
+            let result = selector.into_css();
+
+            assert_snapshot!(stringify!($expr), result, stringify!($expr));
+
+            let wrapped = format!("{result} {{}}");
+            assert_valid_css(&wrapped);
+        };
+    }
+
+    // We do not want this to actually use `unique_str` in a testing situation.
+    const BTN: Class = Class("btn");
+
+    #[test]
+    fn cases() {
+        assert_valid_and_snapsot!(TagDiv);
+        assert_valid_and_snapsot!(BTN);
+        assert_valid_and_snapsot!(TagDiv.and(BTN));
+        assert_valid_and_snapsot!(TagDiv.child(BTN));
+        assert_valid_and_snapsot!(TagDiv.descendant(BTN));
+        assert_valid_and_snapsot!(TagDiv.next_sibling(BTN));
+        assert_valid_and_snapsot!(TagDiv.subsequent_sibling(BTN));
+        assert_valid_and_snapsot!(TagDiv.and(BTN).descendant(BTN));
+        assert_valid_and_snapsot!(BTN.descendant(TagDiv.and(BTN)));
+        assert_valid_and_snapsot!(TagDiv.descendant(TagDiv).descendant(TagDiv));
+        assert_valid_and_snapsot!(TagDiv.after());
+        assert_valid_and_snapsot!(TagDiv.descendant(BTN).before());
+        assert_valid_and_snapsot!(PseudoClass::Hover);
+        assert_valid_and_snapsot!(BTN.and(PseudoClass::Hover));
+        assert_valid_and_snapsot!(TagDiv.descendant(PseudoClass::Hover));
+        assert_valid_and_snapsot!(TagDiv.and(PseudoClass::Has(selector_list!(BTN))));
+        assert_valid_and_snapsot!(TagDiv.and(PseudoClass::NthChild(NthArgument::new(2, 3))));
+        assert_valid_and_snapsot!(
+            TagDiv.and(PseudoClass::NthChild(NthArgument::new(2, 3).of(BTN)))
+        );
+    }
+}

@@ -197,30 +197,6 @@ impl ToCssValue for Color {
     }
 }
 
-/// Create a unique string
-///
-/// This is a hash of the filename + line number + column (computed at compile time)
-///
-/// This is intended to use generating class names and ids.
-/// ```rust
-/// use natrix::unique_str;
-///
-/// const MY_CLASS: &str = unique_str!();
-/// ```
-#[macro_export]
-macro_rules! unique_str {
-    () => {{
-        const RAW: &str = concat!(file!(), "-", line!(), "-", column!());
-        const HASHED: [u8; 20] = $crate::macro_ref::const_sha1::sha1(RAW.as_bytes()).as_bytes();
-        const ENCODED: &str = $crate::macro_ref::const_base::encode_as_str!(
-            &HASHED,
-            $crate::macro_ref::const_base::Config::B64_URL_SAFE.end_padding(false),
-        );
-
-        ENCODED
-    }};
-}
-
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use insta::assert_snapshot;
@@ -265,11 +241,6 @@ mod tests {
             ]
             .boxed()
         }
-    }
-
-    #[test]
-    fn unique_is_unique() {
-        assert_ne!(unique_str!(), unique_str!());
     }
 
     #[test]

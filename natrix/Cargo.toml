@@ -56,10 +56,12 @@ _internal_extract_css = ["_internal_collect_css"]
 
 [dev-dependencies]
 wasm-bindgen-test ="0.3.50"
+static_assertions = "1"
 
 [target.'cfg(not(target_arch="wasm32"))'.dev-dependencies]
 lightningcss = { version = "1.0.0-alpha.66", default-features = false }
 proptest = "1.6"
+insta = "1.43"
 
 [package.metadata.cargo-udeps.ignore]
 development = ["wasm-bindgen-test"]

@@ -1,0 +1,5 @@
+---
+source: natrix/src/css/selectors.rs
+expression: "TagDiv.and(PseudoClass::NthChild(NthArgument::new(2, 3).of(BTN)))"
+---
+div:nth-child(2n+3 of .btn)

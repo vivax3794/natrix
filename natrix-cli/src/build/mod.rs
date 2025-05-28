@@ -4,7 +4,6 @@ use std::fs;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
 
-use crate::options::BuildProfile;
 use crate::prelude::*;
 use crate::{options, utils};
 

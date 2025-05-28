@@ -1,7 +1,8 @@
 use std::hint::black_box;
 
 use natrix::prelude::*;
-use natrix::{css, register_css};
+use natrix::register_css;
+
 mod reload_tests;
 
 const HELLO_TEXT: &str = "HELLO WORLD, TEST TEST!";
@@ -12,7 +13,7 @@ const RELOAD_ID: &str = "RELOAD";
 const IMG_ID: &str = "IMG_ID";
 
 register_css! {
-    css::StyleSheet::new()
+    StyleSheet::new()
         .raw("h1 {background-color: rgb(1, 2, 3, 1);}")
 }
 

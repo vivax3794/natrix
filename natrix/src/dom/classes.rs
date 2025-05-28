@@ -11,7 +11,7 @@ use crate::type_macros;
 /// The result of applying a class
 pub(crate) enum ClassResult<C: Component> {
     /// The class was applied immedtialy, along with its value
-    AppliedIt(Option<Cow<'static, str>>),
+    SetIt(Option<Cow<'static, str>>),
     /// The class needs access to state
     Dynamic(DeferredFunc<C>),
 }
@@ -27,7 +27,7 @@ macro_rules! class_string {
     ($type:ty, $cow:expr) => {
         impl<C: Component> ToClass<C> for $type {
             fn calc_class(self, _node: &web_sys::Element) -> ClassResult<C> {
-                ClassResult::AppliedIt(Some(($cow)(self)))
+                ClassResult::SetIt(Some(($cow)(self)))
             }
         }
     };
@@ -39,7 +39,7 @@ impl<C: Component, T: ToClass<C>> ToClass<C> for Option<T> {
         if let Some(inner) = self {
             inner.calc_class(node)
         } else {
-            ClassResult::AppliedIt(None)
+            ClassResult::SetIt(None)
         }
     }
 }

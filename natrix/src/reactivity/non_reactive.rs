@@ -105,10 +105,10 @@ impl<A: ToAttribute<()>, C: Component> ToAttribute<C> for NonReactive<A> {
 impl<A: ToClass<()>, C: Component> ToClass<C> for NonReactive<A> {
     fn calc_class(self, node: &web_sys::Element) -> ClassResult<C> {
         match self.0.calc_class(node) {
-            ClassResult::AppliedIt(res) => ClassResult::AppliedIt(res),
+            ClassResult::SetIt(res) => ClassResult::SetIt(res),
             ClassResult::Dynamic(_) => {
                 debug_panic!("Dynamic class in `NonReactive` context");
-                ClassResult::AppliedIt(None)
+                ClassResult::SetIt(None)
             }
         }
     }

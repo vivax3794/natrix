@@ -10,6 +10,7 @@ pub mod selectors;
 pub mod stylesheet;
 pub mod values;
 
+pub use selectors::PseudoClass;
 pub use stylesheet::StyleSheet;
 pub use values::Color;
 
@@ -40,7 +41,8 @@ unsafe extern "C" {
 macro_rules! register_css {
     ($style:expr) => {
         $crate::macro_ref::inventory::submit!($crate::macro_ref::CssEmit(|| {
-            use $crate::css::*;
+            use $crate::css::PseudoClass::*;
+            use $crate::css::StyleSheet;
             let sheet: $crate::macro_ref::StyleSheet = $style;
             sheet.to_css()
         }));
@@ -57,7 +59,8 @@ macro_rules! register_css {
 macro_rules! register_css {
     ($style:expr) => {
         const _: fn() -> $crate::macro_ref::StyleSheet = || {
-            use $crate::css::*;
+            use $crate::css::PseudoClass::*;
+            use $crate::css::StyleSheet;
             $style
         };
     };
@@ -117,6 +120,31 @@ fn css_emit(css_string: &str) {
     println!("{css_string}");
 }
 
+/// Create a unique string
+///
+/// This is a hash of the filename + line number + column (computed at compile time)
+///
+/// This is used internally by the `class` and `id` macros
+/// ```rust
+/// # use natrix::prelude::*;
+/// use natrix::class;
+///
+/// const MY_CLASS: Class = class!(); // <-- uses `unique_str`
+/// ```
+#[macro_export]
+macro_rules! unique_str {
+    () => {{
+        const RAW: &str = concat!(file!(), "-", line!(), "-", column!());
+        const HASHED: [u8; 20] = $crate::macro_ref::const_sha1::sha1(RAW.as_bytes()).as_bytes();
+        const ENCODED: &str = $crate::macro_ref::const_base::encode_as_str!(
+            &HASHED,
+            $crate::macro_ref::const_base::Config::B64_URL_SAFE.end_padding(false),
+        );
+
+        ENCODED
+    }};
+}
+
 /// Check if a string is valid css
 #[cfg(all(test, not(target_arch = "wasm32")))]
 #[expect(clippy::panic, clippy::expect_used, reason = "This is meant for tests")]
@@ -135,6 +163,7 @@ fn assert_valid_css(string: &str) {
         Err(error) => {
             panic!("The following code was not valid css\n{string}\nerror: {error}");
         }
+
         Ok(stylesheet) => {
             let warnings = warnings.read().expect("Failed to get lock");
             if !warnings.is_empty() {
@@ -153,5 +182,13 @@ fn assert_valid_css(string: &str) {
                 "Found indications of invalid css\n{string}\n{stylesheet:?}"
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn unique_is_unique() {
+        assert_ne!(unique_str!(), unique_str!());
     }
 }

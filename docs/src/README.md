@@ -40,3 +40,4 @@ impl Component for Counter {
 * **Developer experience first** – Natrix is designed to feel natural for Rust developers.
 * **Idiomatic Rust** – We use Rust-native features & patterns, not what worked for js.
 * **Stop porting JS to Rust** – Rust is an amazing language, let’s build a frontend framework that actually feels like Rust.
+
