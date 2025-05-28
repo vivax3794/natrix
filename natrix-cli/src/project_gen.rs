@@ -75,9 +75,6 @@ dist
 
     generate_main_rs(&root, name, nightly)?;
 
-    let rust_fmt = r"".trim();
-    fs::write(root.join("rustfmt.toml"), rust_fmt)?;
-
     std::process::Command::new("git")
         .args(["init", "--initial-branch=main"])
         .current_dir(&root)

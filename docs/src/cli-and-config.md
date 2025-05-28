@@ -28,7 +28,6 @@ my-awesome-app/
 ├── Cargo.toml
 ├── .gitignore
 ├── rust-toolchain.toml
-├── rustfmt.toml
 └── src/
     └── main.rs
 ```
@@ -47,17 +46,7 @@ The dev server:
 - Serves your app on a local port (defaults to 8000)
 - Sets up WebSocket-based live reloading
 
-> [!TIP]
-> You can specify a custom port for the server:
-> ```bash
-> natrix dev --port 3000
-> ```
-
-#### Development Options
-
-```bash
-natrix dev [options]
-```
+#### Options
 
 - `--port`, `-p`: Set a specific port for the dev server (default: auto-selects starting from 8000)
 - `--profile`: Choose the build profile (`dev` or `release`, default: `dev`)
@@ -80,10 +69,6 @@ This creates a `dist` folder with everything needed to deploy your application, 
 
 #### Build Options
 
-```bash
-natrix build [options]
-```
-
 - `--dist`, `-d`: Specify the output directory (default: `./dist`)
 - `--profile`: Choose the build profile (`dev` or `release`, default: `release`)
 - `--invalidate-cache`: Force asset cache invalidation 
@@ -91,6 +76,9 @@ natrix build [options]
 ## Configuration
 
 Natrix can be configured through your project's `Cargo.toml` file. Add a `[package.metadata.natrix]` section to customize how Natrix builds your application.
+
+>[!IMPORTANT]
+> These options only take affect for production builds. For dev all these settings have sensible defaults.
 
 ### Cache Busting
 
@@ -122,35 +110,5 @@ This configures all asset URLs to be prefixed with the specified path.
 > [!IMPORTANT]
 > Always include a leading slash in your `base_path` value.
 
-### Example Configuration
-
-Here's a complete example showing all available configuration options:
-
-```toml
-[package.metadata.natrix]
-# Use content-based cache busting
-cache_bust = "content"
-# Deploy to example.com/my-app
-base_path = "/my-app"
-```
-
-## Build Profiles
-
-Natrix supports two build profiles with different optimization levels:
-
-### Development Profile
-
-The `dev` profile prioritizes build speed and debugging:
-- Faster compilation
-- Includes debug information
-- Minimal optimizations
-- Larger output size
-
-### Release Profile
-
-The `release` profile prioritizes performance and size:
-- Aggressive code optimization
-- CSS and JavaScript minification
-- WebAssembly optimizations with `wasm-opt`
-- No debug information
-- Smaller output size
+### SSG
+By default natrix extracts metadata from your application, importantly for this to work your application must call [`mount`](prelude::mount), and should not access any browser apis before or after it.

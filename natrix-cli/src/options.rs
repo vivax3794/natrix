@@ -18,6 +18,8 @@ pub(crate) struct NatrixConfig {
     pub(crate) cache_bust: CacheBustOption,
     /// The base url to use
     pub(crate) base_path: Box<str>,
+    /// Wether ssg should be done
+    pub(crate) ssg: bool,
 }
 
 impl Default for NatrixConfig {
@@ -25,6 +27,7 @@ impl Default for NatrixConfig {
         Self {
             cache_bust: CacheBustOption::Content,
             base_path: Box::from(""),
+            ssg: true,
         }
     }
 }
@@ -121,6 +124,8 @@ pub(crate) struct BuildConfig {
     pub(crate) base_path: Box<str>,
     /// Invalidate the asset caches
     pub(crate) invalidate_cache: bool,
+    /// Wether to do ssg
+    pub(crate) ssg: bool,
 }
 
 impl DevArguments {
@@ -152,6 +157,7 @@ impl DevArguments {
             cache_bust: CacheBustOption::Timestamp,
             base_path: Box::from(""),
             invalidate_cache: self.shared.invalidate_cache,
+            ssg: false,
         })
     }
 }
@@ -170,6 +176,7 @@ impl BuildArguments {
             cache_bust: config.cache_bust,
             base_path: config.base_path,
             invalidate_cache: self.shared.invalidate_cache,
+            ssg: config.ssg && profile == BuildProfile::Release,
         })
     }
 }

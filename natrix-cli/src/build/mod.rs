@@ -47,7 +47,7 @@ pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManife
 
     let asset_manifest = assets::collect_macro_output(config)?;
 
-    let css_file = if config.profile == BuildProfile::Release {
+    let css_file = if config.ssg {
         let css_file = css::collect_css(config, &wasm_file)?;
         let css_file = cache_bust_file(config, css_file)?;
         Some(css_file)

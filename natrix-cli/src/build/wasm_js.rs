@@ -111,29 +111,28 @@ pub(crate) fn build_wasm(config: &options::BuildConfig) -> Result<PathBuf> {
         .args(["--profile", config.profile.cargo()])
         .env(natrix_shared::MACRO_SETTINGS, settings);
 
-    match config.profile {
-        BuildProfile::Release => {
-            let mut rustc_flags = String::from("-C target-feature=+bulk-memory,+reference-types ");
-            if rustc_is_nightly {
-                let std_features = String::from("optimize_for_size");
-                command
-                    .args(["-Z", "build-std=core,std,panic_abort"])
-                    .arg(format!("-Zbuild-std-features={std_features}"));
-                rustc_flags.push_str("-Zfmt-debug=none -Zlocation-detail=none -Zshare-generics=y");
-            } else {
-                println!(
-                        "{}",
-                        "⚠️ Using stable rust, nightly rust allows for better optimizations and smaller wasm files"
-                            .yellow()
-                            .bold()
-                    );
-            }
-            command.env("RUSTFLAGS", rustc_flags);
+    if config.profile == BuildProfile::Release {
+        let mut rustc_flags = String::from("-C target-feature=+bulk-memory,+reference-types ");
+        if rustc_is_nightly {
+            let std_features = String::from("optimize_for_size");
+            command
+                .args(["-Z", "build-std=core,std,panic_abort"])
+                .arg(format!("-Zbuild-std-features={std_features}"));
+            rustc_flags.push_str("-Zfmt-debug=none -Zlocation-detail=none -Zshare-generics=y");
+        } else {
+            println!(
+                    "{}",
+                    "⚠️ Using stable rust, nightly rust allows for better optimizations and smaller wasm files"
+                        .yellow()
+                        .bold()
+                );
         }
-        BuildProfile::Dev => {
-            command.args(["--features", FEATURE_RUNTIME_CSS]);
-        }
+        command.env("RUSTFLAGS", rustc_flags);
     }
+    if !config.ssg {
+        command.args(["--features", FEATURE_RUNTIME_CSS]);
+    }
+
     utils::run_with_spinner(command, utils::create_spinner("⚙️ wasm")?).context("Running cargo")?;
 
     find_wasm(config).context("Finding wasm file")
