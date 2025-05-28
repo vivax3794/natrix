@@ -1,6 +1,4 @@
 //! Types for the various css values
-//!
-//! This is the only part of the css system that should be invoked at runtime.
 
 /// Convert a value to a css value string
 pub trait ToCssValue {
@@ -9,6 +7,10 @@ pub trait ToCssValue {
 }
 
 /// A css color
+///
+/// # Important
+/// All color methods and constructor use `debug_assert` to verify input ranges. (as css itself
+/// handles out of range colors fine in prod).
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[must_use]
 pub enum Color {
@@ -221,6 +223,7 @@ macro_rules! unique_str {
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
+    use insta::assert_snapshot;
     use proptest::prelude::*;
 
     use super::*;
@@ -275,6 +278,79 @@ mod tests {
         let chained = Color::rgb(100, 100, 100).with_alpha(0.5);
 
         assert_eq!(direct, chained);
+    }
+
+    #[test]
+    fn snapshot_rgb_colors() {
+        assert_snapshot!("rgb_red", Color::rgb(255, 0, 0).to_css());
+        assert_snapshot!("rgb_green", Color::rgb(0, 255, 0).to_css());
+        assert_snapshot!("rgb_blue", Color::rgb(0, 0, 255).to_css());
+        assert_snapshot!("rgb_black", Color::rgb(0, 0, 0).to_css());
+        assert_snapshot!("rgb_white", Color::rgb(255, 255, 255).to_css());
+    }
+
+    #[test]
+    fn snapshot_rgba_colors() {
+        assert_snapshot!("rgba_half_alpha", Color::rgba(255, 0, 0, 0.5).to_css());
+        assert_snapshot!("rgba_zero_alpha", Color::rgba(0, 255, 0, 0.0).to_css());
+        assert_snapshot!("rgba_full_alpha", Color::rgba(0, 0, 255, 1.0).to_css());
+    }
+
+    #[test]
+    fn snapshot_hsl_colors() {
+        assert_snapshot!("hsl_red", Color::hsl(0, 100, 50).to_css());
+        assert_snapshot!("hsl_green", Color::hsl(120, 100, 50).to_css());
+        assert_snapshot!("hsl_blue", Color::hsl(240, 100, 50).to_css());
+        assert_snapshot!("hsl_gray", Color::hsl(0, 0, 50).to_css());
+    }
+
+    #[test]
+    fn snapshot_hsla_colors() {
+        assert_snapshot!("hsla_half_alpha", Color::hsla(0, 100, 50, 0.5).to_css());
+        assert_snapshot!("hsla_zero_alpha", Color::hsla(120, 100, 50, 0.0).to_css());
+        assert_snapshot!("hsla_full_alpha", Color::hsla(240, 100, 50, 1.0).to_css());
+    }
+
+    #[test]
+    fn snapshot_oklch_colors() {
+        assert_snapshot!("oklch_mid_lightness", Color::oklch(0.5, 0.1, 0.5).to_css());
+        assert_snapshot!("oklch_low_lightness", Color::oklch(0.1, 0.2, 0.8).to_css());
+        assert_snapshot!(
+            "oklch_high_lightness",
+            Color::oklch(0.9, 0.05, 0.2).to_css()
+        );
+    }
+
+    #[test]
+    fn snapshot_oklch_a_colors() {
+        assert_snapshot!(
+            "oklch_a_half_alpha",
+            Color::oklch_a(0.5, 0.1, 0.5, 0.5).to_css()
+        );
+        assert_snapshot!(
+            "oklch_a_zero_alpha",
+            Color::oklch_a(0.1, 0.2, 0.8, 0.0).to_css()
+        );
+        assert_snapshot!(
+            "oklch_a_full_alpha",
+            Color::oklch_a(0.9, 0.05, 0.2, 1.0).to_css()
+        );
+    }
+
+    #[test]
+    fn snapshot_with_alpha_method() {
+        assert_snapshot!(
+            "with_alpha_rgb",
+            Color::rgb(10, 20, 30).with_alpha(0.75).to_css()
+        );
+        assert_snapshot!(
+            "with_alpha_hsl",
+            Color::hsl(90, 50, 25).with_alpha(0.25).to_css()
+        );
+        assert_snapshot!(
+            "with_alpha_oklch",
+            Color::oklch(0.3, 0.1, 0.6).with_alpha(0.9).to_css()
+        );
     }
 
     proptest! {

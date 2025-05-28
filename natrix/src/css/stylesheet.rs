@@ -31,7 +31,7 @@ impl StyleSheet {
     #[doc(hidden)]
     #[must_use]
     pub fn to_css(self) -> String {
-        self.raw_sections.join("\n")
+        self.raw_sections.join("")
     }
 }
 

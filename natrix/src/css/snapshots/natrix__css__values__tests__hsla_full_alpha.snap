@@ -1,0 +1,5 @@
+---
+source: natrix/src/css/values.rs
+expression: "Color::hsla(240, 100, 50, 1.0).to_css()"
+---
+hsl(240 100 50/1)

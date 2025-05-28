@@ -1,10 +1,12 @@
 //! Create css styles
 
 // DESIGN NOTE:
-// This module does not generally need to be efficent, it just needs to be ergonomic.
-// The code in this module is inteded to be used at bundling time, and hence will not be included
+// This module does not generally need to be efficient, it just needs to be ergonomic.
+// The code in this module is intended to be used at bundling time, and hence will not be included
 // in production applications.
 
+pub mod property;
+pub mod selectors;
 pub mod stylesheet;
 pub mod values;
 
@@ -38,6 +40,7 @@ unsafe extern "C" {
 macro_rules! register_css {
     ($style:expr) => {
         $crate::macro_ref::inventory::submit!($crate::macro_ref::CssEmit(|| {
+            use $crate::css::*;
             let sheet: $crate::macro_ref::StyleSheet = $style;
             sheet.to_css()
         }));
@@ -53,7 +56,10 @@ macro_rules! register_css {
 #[cfg(not(feature = "_internal_collect_css"))]
 macro_rules! register_css {
     ($style:expr) => {
-        const _: fn() -> $crate::macro_ref::StyleSheet = || $style;
+        const _: fn() -> $crate::macro_ref::StyleSheet = || {
+            use $crate::css::*;
+            $style
+        };
     };
 }
 

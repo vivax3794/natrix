@@ -1,0 +1,5 @@
+---
+source: natrix/src/css/values.rs
+expression: "Color::rgba(255, 0, 0, 0.5).to_css()"
+---
+rgb(255 0 0/0.5)
