@@ -111,4 +111,4 @@ This configures all asset URLs to be prefixed with the specified path.
 > Always include a leading slash in your `base_path` value.
 
 ### SSG
-By default natrix extracts metadata from your application, importantly for this to work your application must call [`mount`](prelude::mount), and should not access any browser apis before or after it.
+By default natrix extracts metadata from your application, importantly for this to work your application must call [`mount`](reactivity::component::mount), and should not access any browser apis before or after it.

@@ -6,3 +6,10 @@ edition = "2024"
 [dependencies]
 natrix = { path="../natrix", features = ["nightly", "test_utils"] }
 wasm_bench_runtime = "*"
+
+[package.metadata.natrix]
+ssg = false
+
+[features]
+__natrix_internal_extract_css = ["natrix/_internal_extract_css"]
+__natrix_internal_runtime_css = ["natrix/_internal_runtime_css"]

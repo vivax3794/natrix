@@ -18,7 +18,7 @@ pub(crate) struct NatrixConfig {
     pub(crate) cache_bust: CacheBustOption,
     /// The base url to use
     pub(crate) base_path: Box<str>,
-    /// Wether ssg should be done
+    /// Whether ssg should be done
     pub(crate) ssg: bool,
 }
 
@@ -124,7 +124,7 @@ pub(crate) struct BuildConfig {
     pub(crate) base_path: Box<str>,
     /// Invalidate the asset caches
     pub(crate) invalidate_cache: bool,
-    /// Wether to do ssg
+    /// Whether to do ssg
     pub(crate) ssg: bool,
 }
 
