@@ -20,9 +20,9 @@ notify = "8.0.0"
 tiny_http = "0.12.0"
 oxc = {version="0.72.0", default-features=false, features=["minifier", "codegen"]}
 lightningcss = { version = "1.0.0-alpha.66", default-features = false, features = ["visitor"] }
-wasmparser = "0.231"
+wasmparser = "0.232"
 rustc_version = "0.4.1"
-cargo_metadata = "0.19.2"
+cargo_metadata = "0.20"
 tungstenite = { version = "0.26.2" }
 data-encoding = {version="2.9.0", default-features = false, features = ["alloc"]}
 ignore = "0.4.23"

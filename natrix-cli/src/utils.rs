@@ -109,7 +109,7 @@ pub(crate) fn get_project_name() -> Result<String> {
         ));
     }
 
-    Ok(package.name.clone())
+    Ok(package.name.to_string())
 }
 
 /// Find the target folder
