@@ -5,6 +5,18 @@
 pub struct SelectorList(pub Vec<FinalizedSelector>);
 
 /// Create a Selector list of the given elements
+///
+/// This supports being passed different types of selectors, as it will convert all of them to
+/// `FinalizedSelector` automatically
+///
+/// ```rust
+/// # use natrix::prelude::*;
+/// # use natrix::selector_list;
+/// let _ = selector_list![
+///     e::TagDiv, // This is of type `TagDiv`
+///     e::TagDiv.child(e::TagH1) // This is of type `CompoundSelector`
+/// ];
+/// ```
 #[macro_export]
 macro_rules! selector_list {
     [$($element:expr),*] => {
@@ -273,18 +285,55 @@ define_pseudo_class!(
     UserInvalid => "user-invalid", UserValid => "user-valid";
 
     Dir(Direction): Dir(dir) => format!("dir({})", dir.short()), "dir";
-    Has(SelectorList): Has(list) => format!("has({})", list.into_css()), "has";
-    Is(SelectorList): Is(list) => format!("is({})", list.into_css()), "is";
     Lang(&'static str): Lang(lang) => format!("lang({lang})"), "lang";
-    Not(SelectorList): Not(list) => format!("not({})", list.into_css()), "not";
     NthChild(NthArgument): NthChild(arg) => format!("nth-child({})", arg.into_css()), "nth-child";
     NthLastChild(NthArgument): NthLastChild(arg) => format!("nth-last-child({})", arg.into_css()), "nth-last-child";
     NthLastOfType(NthArgument): NthLastOfType(arg) => format!("nth-last-of-type({})", arg.into_css()), "nth-last-of-type";
     NthOfType(NthArgument): NthOfType(arg) => format!("nth-of-type({})", arg.into_css()), "nth-of-type";
-    Where(SelectorList): Where(list) => format!("where({})", list.into_css()), "where";
 );
 
 impl IntoSimpleSelector for PseudoClass {
+    fn into_simple(self) -> SimpleSelector {
+        SimpleSelector::Pseudo(self.into_css().into())
+    }
+}
+
+/// Define `PseudoClassNested`
+macro_rules! define_pseudo_class_nested {
+    (
+        $($c_def:ident($($c_arg:ty),*): $c_pat:pat => $c_expr:expr, $c_doc:literal);*;
+    ) => {
+        paste::paste! {
+            /// Pseudo classes
+            pub enum PseudoClassNested<S> {
+                $(
+                    #[doc = concat!("<https://developer.mozilla.org/en-US/docs/Web/CSS/:", $c_doc,">")]
+                    $c_def($($c_arg),*)
+                ),*,
+            }
+
+            impl<S: IntoSelectorList> PseudoClassNested<S> {
+                /// Convert to css
+                fn into_css(self) -> String {
+                    match self {
+                        $(
+                            Self::$c_pat => $c_expr
+                        ),*,
+                    }
+                }
+            }
+        }
+    };
+}
+
+define_pseudo_class_nested!(
+    Has(S): Has(list) => format!("has({})", list.into_list().into_css()), "has";
+    Is(S): Is(list) => format!("is({})", list.into_list().into_css()), "is";
+    Not(S): Not(list) => format!("not({})", list.into_list().into_css()), "not";
+    Where(S): Where(list) => format!("where({})", list.into_list().into_css()), "where";
+);
+
+impl<S: IntoSelectorList> IntoSimpleSelector for PseudoClassNested<S> {
     fn into_simple(self) -> SimpleSelector {
         SimpleSelector::Pseudo(self.into_css().into())
     }
@@ -508,6 +557,24 @@ impl<T: IntoComplexSelector> IntoFinalizedSelector for T {
     }
 }
 
+/// Convert a selector into a selector list
+pub trait IntoSelectorList {
+    /// Convert into a list
+    fn into_list(self) -> SelectorList;
+}
+
+impl IntoSelectorList for SelectorList {
+    fn into_list(self) -> SelectorList {
+        self
+    }
+}
+
+impl<T: IntoFinalizedSelector> IntoSelectorList for T {
+    fn into_list(self) -> SelectorList {
+        SelectorList(vec![self.into_finalized()])
+    }
+}
+
 /// Generate a unique class names
 #[macro_export]
 macro_rules! class {
@@ -526,13 +593,15 @@ mod tests {
     use crate::css::assert_valid_css;
     use crate::dom::html_elements::TagDiv;
 
-    assert_impl_all!(TagDiv: IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector);
-    assert_impl_all!(Class: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector);
-    assert_impl_all!(PseudoClass: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector);
-    assert_impl_all!(SimpleSelector: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector);
-    assert_impl_all!(CompoundSelector: IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector);
-    assert_impl_all!(ComplexSelector: IntoComplexSelector, IntoFinalizedSelector);
-    assert_impl_all!(FinalizedSelector: IntoFinalizedSelector);
+    assert_impl_all!(TagDiv: IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector, IntoSelectorList);
+    assert_impl_all!(Class: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector, IntoSelectorList);
+    assert_impl_all!(PseudoClass: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector, IntoSelectorList);
+    assert_impl_all!(PseudoClassNested<TagDiv>: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector, IntoSelectorList);
+    assert_impl_all!(SimpleSelector: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector, IntoSelectorList);
+    assert_impl_all!(CompoundSelector: IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector, IntoSelectorList);
+    assert_impl_all!(ComplexSelector: IntoComplexSelector, IntoFinalizedSelector, IntoSelectorList);
+    assert_impl_all!(FinalizedSelector: IntoFinalizedSelector, IntoSelectorList);
+    assert_impl_all!(SelectorList: IntoSelectorList);
 
     // Tags can only be the start of a compound selector, so should not be valid to be inserted in
     // the middle of one.
@@ -540,6 +609,7 @@ mod tests {
     assert_not_impl_any!(CompoundSelector: IntoSimpleSelector);
     assert_not_impl_any!(ComplexSelector: IntoSimpleSelector, IntoCompoundSelector);
     assert_not_impl_any!(FinalizedSelector: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector);
+    assert_not_impl_any!(SelectorList: IntoSimpleSelector, IntoCompoundSelector, IntoComplexSelector, IntoFinalizedSelector);
 
     macro_rules! assert_valid_and_snapsot {
         ($expr:expr) => {
@@ -573,7 +643,8 @@ mod tests {
         assert_valid_and_snapsot!(PseudoClass::Hover);
         assert_valid_and_snapsot!(BTN.and(PseudoClass::Hover));
         assert_valid_and_snapsot!(TagDiv.descendant(PseudoClass::Hover));
-        assert_valid_and_snapsot!(TagDiv.and(PseudoClass::Has(selector_list!(BTN))));
+        assert_valid_and_snapsot!(TagDiv.and(PseudoClassNested::Has(BTN)));
+        assert_valid_and_snapsot!(TagDiv.and(PseudoClassNested::Has(selector_list![BTN, TagDiv])));
         assert_valid_and_snapsot!(TagDiv.and(PseudoClass::NthChild(NthArgument::new(2, 3))));
         assert_valid_and_snapsot!(
             TagDiv.and(PseudoClass::NthChild(NthArgument::new(2, 3).of(BTN)))

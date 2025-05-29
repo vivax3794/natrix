@@ -10,7 +10,7 @@ pub mod selectors;
 pub mod stylesheet;
 pub mod values;
 
-pub use selectors::PseudoClass;
+pub use selectors::{PseudoClass, PseudoClassNested};
 pub use stylesheet::StyleSheet;
 pub use values::Color;
 
@@ -41,8 +41,7 @@ unsafe extern "C" {
 macro_rules! register_css {
     ($style:expr) => {
         $crate::macro_ref::inventory::submit!($crate::macro_ref::CssEmit(|| {
-            use $crate::css::PseudoClass::*;
-            use $crate::css::StyleSheet;
+            use $crate::css::prelude::*;
             let sheet: $crate::macro_ref::StyleSheet = $style;
             sheet.to_css()
         }));
@@ -59,11 +58,19 @@ macro_rules! register_css {
 macro_rules! register_css {
     ($style:expr) => {
         const _: fn() -> $crate::macro_ref::StyleSheet = || {
-            use $crate::css::PseudoClass::*;
-            use $crate::css::StyleSheet;
+            use $crate::css::prelude::*;
             $style
         };
     };
+}
+
+/// Css prelude
+/// This is auto start imported in `register_css`
+pub mod prelude {
+    pub use super::PseudoClass::*;
+    pub use super::PseudoClassNested::*;
+    pub use super::StyleSheet;
+    pub use super::selectors::{Direction, NthArgument};
 }
 
 /// Do the css collection and either emit to STDOUT or inject into dom

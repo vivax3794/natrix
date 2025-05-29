@@ -1,5 +1,0 @@
----
-source: natrix/src/css/selectors.rs
-expression: "TagDiv.and(PseudoClass::Has(selector_list!(BTN)))"
----
-div:has(.btn)
