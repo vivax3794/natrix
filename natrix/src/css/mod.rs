@@ -65,7 +65,7 @@ macro_rules! register_css {
 }
 
 /// Css prelude
-/// This is auto start imported in `register_css`
+/// This is auto star imported in `register_css`
 pub mod prelude {
     pub use super::PseudoClass::*;
     pub use super::PseudoClassNested::*;
