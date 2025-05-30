@@ -300,7 +300,7 @@ macro_rules! aria_attrs {
         impl<C: Component, T> HtmlElement<C, T> {
             $(
             pastey::paste! {
-                #[doc = "<https://developer.mozilla.org/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-" $attr ">"]
+                #[doc = "<https://developer.mozilla.org/docs/Web/Accessibility/ARIA/Reference/Attributes/aria%2d" $attr ">"]
                 #[inline]
                 pub fn [<aria_$attr>](self, value: impl ToAttribute<C>) -> Self {
                     self.attr(concat!("aria-", stringify!($attr)), value)
