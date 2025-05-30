@@ -348,7 +348,7 @@ impl<S: IntoSelectorList> IntoSimpleSelector for PseudoClassNested<S> {
     message = "{Self} is not a simple selector",
     note = "If you tried to pass a string, use the specific constructors like `class!()`"
 )]
-pub(crate) trait IntoSimpleSelector {
+pub trait IntoSimpleSelector {
     /// Into a simple selector
     fn into_simple(self) -> SimpleSelector;
 }
