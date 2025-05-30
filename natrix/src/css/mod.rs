@@ -71,6 +71,7 @@ pub mod prelude {
     pub use super::PseudoClassNested::*;
     pub use super::StyleSheet;
     pub use super::selectors::{Direction, NthArgument};
+    pub use crate::selector_list;
 }
 
 /// Do the css collection and either emit to STDOUT or inject into dom
