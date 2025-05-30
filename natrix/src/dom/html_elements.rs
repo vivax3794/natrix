@@ -238,8 +238,8 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
 macro_rules! elements {
     ($($name:ident),*) => {
         $(
-            paste::paste! {
-                #[doc = concat!("`<", stringify!($name), ">`")]
+            pastey::paste! {
+                #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/" $name ">"]
                 pub struct [< Tag $name:camel >];
 
                 impl IntoCompoundSelector for [< Tag $name:camel >] {
@@ -248,7 +248,7 @@ macro_rules! elements {
                     }
                 }
 
-                #[doc = concat!("`<", stringify!($name), ">`")]
+                #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/" $name ">"]
                 #[inline]
                 pub fn $name<C: Component>() -> HtmlElement<C, [< Tag $name:camel >]> {
                     HtmlElement::new(stringify!($name))
@@ -262,14 +262,14 @@ macro_rules! elements {
 macro_rules! attr_helpers {
     ($($tag:ident => $($attr:ident),+;)*) => {
         $(
-            paste::paste! {
+            pastey::paste! {
                 impl<C: Component> HtmlElement<C, [< Tag $tag:camel >]> {
                     $(
-                        #[doc = concat!("Set the `", stringify!($attr), "` attribute")]
+                        #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/" $tag "##" $attr ">"]
                         #[inline]
                         pub fn $attr(self, value: impl ToAttribute<C>) -> Self {
                             self.attr(stringify!($attr), value)
-                        }
+                           }
                     )+
                 }
             }
@@ -281,13 +281,15 @@ macro_rules! attr_helpers {
 macro_rules! global_attrs {
     ($($attr:ident),*) => {
         impl<C: Component, T> HtmlElement<C, T> {
-            $(
-                #[doc = concat!("Set the `", stringify!($attr), "` attribute")]
-                #[inline]
-                pub fn $attr(self, value: impl ToAttribute<C>) -> Self {
-                    self.attr(stringify!($attr), value)
-                }
-            )*
+            pastey::paste! {
+                $(
+                    #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Global_attributes/" $attr ">"]
+                    #[inline]
+                    pub fn $attr(self, value: impl ToAttribute<C>) -> Self {
+                        self.attr(stringify!($attr), value)
+                    }
+                )*
+            }
         }
     };
 }
@@ -297,8 +299,8 @@ macro_rules! aria_attrs {
     ($($attr:ident),*) => {
         impl<C: Component, T> HtmlElement<C, T> {
             $(
-            paste::paste! {
-                #[doc = concat!("Set the `aria-", stringify!($attr), "` attribute")]
+            pastey::paste! {
+                #[doc = "<https://developer.mozilla.org/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-" $attr ">"]
                 #[inline]
                 pub fn [<aria_$attr>](self, value: impl ToAttribute<C>) -> Self {
                     self.attr(concat!("aria-", stringify!($attr)), value)

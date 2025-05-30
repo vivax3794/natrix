@@ -87,7 +87,7 @@ impl ComplexSelector {
 }
 
 /// A combinator
-/// <https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_selectors#combinators_and_separators>
+/// <https://developer.mozilla.org/docs/Web/CSS/CSS_selectors#combinators_and_separators>
 #[derive(Debug, Copy, Clone)]
 pub enum Combinator {
     /// +
@@ -152,19 +152,19 @@ macro_rules! define_pseudo_class {
         $($a_rust:ident => $a_name:literal),*;
         $($c_def:ident($($c_arg:ty),*): $c_pat:pat => $c_expr:expr, $c_doc:literal);*;
     ) => {
-        paste::paste! {
+        pastey::paste! {
             /// Pseudo classes
             pub enum PseudoClass {
                 $(
-                    #[doc = concat!("<https://developer.mozilla.org/en-US/docs/Web/CSS/:", stringify!($simple),">")]
+                    #[doc = "<https://developer.mozilla.org/docs/Web/CSS/:" $simple ">"]
                     [< $simple:camel >]
                 ),*,
                 $(
-                    #[doc = concat!("<https://developer.mozilla.org/en-US/docs/Web/CSS/:", $a_name,">")]
+                    #[doc = "<https://developer.mozilla.org/docs/Web/CSS/:" $a_name ">"]
                     $a_rust
                 ),*,
                 $(
-                    #[doc = concat!("<https://developer.mozilla.org/en-US/docs/Web/CSS/:", $c_doc,">")]
+                    #[doc = "<https://developer.mozilla.org/docs/Web/CSS/:" $c_doc ">"]
                     $c_def($($c_arg),*)
                 ),*,
             }
@@ -208,7 +208,7 @@ impl Direction {
 }
 
 /// The argument for the `nth-...` pseudo classes
-/// <https://developer.mozilla.org/en-US/docs/Web/CSS/:nth-child#syntax>
+/// <https://developer.mozilla.org/docs/Web/CSS/:nth-child#syntax>
 #[must_use]
 pub struct NthArgument {
     /// The step
@@ -303,11 +303,11 @@ macro_rules! define_pseudo_class_nested {
     (
         $($c_def:ident($($c_arg:ty),*): $c_pat:pat => $c_expr:expr, $c_doc:literal);*;
     ) => {
-        paste::paste! {
+        pastey::paste! {
             /// Pseudo classes
             pub enum PseudoClassNested<S> {
                 $(
-                    #[doc = concat!("<https://developer.mozilla.org/en-US/docs/Web/CSS/:", $c_doc,">")]
+                    #[doc = "<https://developer.mozilla.org/docs/Web/CSS/:" $c_doc ">"]
                     $c_def($($c_arg),*)
                 ),*,
             }
@@ -419,20 +419,24 @@ impl<T: IntoSimpleSelector> IntoCompoundSelector for T {
 /// Define a pseudo element method
 macro_rules! pseudo_element {
     ($element:ident) => {
-        #[doc = concat!("<https://developer.mozilla.org/en-US/docs/Web/CSS/::", stringify!($element), ">")]
-        fn $element(self) -> FinalizedSelector {
-            FinalizedSelector {
-                head: self.into_complex(),
-                element: Some(stringify!($element).into())
+        pastey::paste! {
+            #[doc = "<https://developer.mozilla.org/docs/Web/CSS/::" $element ">"]
+            fn $element(self) -> FinalizedSelector {
+                FinalizedSelector {
+                    head: self.into_complex(),
+                    element: Some(stringify!($element).into())
+                }
             }
         }
     };
     ($element:literal, $method:ident) => {
-        #[doc = concat!("<https://developer.mozilla.org/en-US/docs/Web/CSS/::", stringify!($element), ">")]
-        fn $method(self) -> FinalizedSelector {
-            FinalizedSelector {
-                head: self.into_complex(),
-                element: Some(stringify!($element).into())
+        pastey::paste! {
+            #[doc = "<https://developer.mozilla.org/docs/Web/CSS/::" $element ">"]
+            fn $method(self) -> FinalizedSelector {
+                FinalizedSelector {
+                    head: self.into_complex(),
+                    element: Some(stringify!($element).into())
+                }
             }
         }
     };
@@ -454,7 +458,7 @@ pub trait IntoComplexSelector: Sized {
     /// let _ = e::TagP.child(e::TagButton);
     /// ```
     ///
-    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/Child_combinator>
+    /// <https://developer.mozilla.org/docs/Web/CSS/Child_combinator>
     fn child(self, child: impl IntoCompoundSelector) -> ComplexSelector {
         let mut this = self.into_complex();
         this.tail
@@ -470,7 +474,7 @@ pub trait IntoComplexSelector: Sized {
     /// let _ = e::TagP.descendant(e::TagButton);
     /// ```
     ///
-    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/Descendant_combinator>
+    /// <https://developer.mozilla.org/docs/Web/CSS/Descendant_combinator>
     fn descendant(self, descendant: impl IntoCompoundSelector) -> ComplexSelector {
         let mut this = self.into_complex();
         this.tail
@@ -486,7 +490,7 @@ pub trait IntoComplexSelector: Sized {
     /// let _ = e::TagP.next_sibling(e::TagButton);
     /// ```
     ///
-    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/Next-sibling_combinator>
+    /// <https://developer.mozilla.org/docs/Web/CSS/Next-sibling_combinator>
     fn next_sibling(self, sibling: impl IntoCompoundSelector) -> ComplexSelector {
         let mut this = self.into_complex();
         this.tail
@@ -502,7 +506,7 @@ pub trait IntoComplexSelector: Sized {
     /// let _ = e::TagP.subsequent_sibling(e::TagButton);
     /// ```
     ///
-    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/Subsequent-sibling_combinator>
+    /// <https://developer.mozilla.org/docs/Web/CSS/Subsequent-sibling_combinator>
     fn subsequent_sibling(self, sibling: impl IntoCompoundSelector) -> ComplexSelector {
         let mut this = self.into_complex();
         this.tail

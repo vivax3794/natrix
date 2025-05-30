@@ -4,11 +4,6 @@ targets = [
 ]
 all-features = true
 
-[advisories]
-ignore = [
-    { id="RUSTSEC-2024-0436", reason="While not maintained, its still in used by major rust libraries like itertools, so I think we are good"}
-]
-
 [licenses]
 allow = [
     "MIT",
