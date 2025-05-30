@@ -130,6 +130,8 @@ pub enum SimpleSelector {
     Tag(Box<str>),
     /// Class
     Class(Box<str>),
+    /// A id
+    Id(Box<str>),
     /// Pseudo Class
     Pseudo(Box<str>),
 }
@@ -140,6 +142,7 @@ impl SimpleSelector {
         match self {
             Self::Tag(value) => value.into(),
             Self::Class(value) => format!(".{value}"),
+            Self::Id(value) => format!("#{value}"),
             Self::Pseudo(value) => format!(":{value}"),
         }
     }
@@ -370,6 +373,51 @@ impl IntoSimpleSelector for Class {
     }
 }
 
+/// Generate a unique class name
+///
+/// ```rust
+/// # use natrix::prelude::*;
+/// const MY_CLASS: Class = natrix::class!();
+/// ```
+#[macro_export]
+macro_rules! class {
+    () => {
+        $crate::prelude::Class($crate::unique_str!())
+    };
+}
+
+/// A id generate from the `id` macro
+pub struct Id(pub &'static str);
+
+impl<C: crate::reactivity::Component> crate::dom::ToAttribute<C> for Id {
+    fn calc_attribute(
+        self,
+        _name: &'static str,
+        _node: &web_sys::Element,
+    ) -> crate::dom::attributes::AttributeResult<C> {
+        crate::dom::attributes::AttributeResult::SetIt(Some(self.0.into()))
+    }
+}
+
+impl IntoSimpleSelector for Id {
+    fn into_simple(self) -> SimpleSelector {
+        SimpleSelector::Id(self.0.into())
+    }
+}
+
+/// Generate a unique id name
+///
+/// ```rust
+/// # use natrix::prelude::*;
+/// const MY_ID: Id = natrix::id!();
+/// ```
+#[macro_export]
+macro_rules! id {
+    () => {
+        $crate::prelude::Id($crate::unique_str!())
+    };
+}
+
 /// For items that can be converted into compound selectors
 ///
 /// This also implements all of the compound selector methods, this lets you do
@@ -579,14 +627,6 @@ impl<T: IntoFinalizedSelector> IntoSelectorList for T {
     }
 }
 
-/// Generate a unique class names
-#[macro_export]
-macro_rules! class {
-    () => {
-        $crate::prelude::Class($crate::unique_str!())
-    };
-}
-
 #[cfg(test)]
 #[cfg(not(target_arch = "wasm32"))]
 mod tests {
@@ -629,20 +669,25 @@ mod tests {
 
     // We do not want this to actually use `unique_str` in a testing situation.
     const BTN: Class = Class("btn");
+    const PROFILE: Id = Id("profile");
 
     #[test]
     fn cases() {
         assert_valid_and_snapsot!(TagDiv);
         assert_valid_and_snapsot!(BTN);
+        assert_valid_and_snapsot!(PROFILE);
         assert_valid_and_snapsot!(TagDiv.and(BTN));
+        assert_valid_and_snapsot!(TagDiv.and(PROFILE));
         assert_valid_and_snapsot!(TagDiv.child(BTN));
         assert_valid_and_snapsot!(TagDiv.descendant(BTN));
+        assert_valid_and_snapsot!(TagDiv.descendant(BTN).descendant(PROFILE));
         assert_valid_and_snapsot!(TagDiv.next_sibling(BTN));
         assert_valid_and_snapsot!(TagDiv.subsequent_sibling(BTN));
         assert_valid_and_snapsot!(TagDiv.and(BTN).descendant(BTN));
         assert_valid_and_snapsot!(BTN.descendant(TagDiv.and(BTN)));
         assert_valid_and_snapsot!(TagDiv.descendant(TagDiv).descendant(TagDiv));
         assert_valid_and_snapsot!(TagDiv.after());
+        assert_valid_and_snapsot!(PROFILE.after());
         assert_valid_and_snapsot!(TagDiv.descendant(BTN).before());
         assert_valid_and_snapsot!(PseudoClass::Hover);
         assert_valid_and_snapsot!(BTN.and(PseudoClass::Hover));

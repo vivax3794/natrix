@@ -121,6 +121,7 @@ pub mod prelude {
 
     pub use super::css::selectors::{
         Class,
+        Id,
         IntoComplexSelector,
         IntoCompoundSelector,
         IntoFinalizedSelector,
