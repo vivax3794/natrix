@@ -19,13 +19,14 @@ pub struct SelectorList(pub Vec<FinalizedSelector>);
 /// ```
 #[macro_export]
 macro_rules! selector_list {
-    [$($element:expr),*] => {
+    [$($element:expr),*] => {{
+        use $crate::css::selectors::IntoFinalizedSelector;
         $crate::css::selectors::SelectorList(vec![
             $(
                 $element.into_finalized()
             ),*
         ])
-    };
+    }};
 }
 
 impl SelectorList {
