@@ -165,59 +165,6 @@ pub(crate) enum UpdateResult {
     RunHook(HookKey),
 }
 
-/// Operations that are more ergonomic but inconsistent
-#[cfg(feature = "ergonomic_ops")]
-mod ergonomin_ops {
-    use std::ops::{
-        AddAssign,
-        BitAndAssign,
-        BitOrAssign,
-        BitXorAssign,
-        DivAssign,
-        MulAssign,
-        RemAssign,
-        ShlAssign,
-        ShrAssign,
-        SubAssign,
-    };
-
-    use super::Signal;
-
-    impl<R, T: PartialEq<R>> PartialEq<R> for Signal<T> {
-        fn eq(&self, other: &R) -> bool {
-            **self == *other
-        }
-    }
-
-    impl<R, T: PartialOrd<R>> PartialOrd<R> for Signal<T> {
-        fn partial_cmp(&self, other: &R) -> Option<std::cmp::Ordering> {
-            (**self).partial_cmp(other)
-        }
-    }
-
-    /// Generate inplace operations for signal
-    macro_rules! inplace_op {
-        ($trait:ident. $method:ident()) => {
-            impl<R, T: $trait<R>> $trait<R> for Signal<T> {
-                fn $method(&mut self, rhs: R) {
-                    (**self).$method(rhs);
-                }
-            }
-        };
-    }
-
-    inplace_op!(AddAssign.add_assign());
-    inplace_op!(SubAssign.sub_assign());
-    inplace_op!(MulAssign.mul_assign());
-    inplace_op!(DivAssign.div_assign());
-    inplace_op!(RemAssign.rem_assign());
-    inplace_op!(BitAndAssign.bitand_assign());
-    inplace_op!(BitOrAssign.bitor_assign());
-    inplace_op!(BitXorAssign.bitxor_assign());
-    inplace_op!(ShlAssign.shl_assign());
-    inplace_op!(ShrAssign.shr_assign());
-}
-
 #[cfg(test)]
 mod tests {
     use super::{Signal, SignalMethods};
@@ -249,55 +196,5 @@ mod tests {
         assert_eq!(format!("{:?}", foo.0), format!("{data:?}"));
 
         assert!(foo.0.read.get());
-    }
-
-    #[cfg(feature = "ergonomic_ops")]
-    mod ergonomic_ops {
-        use super::*;
-
-        #[test]
-        fn eq() {
-            let foo = &Holder(Signal::new(10));
-
-            assert_eq!(foo.0, 10);
-            assert_ne!(foo.0, 20);
-
-            assert!(foo.0.read.get());
-        }
-
-        #[test]
-        fn cmp() {
-            let foo = &Holder(Signal::new(10));
-
-            assert!(foo.0 > 5);
-            assert!(foo.0 < 20);
-
-            assert!(foo.0.read.get());
-        }
-
-        macro_rules! test_inplace {
-        ($name:ident: $initial:literal $operation:tt $value:literal -> $expected:literal) => {
-            #[test]
-            fn $name() {
-                let foo = &mut Holder(Signal::new($initial));
-
-                foo.0 $operation $value;
-
-                assert!(foo.0.changed());
-                assert_eq!(foo.0, $expected);
-            }
-        };
-    }
-
-        test_inplace!(inplace_add: 10 += 5 -> 15);
-        test_inplace!(inplace_sub: 10 -= 5 -> 5);
-        test_inplace!(inplace_mul: 10 *= 4 -> 40);
-        test_inplace!(inplace_div: 10 /= 5 -> 2);
-        test_inplace!(inplace_mod: 12 %= 10 -> 2);
-        test_inplace!(inplace_and: 0b1100 &= 0b1010 -> 0b1000);
-        test_inplace!(inplace_or:  0b0100 |= 0b0010 -> 0b0110);
-        test_inplace!(inplace_xor: 0b1100 ^= 0b1000 -> 0b0100);
-        test_inplace!(inplace_shl: 1 <<= 1 -> 2);
-        test_inplace!(inplace_shr: 4 >>= 1 -> 2);
     }
 }

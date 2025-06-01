@@ -170,7 +170,7 @@ struct HelloWorld {
 
 impl natrix::data!(HelloWorld) {
     pub fn increment(&mut self) {
-        self.counter += 1;
+        *self.counter += 1;
     }
 }
 ```

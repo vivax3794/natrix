@@ -37,36 +37,23 @@ this annotates certain framework structs as [`must_not_suspend`](https://github.
 > #![warn(must_not_suspend)]
 > ```
 
-### `ergonomic_ops`
+### `default_app`
+This feature flag is enabled by default in the project template. And is a collection of features considered "default" for applications.
+We opted for this over normal default cargo features because we think it is important for libraries to use the minimal amount of features.
+Libraries should *never* enable this feature flag.
+The intent is that even if a library uses all the below features it should not be tempted to simply use `default-features = true`.
 
-Implements `AddAssign`, `SubAssign`, etc on signals, allowing you to omit the dereference in certain situations.
-This is disabled by default because it does not match other smart pointers, and still requires the dereference in certain situations.
-
-```rust
-# extern crate natrix;
-# use natrix::prelude::*;
-# #[derive(Component)]
-# struct Hello { counter: u8 }
-# impl Component for Hello {
-#     fn render() -> impl Element<Self> {
-#        e::button().on::<events::Click>(|ctx: E<Self>, _, _|{
-// Without `ergonomic_ops`
-*ctx.counter += 1;
-*ctx.counter = *ctx.counter + 1;
-
-// With `ergonomic_ops`
-ctx.counter += 1;
-*ctx.counter = *ctx.counter + 1;
-# })
-# }}
-```
-
-Notice how we still need the dereference for a plain assignment and addition? This inconsistency is why this feature is disabled by default as many might find this confusing.
-
-## Default features
+* `console_log` - A library would almost never want to enable this.
 
 ### `console_log`
 Automatically sets up [`console_log`](https://crates.io/crates/console_log) on [`mount`](reactivity::component::mount).
+
+### `test_utils`
+Various testing utilities, this should be enabled via a `[dev-dependencies]`.
+```toml
+[dev-dependencies]
+natrix = {version = "*", features=["test_utils"]}
+```
 
 ## Internal features
 

@@ -9,7 +9,6 @@ use crate::dom::element::{DynElement, Element, ElementRenderResult, MaybeStaticE
 use crate::get_document;
 use crate::reactivity::signal::RenderingState;
 use crate::reactivity::state::{ComponentData, E, EventToken, HookKey, KeepAlive, State};
-use crate::utils::debug_panic;
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
 /// associating a component with its reactive state as well as converting to a struct to its
@@ -330,20 +329,19 @@ pub fn mount<C: Component>(component: C) {
 
     #[cfg(all(feature = "console_log", target_arch = "wasm32"))]
     if let Err(err) = console_log::init_with_level(log::Level::Trace) {
-        debug_panic!("Failed to create logger: {err}");
+        crate::utils::debug_panic!("Failed to create logger: {err}");
     }
     #[cfg(feature = "_internal_extract_css")]
     if let Err(err) = simple_logger::init_with_level(log::Level::Trace) {
         eprintln!("Failed to setup logger {err}");
     }
-    log::info!("Logging initalized");
+    log::info!("Logging initialized");
 
     #[cfg(feature = "_internal_collect_css")]
     crate::css::css_collect();
 
     if cfg!(feature = "_internal_extract_css") {
         log::info!("Css extract mode, aboring mount.");
-        panic!("HUH");
         return;
     }
 

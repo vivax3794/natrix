@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 natrix = { path="../natrix", features = ["nightly", "test_utils"] }
+log = {version = "0.4", features = ["release_max_level_off"]}
 wasm_bench_runtime = "*"
 
 [package.metadata.natrix]

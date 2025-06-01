@@ -72,6 +72,10 @@ pub(crate) fn path_str(path: &Path) -> Cow<'_, str> {
 }
 
 /// Find if the specified feature is enabled for natrix
+#[expect(
+    dead_code,
+    reason = "No longer used, but might be useful in the future"
+)]
 pub(crate) fn is_feature_enabled(feature: &str, is_default: bool) -> Result<bool> {
     let metadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
     let packages = metadata.workspace_default_packages();

@@ -58,7 +58,7 @@ pub(crate) fn minimize_js(js_file: &PathBuf) -> Result<(), anyhow::Error> {
             ..Default::default()
         }),
         compress: Some(oxc::minifier::CompressOptions {
-            drop_console: !utils::is_feature_enabled("keep_console_in_release", false)?,
+            drop_console: false,
             drop_debugger: true,
             ..Default::default()
         }),

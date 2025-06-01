@@ -2,11 +2,16 @@
 
 use crate::dom::attributes::AttributeResult;
 use crate::dom::classes::ClassResult;
-use crate::dom::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
+use crate::dom::element::{
+    Element,
+    ElementRenderResult,
+    MaybeStaticElement,
+    generate_fallback_node,
+};
 use crate::dom::{ToAttribute, ToClass};
 use crate::reactivity::component::{Component, ComponentBase, NoMessages};
-use crate::reactivity::signal::{RenderingState, SignalMethods};
-use crate::reactivity::state::{ComponentData, State};
+use crate::reactivity::signal::SignalMethods;
+use crate::reactivity::state::ComponentData;
 use crate::utils::debug_panic;
 
 impl ComponentData for () {
@@ -32,9 +37,9 @@ impl Component for () {
 
     fn render() -> impl Element<Self> {
         debug_panic!(
-            "Attempted to render a `()` as a component. This is most definitly not what you intended."
+            "Attempted to render a `()` as a component. This is most definitely not what you intended."
         );
-        crate::dom::element::generate_fallback_node()
+        generate_fallback_node()
     }
 }
 
@@ -77,7 +82,19 @@ pub struct NonReactive<E>(pub E);
 
 impl<E: Element<()> + 'static, C: Component> Element<C> for NonReactive<E> {
     fn into_generic(self) -> MaybeStaticElement<C> {
-        self.0.into_generic()
+        match self.0.into_generic() {
+            MaybeStaticElement::Static(node) => MaybeStaticElement::Static(node),
+            MaybeStaticElement::Html(html) => {
+                if !html.deferred.is_empty() {
+                    debug_panic!("Html element with reactive values in `NonReactive` context.");
+                }
+                MaybeStaticElement::Static(ElementRenderResult::Node(html.element.into()))
+            }
+            MaybeStaticElement::Dynamic(_) => {
+                debug_panic!("Dynamic element in NonReactive context");
+                MaybeStaticElement::Static(ElementRenderResult::Node(generate_fallback_node()))
+            }
+        }
     }
 }
 

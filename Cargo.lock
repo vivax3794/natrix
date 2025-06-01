@@ -171,6 +171,7 @@ dependencies = [
 name = "benchmark"
 version = "0.1.0"
 dependencies = [
+ "log",
  "natrix",
  "wasm_bench_runtime",
 ]

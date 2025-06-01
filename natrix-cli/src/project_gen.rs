@@ -28,9 +28,18 @@ pub(crate) fn generate_project(name: &str, stable: bool) -> std::result::Result<
         natrix_table = format!(r#"{natrix_table}, path = "{path}""#);
     }
     let natrix_test_table = format!(r#"natrix = {{{natrix_table}, features=["test_utils"]}}"#);
+
+    let mut features = vec!["default_app"];
+
     if nightly {
-        natrix_table = format!(r#"{natrix_table}, features = ["nightly"]"#);
+        features.push("nightly");
     }
+    let features = features
+        .into_iter()
+        .map(|feat| format!(r#""{feat}""#))
+        .collect::<Vec<_>>()
+        .join(",");
+    natrix_table = format!(r"{natrix_table}, features = [{features}]");
 
     let natrix_decl = format!("natrix = {{ {natrix_table} }}");
     let natrix_decl = natrix_decl.trim();
