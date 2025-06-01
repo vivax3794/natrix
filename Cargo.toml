@@ -17,6 +17,10 @@ lto = "fat"
 panic = "abort"
 strip = "symbols"
 
+[profile.test-no-assertions]
+inherits = "test"
+debug-assertions = false
+
 [workspace.lints.rust]
 missing_docs = "warn"
 private_interfaces = { level = "allow"}

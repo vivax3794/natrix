@@ -16,7 +16,7 @@ test: test_native test_web integration_tests_dev integration_tests_build project
 # Run tests that are not dependent on the web
 test_native:
     cargo +nightly nextest run --all-features -p natrix
-    cargo +nightly nextest run --all-features -p natrix --release
+    cargo +nightly nextest run --all-features -p natrix --cargo-profile test-no-assertions
 
 insta:
     cargo insta test --review --package natrix --unreferenced delete --test-runner nextest --all-features
@@ -35,8 +35,6 @@ check:
 
     cargo +stable hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --skip nightly --tests -- -Dwarnings
     cargo +nightly hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --tests -- -Dwarnings
-    cargo +stable hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --skip nightly --tests --release -- -Dwarnings
-    cargo +nightly hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --tests --release -- -Dwarnings
 
 check_deps:
     cargo update
