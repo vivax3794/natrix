@@ -327,9 +327,11 @@ pub struct RenderResult<C: Component> {
 pub fn mount<C: Component>(component: C) {
     crate::panics::set_panic_hook();
 
-    #[cfg(all(feature = "console_log", target_arch = "wasm32"))]
-    if let Err(err) = console_log::init_with_level(log::Level::Trace) {
-        crate::utils::debug_panic!("Failed to create logger: {err}");
+    #[cfg(feature = "console_log")]
+    if cfg!(target_arch = "wasm32") {
+        if let Err(err) = console_log::init_with_level(log::Level::Trace) {
+            crate::utils::debug_panic!("Failed to create logger: {err}");
+        }
     }
     #[cfg(feature = "_internal_extract_css")]
     if let Err(err) = simple_logger::init_with_level(log::Level::Trace) {

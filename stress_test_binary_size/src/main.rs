@@ -18,6 +18,7 @@ macro_rules! large_type {
                 e::div()
                     $(
                         .child(|ctx: R<Self>| ctx.$field.clone())
+                        .attr(stringify!($field), |ctx: R<Self>| ctx.$field.clone())
                     )*
             }
         }

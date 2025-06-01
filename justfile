@@ -39,6 +39,7 @@ check:
     cargo +nightly hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --tests --release -- -Dwarnings
 
 check_deps:
+    cargo update
     cargo hack udeps --each-feature --ignore-private --all-targets
     cargo outdated -R --workspace --exit-code 1
     cd natrix && cargo deny check all --exclude-dev

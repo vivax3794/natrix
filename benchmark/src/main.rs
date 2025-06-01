@@ -76,6 +76,27 @@ impl<const N: u32> Component for ToggleText<N> {
 }
 
 #[derive(Component, Default)]
+struct ToggleAttr<const N: u32> {
+    state: bool,
+}
+
+impl<const N: u32> Component for ToggleAttr<N> {
+    fn render() -> impl Element<Self> {
+        let mut res = e::div().child(e::button().id("BUTTON").on::<events::Click>(
+            |ctx: E<Self>, _, _| {
+                *ctx.state = !*ctx.state;
+            },
+        ));
+
+        for _ in 0..N {
+            res = res.child(e::button().disabled(|ctx: R<Self>| *ctx.state));
+        }
+
+        res
+    }
+}
+
+#[derive(Component, Default)]
 struct ToggleExist<const N: u32> {
     state: bool,
 }
@@ -233,6 +254,14 @@ fn main() {
         natrix::test_utils::mount_test(ToggleText::<10000>::default());
         bencher
             .bench("toggle text", 0, |_| {
+                let button = natrix::test_utils::get("BUTTON");
+                button.click();
+            })
+            .await;
+
+        natrix::test_utils::mount_test(ToggleAttr::<10000>::default());
+        bencher
+            .bench("toggle attribute", 0, |_| {
                 let button = natrix::test_utils::get("BUTTON");
                 button.click();
             })

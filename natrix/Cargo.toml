@@ -20,17 +20,17 @@ natrix_macros = {path = "../natrix_macros", version="0.3.0"}
 natrix_shared = {path = "../natrix_shared", version="0.3.0"}
 
 # Default
-wasm-bindgen = {version= "0.2.100", features=["enable-interning"]}
-itoa = "1.0.14"
+wasm-bindgen = {version= "0.2.100", features=["enable-interning", "msrv", "std"], default-features=false}
+itoa = "1.0.15"
 ryu = "1.0.0"
-slotmap = "1.0.6"
+slotmap = {version="1.0.6", default-features = false}
 
 # Async
-wasm-bindgen-futures = { version = "0.4.50" }
+wasm-bindgen-futures = { version = "0.4.50", default-features = false}
 futures-channel = { version = "0.3.31" }
 futures-util = { version = "0.3.31", default-features = false}
 futures-core = { version = "0.3.31", default-features = false}
-ouroboros = { version = "0.18.0" }
+ouroboros = { version = "0.18.0", default-features = false}
 
 # Other
 pastey = "0.1"
@@ -43,8 +43,8 @@ inventory = {version="0.3", optional = true}
 
 # Logging
 log = "0.4"
-console_log = {version = "1.0", optional=true}
-simple_logger = {version="5.0", features=["stderr", "colors"], default-features=false, optional=true}
+console_log = {version = "1.0", optional=true, features=["color"]}
+simple_logger = {version="5.0", features=["stderr"], default-features=false, optional=true}
 
 [features]
 default_app = ["console_log"]
