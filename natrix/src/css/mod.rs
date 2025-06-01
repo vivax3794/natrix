@@ -42,6 +42,7 @@ macro_rules! register_css {
     ($style:expr) => {
         $crate::macro_ref::inventory::submit!($crate::macro_ref::CssEmit(|| {
             use $crate::css::prelude::*;
+            $crate::macro_ref::log::trace!(concat!("generating css for ", file!(), " ", line!()));
             let sheet: $crate::macro_ref::StyleSheet = $style;
             sheet.to_css()
         }));
@@ -59,6 +60,7 @@ macro_rules! register_css {
     ($style:expr) => {
         const _: fn() -> $crate::macro_ref::StyleSheet = || {
             use $crate::css::prelude::*;
+            $crate::macro_ref::log::warn!("Register css code called in non-collection mode");
             $style
         };
     };
@@ -78,15 +80,19 @@ pub mod prelude {
 /// Depending on the selected feature flags.
 #[cfg(feature = "_internal_collect_css")]
 pub(crate) fn css_collect() {
+    log::info!("Collecting css");
+
     #[cfg(feature = "_internal_runtime_css")]
     #[expect(
         unsafe_code,
         reason = "This is required for inventory to work on wasm, it is not included in production builds"
     )]
     unsafe {
+        log::trace!("Calling ctors");
         __wasm_call_ctors();
     }
 
+    log::trace!("Collecting strings");
     let mut result = String::new();
     for emit in inventory::iter::<CssEmit> {
         result.push_str(&(emit.0)());
@@ -106,6 +112,7 @@ pub(crate) fn css_collect() {
     reason = "This happens early, and is meant for dev mode only"
 )]
 fn css_runtime(css_string: &str) {
+    log::debug!("Injecting css into document");
     let document = crate::get_document();
     let style = document
         .create_element("style")
@@ -125,6 +132,7 @@ fn css_runtime(css_string: &str) {
 /// bit more structured later (json, files, whatever)
 #[cfg(feature = "_internal_extract_css")]
 fn css_emit(css_string: &str) {
+    log::debug!("Emitting css to bundler");
     println!("{css_string}");
 }
 

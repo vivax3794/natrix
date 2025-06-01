@@ -9,7 +9,7 @@ use crate::dom::element::{DynElement, Element, ElementRenderResult, MaybeStaticE
 use crate::get_document;
 use crate::reactivity::signal::RenderingState;
 use crate::reactivity::state::{ComponentData, E, EventToken, HookKey, KeepAlive, State};
-use crate::utils::{debug_panic, error_log};
+use crate::utils::debug_panic;
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
 /// associating a component with its reactive state as well as converting to a struct to its
@@ -126,10 +126,7 @@ pub trait Component: ComponentBase {
         reason = "We want the auto-completion for this method to be connvenient"
     )]
     fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage, token: EventToken) {
-        // since the default (should) be `NoMessages` (which is `!`) this will only ever actually be called
-        // If the user has a `ReceiveMessage` type that is not `NoMessages` and forgot to implement
-        // this method.
-        debug_panic!(
+        log::warn!(
             "Component {} received message, but does not implement a handler",
             std::any::type_name::<Self>()
         );
@@ -221,7 +218,7 @@ impl<M> Sender<M> {
     #[inline]
     pub fn send(&self, msg: M, _token: EventToken) {
         if self.0.unbounded_send(msg).is_err() {
-            error_log!("Failed to send message to component, receiver is closed.");
+            log::error!("Failed to send message to component, receiver is closed.");
         }
     }
 }
@@ -331,10 +328,22 @@ pub struct RenderResult<C: Component> {
 pub fn mount<C: Component>(component: C) {
     crate::panics::set_panic_hook();
 
+    #[cfg(all(feature = "console_log", target_arch = "wasm32"))]
+    if let Err(err) = console_log::init_with_level(log::Level::Trace) {
+        debug_panic!("Failed to create logger: {err}");
+    }
+    #[cfg(feature = "_internal_extract_css")]
+    if let Err(err) = simple_logger::init_with_level(log::Level::Trace) {
+        eprintln!("Failed to setup logger {err}");
+    }
+    log::info!("Logging initalized");
+
     #[cfg(feature = "_internal_collect_css")]
     crate::css::css_collect();
 
     if cfg!(feature = "_internal_extract_css") {
+        log::info!("Css extract mode, aboring mount.");
+        panic!("HUH");
         return;
     }
 
@@ -363,6 +372,10 @@ pub fn render_component<C: Component>(
     component: C,
     target_id: &str,
 ) -> Result<RenderResult<C>, &'static str> {
+    log::info!(
+        "Mounting root component {} at #{target_id}",
+        std::any::type_name::<C>()
+    );
     let data = component.into_state();
     let element = C::render();
 

@@ -6,6 +6,7 @@ edition = "2024"
 
 [dependencies]
 natrix = { path="../natrix", features = ["nightly"] }
+log = {version = "*", features=["release_max_level_off"]}
 
 [package.metadata.natrix]
 cache_bust = "none"

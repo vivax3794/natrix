@@ -45,26 +45,15 @@ macro_rules! debug_panic {
         $crate::utils::cold_path();
 
 
+        ::log::error!($($msg),*);
         if cfg!(debug_assertions) {
             panic!($($msg),*);
-        } else {
-            $crate::utils::error_log!($($msg),*);
         }
     };
 }
 
 /// Log a error to the console
-macro_rules! error_log {
-    ($($msg:expr),*) => {
-        #[cfg(console_log)]
-        #[cfg(target_arch = "wasm32")]
-        {
-            web_sys::console::error_1(&format!($($msg),*).into());
-        }
-    };
-}
-
-pub(crate) use {debug_expect, debug_panic, error_log};
+pub(crate) use {debug_expect, debug_panic};
 
 /// A guard that executes a callback when dropped.
 ///

@@ -194,7 +194,7 @@ gh_action:
 
 [working-directory: './stress_test_binary_size']
 stress_size: install_cli
-    wc -c dist/code_bg.wasm
+    wc -c dist/code_bg.wasm || true
     natrix build
     wc -c dist/code_bg.wasm
 

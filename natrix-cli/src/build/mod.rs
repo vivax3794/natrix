@@ -109,7 +109,7 @@ pub(crate) fn generate_html(
         <div id="{}">This website requires Javascript and Wasm support.</div>
         <script type="module">
             import init from "{base_path}/{js_file}";
-            init("{base_path}/{wasm_file}");
+            init({{module_or_path:"{base_path}/{wasm_file}"}});
             {js_reload}
         </script>
     </body>

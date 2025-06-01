@@ -269,8 +269,8 @@ impl NthArgument {
     }
 }
 
-// TODO: `has` - needs a ComplexSelector without `first`
-// TODO: `not` - doesnt allow pseudo elements
+// TODO: `has` - needs to support a ComplexSelector without `first`, i.e `:has(+ div)`
+// TODO: `not` - doesnt allow pseudo elements, i.e `:not(div::after)` should not be allowed
 // (do `has`, `where`, `is` do? `not` mentioned specifically it didnt)
 
 define_pseudo_class!(

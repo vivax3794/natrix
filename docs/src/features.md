@@ -63,10 +63,10 @@ ctx.counter += 1;
 
 Notice how we still need the dereference for a plain assignment and addition? This inconsistency is why this feature is disabled by default as many might find this confusing.
 
-### `keep_console_in_release`
+## Default features
 
-By default natrix strips out all console logs, including your own, in release builds. (including from panics)
-This feature disables that, allowing you to see the console logs in release builds.
+### `console_log`
+Automatically sets up [`console_log`](https://crates.io/crates/console_log) on [`mount`](reactivity::component::mount).
 
 ## Internal features
 

@@ -66,17 +66,8 @@ pub mod panics {
     /// await.
     pub fn has_panicked() -> bool {
         let result = PANIC_HAPPENED.load(std::sync::atomic::Ordering::Relaxed);
-        #[cfg(console_log)]
         if result {
-            web_sys::console::warn_1(
-                &"
-Access to framework state was attempted after a panic.
-Continuing to execute rust code after panic may cause undefined behavior.
-If you which to allow execution after a panic (not recommended) you can disable the `panic_hook` feature of `natrix`.
-"
-                .trim()
-                .into(),
-            );
+            log::warn!("Access to framework state was attempted after a panic.");
         }
         result
     }
@@ -89,11 +80,8 @@ If you which to allow execution after a panic (not recommended) you can disable 
         std::panic::set_hook(Box::new(|info| {
             PANIC_HAPPENED.store(true, std::sync::atomic::Ordering::Relaxed);
 
-            #[cfg(console_log)]
-            {
-                let panic_message = info.to_string();
-                web_sys::console::error_1(&panic_message.into());
-            }
+            let panic_message = info.to_string();
+            log::error!("{panic_message}");
         }));
     }
 }
@@ -141,7 +129,7 @@ pub use reactivity::state::{RenderCtx, State};
 pub mod macro_ref {
     #[cfg(feature = "_internal_collect_css")]
     pub use inventory;
-    pub use {const_base, const_sha1};
+    pub use {const_base, const_sha1, log};
 
     #[cfg(feature = "_internal_collect_css")]
     pub use super::css::CssEmit;

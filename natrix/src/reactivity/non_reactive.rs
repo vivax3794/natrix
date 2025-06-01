@@ -31,6 +31,9 @@ impl Component for () {
     type ReceiveMessage = NoMessages;
 
     fn render() -> impl Element<Self> {
+        debug_panic!(
+            "Attempted to render a `()` as a component. This is most definitly not what you intended."
+        );
         crate::dom::element::generate_fallback_node()
     }
 }
@@ -74,19 +77,7 @@ pub struct NonReactive<E>(pub E);
 
 impl<E: Element<()> + 'static, C: Component> Element<C> for NonReactive<E> {
     fn into_generic(self) -> MaybeStaticElement<C> {
-        MaybeStaticElement::Dynamic(Box::new(self))
-    }
-}
-
-impl<E: Element<()>, C: Component> DynElement<C> for NonReactive<E> {
-    fn render(
-        self: Box<Self>,
-        _ctx: &mut State<C>,
-        render_state: &mut RenderingState,
-    ) -> ElementRenderResult {
-        self.0
-            .into_generic()
-            .render(&mut State::create_base(()), render_state)
+        self.0.into_generic()
     }
 }
 
@@ -95,7 +86,7 @@ impl<A: ToAttribute<()>, C: Component> ToAttribute<C> for NonReactive<A> {
         match self.0.calc_attribute(name, node) {
             AttributeResult::SetIt(res) => AttributeResult::SetIt(res),
             AttributeResult::IsDynamic(_) => {
-                debug_panic!("Dynamic attribute in `NonReactive` context");
+                debug_panic!("Dynamic Attribute in `NonReactive` context");
                 AttributeResult::SetIt(None)
             }
         }
@@ -107,7 +98,7 @@ impl<A: ToClass<()>, C: Component> ToClass<C> for NonReactive<A> {
         match self.0.calc_class(node) {
             ClassResult::SetIt(res) => ClassResult::SetIt(res),
             ClassResult::Dynamic(_) => {
-                debug_panic!("Dynamic class in `NonReactive` context");
+                debug_panic!("Dynamic Class in `NonReactive` context");
                 ClassResult::SetIt(None)
             }
         }
