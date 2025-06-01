@@ -49,7 +49,13 @@ pub(crate) fn component_derive_implementation(item: ItemStruct) -> TokenStream {
     let signal_state_name = format_ident!("_{name}SignalState");
 
     // Handle generics
-    let generics = prepare_generics(item.generics);
+    let generics = {
+        let mut generics = item.generics;
+        for type_ in generics.type_params_mut() {
+            type_.bounds.push(parse_quote!('static));
+        }
+        generics
+    };
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
     let generic_params = GenericParams {
@@ -69,14 +75,18 @@ pub(crate) fn component_derive_implementation(item: ItemStruct) -> TokenStream {
     let mut tokens = TokenStream::new();
 
     // Generate struct definitions
-    tokens.extend(generate_struct_definitions(
-        &vis,
-        &data_name,
-        &signal_state_name,
-        &generics,
-        &fields,
-        is_named,
-    ));
+    tokens.extend({
+        let vis: &syn::Visibility = &vis;
+        let data_name: &syn::Ident = &data_name;
+        let signal_state_name: &syn::Ident = &signal_state_name;
+        let generics: &syn::Generics = &generics;
+        let fields: &[Field] = &fields;
+        if is_named {
+            generate_named_struct_definitions(vis, data_name, signal_state_name, generics, fields)
+        } else {
+            generate_tuple_struct_definitions(vis, data_name, signal_state_name, generics, fields)
+        }
+    });
 
     // Generate ComponentData implementation
     tokens.extend(generate_component_data_impl(
@@ -92,30 +102,6 @@ pub(crate) fn component_derive_implementation(item: ItemStruct) -> TokenStream {
     ));
 
     tokens
-}
-
-/// Prepare generics by adding 'static bound to type parameters
-pub(crate) fn prepare_generics(mut generics: syn::Generics) -> syn::Generics {
-    for type_ in generics.type_params_mut() {
-        type_.bounds.push(parse_quote!('static));
-    }
-    generics
-}
-
-/// Generate struct definitions for the component
-pub(crate) fn generate_struct_definitions(
-    vis: &syn::Visibility,
-    data_name: &syn::Ident,
-    signal_state_name: &syn::Ident,
-    generics: &syn::Generics,
-    fields: &[Field],
-    is_named: bool,
-) -> TokenStream {
-    if is_named {
-        generate_named_struct_definitions(vis, data_name, signal_state_name, generics, fields)
-    } else {
-        generate_tuple_struct_definitions(vis, data_name, signal_state_name, generics, fields)
-    }
 }
 
 /// Generate struct definitions for named structs
@@ -195,9 +181,23 @@ pub(crate) fn generate_component_data_impl(
     let fields = component_params.fields;
     let is_named = component_params.is_named;
 
-    let signals_mut_body = generate_signals_mut_body(fields);
+    let signals_mut_body = {
+        let mut signals_mut_body = TokenStream::new();
+        for field in fields {
+            let access = &field.access;
+            signals_mut_body.extend(quote! { &mut self.#access, });
+        }
+        signals_mut_body
+    };
     let pop_signals_body = generate_pop_signals_body(signal_state_name, fields, is_named);
-    let set_signals_body = generate_set_signals_body(fields);
+    let set_signals_body = {
+        let mut set_signals_body = TokenStream::new();
+        for field in fields {
+            let access = &field.access;
+            set_signals_body.extend(quote! { self.#access.set_state(state.#access); });
+        }
+        set_signals_body
+    };
 
     quote! {
         #[automatically_derived]
@@ -220,16 +220,6 @@ pub(crate) fn generate_component_data_impl(
             }
         }
     }
-}
-
-/// Generate the `signals_mut` method body
-pub(crate) fn generate_signals_mut_body(fields: &[Field]) -> TokenStream {
-    let mut signals_mut_body = TokenStream::new();
-    for field in fields {
-        let access = &field.access;
-        signals_mut_body.extend(quote! { &mut self.#access, });
-    }
-    signals_mut_body
 }
 
 /// Generate the `pop_signals` method body
@@ -261,16 +251,6 @@ pub(crate) fn generate_pop_signals_body(
             )
         }
     }
-}
-
-/// Generate the `set_signals` method body
-pub(crate) fn generate_set_signals_body(fields: &[Field]) -> TokenStream {
-    let mut set_signals_body = TokenStream::new();
-    for field in fields {
-        let access = &field.access;
-        set_signals_body.extend(quote! { self.#access.set_state(state.#access); });
-    }
-    set_signals_body
 }
 
 /// Generate the `ComponentBase` implementation
