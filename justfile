@@ -32,6 +32,7 @@ check:
     cargo fmt --check
 
     cargo +stable clippy -p natrix-cli -- -Dwarnings
+    cargo +nightly clippy -p natrix_macros --all-features -- -Dwarnings
 
     cargo +stable hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --skip nightly --tests -- -Dwarnings
     cargo +nightly hack clippy -p natrix --target wasm32-unknown-unknown --each-feature --tests -- -Dwarnings
