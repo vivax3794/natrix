@@ -105,7 +105,6 @@ pub(crate) fn generate_html(
     <head>
         {style_link}
         <link rel="preload" as="fetch" href="{base_path}/{wasm_file}" crossorigin="anonymous"/>
-        <link rel="preload" as="script" href="{base_path}/{js_file}" crossorigin="anonymous"/>
         <meta name="viewport" content="width=device-width, initial-scale=1">
     </head>
     <body>

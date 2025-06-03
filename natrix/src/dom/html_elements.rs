@@ -100,7 +100,7 @@ impl<C: Component, T> HtmlElement<C, T> {
             let ctx_weak = ctx.deferred_borrow(EventToken::new());
 
             let callback: Box<dyn Fn(web_sys::Event) + 'static> = Box::new(move |event| {
-                crate::return_if_panic!();
+                crate::panics::return_if_panic!();
 
                 let Ok(event) = event.dyn_into() else {
                     debug_panic!("Unexpected event type");

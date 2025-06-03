@@ -8,6 +8,7 @@
 pub mod async_utils;
 pub mod css;
 pub mod dom;
+pub mod panics;
 pub mod reactivity;
 pub mod test_utils;
 mod type_macros;
@@ -55,56 +56,6 @@ pub(crate) fn get_document() -> web_sys::Document {
 pub(crate) fn get_window() -> web_sys::Window {
     WINDOW.with(Clone::clone)
 }
-
-/// Panic handling
-pub mod panics {
-    /// Mark that a panic has happened
-    static PANIC_HAPPENED: std::sync::atomic::AtomicBool =
-        std::sync::atomic::AtomicBool::new(false);
-
-    /// Has a panic occurred
-    /// This is only needed for you to call if you are using custom callbacks passed to js.
-    /// All natrix event handlers already check this.
-    /// And all uses of `ctx.use_async` uses some magic to insert a check to this *after every*
-    /// await.
-    pub fn has_panicked() -> bool {
-        let result = PANIC_HAPPENED.load(std::sync::atomic::Ordering::Relaxed);
-        if result {
-            log::warn!("Access to framework state was attempted after a panic.");
-        }
-        result
-    }
-
-    /// Set the panic hook to mark that a panic has happened
-    pub fn set_panic_hook() {
-        #[cfg(target_arch = "wasm32")]
-        #[allow(clippy::allow_attributes, reason = "only applies sometimes")]
-        #[allow(unused_variables, reason = "Only used when console_log is enabled")]
-        std::panic::set_hook(Box::new(|info| {
-            PANIC_HAPPENED.store(true, std::sync::atomic::Ordering::Relaxed);
-
-            let panic_message = info.to_string();
-            log::error!("{panic_message}");
-        }));
-    }
-}
-
-/// Returns if a panic has happened
-///
-/// (or is a noop when the `panic_hook` feature is not enabled)
-macro_rules! return_if_panic {
-    ($val:expr) => {
-        if $crate::panics::has_panicked() {
-            return $val;
-        }
-    };
-    () => {
-        if $crate::panics::has_panicked() {
-            return;
-        }
-    };
-}
-pub(crate) use return_if_panic;
 
 /// Public export of everything.
 pub mod prelude {

@@ -42,13 +42,11 @@ impl Component for HelloWorld {
                     .class(format!("dyn{}", black_box("amic"))),
             )
             .child(SubComponent::new(integration_tests_dependency::DepComp))
-            .child(
-                e::button()
-                    .id(PANIC_ID)
-                    .on::<events::Click>(|_ctx: E<Self>, _, _| {
-                        panic!("Panic button clicked!");
-                    }),
-            )
+            .child(e::button().id(PANIC_ID).text("PANIC").on::<events::Click>(
+                |_ctx: E<Self>, _, _| {
+                    panic!("Panic button clicked!");
+                },
+            ))
             .child(
                 e::button()
                     .id(BUTTON_ID)
