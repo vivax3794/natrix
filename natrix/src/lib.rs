@@ -13,6 +13,8 @@ pub mod test_utils;
 mod type_macros;
 mod utils;
 
+pub use wasm_bindgen::intern;
+
 thread_local! {
     /// A lazy initlized reference to the js document.
     static DOCUMENT: web_sys::Document = {

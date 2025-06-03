@@ -1,3 +1,4 @@
+use natrix::class;
 use natrix::prelude::*;
 use wasm_bench_runtime::Bencher;
 
@@ -90,6 +91,32 @@ impl<const N: u32> Component for ToggleAttr<N> {
 
         for _ in 0..N {
             res = res.child(e::button().disabled(|ctx: R<Self>| *ctx.state));
+        }
+
+        res
+    }
+}
+
+const CLASS_ON: Class = class!();
+const CLASS_OFF: Class = class!();
+
+#[derive(Component, Default)]
+struct ToggleClass<const N: u32> {
+    state: bool,
+}
+
+impl<const N: u32> Component for ToggleClass<N> {
+    fn render() -> impl Element<Self> {
+        let mut res = e::div().child(e::button().id("BUTTON").on::<events::Click>(
+            |ctx: E<Self>, _, _| {
+                *ctx.state = !*ctx.state;
+            },
+        ));
+
+        for _ in 0..N {
+            res = res.child(
+                e::button().class(|ctx: R<Self>| if *ctx.state { CLASS_ON } else { CLASS_OFF }),
+            );
         }
 
         res
@@ -262,6 +289,14 @@ fn main() {
         natrix::test_utils::mount_test(ToggleAttr::<10000>::default());
         bencher
             .bench("toggle attribute", 0, |_| {
+                let button = natrix::test_utils::get("BUTTON");
+                button.click();
+            })
+            .await;
+
+        natrix::test_utils::mount_test(ToggleClass::<10000>::default());
+        bencher
+            .bench("toggle class", 0, |_| {
                 let button = natrix::test_utils::get("BUTTON");
                 button.click();
             })

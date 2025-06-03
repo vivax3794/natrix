@@ -2,7 +2,7 @@
 
 use std::borrow::Cow;
 
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast, intern};
 
 use crate::dom::attributes::AttributeResult;
 use crate::dom::classes::ClassResult;
@@ -287,7 +287,7 @@ impl<C: Component, T: ToClass<C>> ReactiveValue<C> for ReactiveClass<T> {
 
         let new = match self.data.calc_class(node) {
             ClassResult::SetIt(res) => res.inspect(|res| {
-                debug_expect!(class_list.add_1(res), "Failed to add class");
+                debug_expect!(class_list.add_1(intern(res)), "Failed to add class");
             }),
             ClassResult::Dynamic(dynamic) => {
                 dynamic(ctx, render_state);

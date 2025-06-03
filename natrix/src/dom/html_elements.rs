@@ -49,7 +49,7 @@ impl<C: Component, T> HtmlElement<C, T> {
     ///
     /// All non-deprecated html elements have a helper function in this module
     pub fn new(tag: &'static str) -> Self {
-        let node = if let Ok(node) = get_document().create_element(tag) {
+        let node = if let Ok(node) = get_document().create_element(intern(tag)) {
             node
         } else {
             debug_panic!("Failed to create <{tag}>");
@@ -191,7 +191,7 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// Add a attribute to the node.
     #[inline]
     pub fn attr(mut self, key: &'static str, value: impl ToAttribute<C>) -> Self {
-        match value.calc_attribute(key, &self.element) {
+        match value.calc_attribute(intern(key), &self.element) {
             AttributeResult::SetIt(res) => {
                 if let Some(res) = res {
                     debug_expect!(
@@ -214,7 +214,10 @@ impl<C: Component, T> HtmlElement<C, T> {
         match class.calc_class(&self.element) {
             ClassResult::SetIt(res) => {
                 if let Some(res) = res {
-                    debug_expect!(self.element.class_list().add_1(&res), "Failed to add class");
+                    debug_expect!(
+                        self.element.class_list().add_1(intern(&res)),
+                        "Failed to add class"
+                    );
                 }
             }
             ClassResult::Dynamic(dynamic) => {
