@@ -11,6 +11,7 @@ cache_bust = "none"
 [dependencies]
 natrix = {path = "../natrix", features = ["nightly", "default_app"]}
 integration_tests_dependency = {path = "../integration_tests_dependency"}
+log = {version = "0.4", features = ["max_level_trace"]}
 
 [dev-dependencies]
 thirtyfour = { version = "0.35.0", default-features = false , features=["reqwest"]}

@@ -1133,6 +1133,7 @@ name = "integration_tests"
 version = "0.1.0"
 dependencies = [
  "integration_tests_dependency",
+ "log",
  "natrix",
  "thirtyfour",
  "tokio",
@@ -1142,7 +1143,6 @@ dependencies = [
 name = "integration_tests_dependency"
 version = "0.1.0"
 dependencies = [
- "log",
  "natrix",
 ]
 

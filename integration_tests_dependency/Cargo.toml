@@ -6,4 +6,3 @@ publish = false
 
 [dependencies]
 natrix = {path = "../natrix", features = ["nightly"]}
-log = {version = "0.4", features = ["max_level_trace"]}
