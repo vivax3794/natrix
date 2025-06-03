@@ -250,15 +250,7 @@ fn main() {
     Bencher::start(async |mut bencher| {
         bencher
             .bench("mount_large", 0, |_| {
-                // WARNING: This does include the `mount_test` cleaning up the previous dom tree.
-                // But at least on the rust side that should be minimal in comparison to the
-                // mounting.
-                natrix::test_utils::setup();
-                natrix::reactivity::component::mount_at(
-                    Buttons::<10000>::default(),
-                    natrix::test_utils::MOUNT_POINT,
-                )
-                .unwrap();
+                natrix::test_utils::mount_test(Buttons::<10000>::default());
             })
             .await;
 

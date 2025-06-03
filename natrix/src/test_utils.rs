@@ -2,12 +2,15 @@
 #![cfg(feature = "test_utils")]
 #![expect(clippy::expect_used, reason = "tests only")]
 
+use std::cell::Cell;
+
 use wasm_bindgen::JsCast;
 use web_sys::HtmlElement;
 
 use crate::get_document;
 use crate::prelude::Component;
-use crate::reactivity::component::mount_at;
+use crate::reactivity::component::render_component;
+use crate::reactivity::state::KeepAlive;
 
 /// The parent of the testing env
 const MOUNT_PARENT: &str = "__TESTING_PARENT";
@@ -15,12 +18,17 @@ const MOUNT_PARENT: &str = "__TESTING_PARENT";
 /// This is auto created and cleaned up by `setup`
 pub const MOUNT_POINT: &str = "__TESTING_MOUNT_POINT";
 
+thread_local! {
+     static CURRENT_COMP: Cell<KeepAlive>  = Cell::new(Box::new(()));
+}
+
 /// Mount a component at the test location (creating/resetting it if needed)
 /// # Panics
 /// If the js is in a invalid state or the element is not found
 pub fn mount_test<C: Component>(component: C) {
     setup();
-    mount_at(component, MOUNT_POINT).expect("Failed to mount");
+    let result = render_component(component, MOUNT_POINT).expect("Failed to mount");
+    CURRENT_COMP.with(|cell| cell.set(Box::new(result)));
 }
 
 /// Setup `MOUNT_POINt` as a valid mount location
