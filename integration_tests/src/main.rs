@@ -163,6 +163,8 @@ mod driver_tests {
         assert_eq!(text, "1");
 
         panic_button.click().await.unwrap();
+        client.accept_alert().await.unwrap();
+
         button.click().await.unwrap();
         let text = button.text().await.unwrap();
         assert_eq!(
