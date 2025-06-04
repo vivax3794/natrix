@@ -21,22 +21,22 @@ pub fn has_panicked() -> bool {
 /// Set the panic hook to mark that a panic has happened
 pub fn set_panic_hook() {
     std::panic::set_hook(Box::new(move |info| {
-        let already_paniced = PANIC_HAPPENED.fetch_or(true, std::sync::atomic::Ordering::Relaxed);
+        let already_panicked = PANIC_HAPPENED.fetch_or(true, std::sync::atomic::Ordering::Relaxed);
 
         let panic_message = info.to_string();
         log::error!("{panic_message}");
 
-        if already_paniced {
-            log::warn!("Panic occured after panic already happend");
+        if already_panicked {
+            log::warn!("Panic occurred after panic already happened");
             return;
         }
 
         let msg = if cfg!(debug_assertions) {
-            "Panic Occured, check browser console."
+            format!("Panic occurred, check browser for traceback.\n{panic_message}")
         } else {
-            "Unknown error occured, please reload the tab."
+            format!("Unknown error occurred, please reload tab.\n{panic_message}")
         };
-        if let Err(err) = crate::get_window().alert_with_message(msg) {
+        if let Err(err) = crate::get_window().alert_with_message(&msg) {
             log::error!("Failed to create panic alert {err:?}");
         }
     }));
