@@ -187,6 +187,8 @@ clean:
     cargo clean
     cd docs && mdbook clean
     rm -rv integration_tests/dist || true
+    rm -rv stress_test_binary_size/dist || true
+    rm -rv benchmark/dist || true
 
 gh_action:
     act -P ubuntu-latest=catthehacker/ubuntu:full-latest -W .github/workflows/run_tests.yml
