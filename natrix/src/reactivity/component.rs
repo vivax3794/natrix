@@ -67,27 +67,35 @@ pub enum NoMessages {}
     note = "`#[derive(Component)]` does not implement `Component`"
 )]
 pub trait Component: ComponentBase {
-    /// Messages this component can emit.
-    ///
-    /// Use `NoMessages` if you do not need to emit any messages.
-    #[cfg(feature = "nightly")]
-    type EmitMessage = NoMessages;
-    /// Messages this component can emit.
-    ///
-    /// Use `NoMessages` if you do not need to emit any messages.
-    #[cfg(not(feature = "nightly"))]
-    type EmitMessage;
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "nightly")] {
+            /// Messages this component can emit.
+            ///
+            /// Use `NoMessages` if you do not need to emit any messages.
+            /// Defaults to `NoMessages` on nightly.
+            type EmitMessage = NoMessages;
+        } else {
+            /// Messages this component can emit.
+            ///
+            /// Use `NoMessages` if you do not need to emit any messages.
+            type EmitMessage;
+        }
+    }
 
-    /// Message that can be received by this component.
-    ///
-    /// Use `NoMessages` if you do not need to receive any messages.
-    #[cfg(feature = "nightly")]
-    type ReceiveMessage = NoMessages;
-    /// Message that can be received by this component.
-    ///     
-    /// Use `NoMessages` if you do not need to receive any messages.
-    #[cfg(not(feature = "nightly"))]
-    type ReceiveMessage;
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "nightly")] {
+            /// Message that can be received by this component.
+            ///
+            /// Use `NoMessages` if you do not need to receive any messages.
+            /// Defaults to `NoMessages` on nightly.
+            type ReceiveMessage = NoMessages;
+        } else {
+            /// Message that can be received by this component.
+            ///
+            /// Use `NoMessages` if you do not need to receive any messages.
+            type ReceiveMessage;
+        }
+    }
 
     /// Return the root element of the component.
     ///

@@ -1354,6 +1354,7 @@ dependencies = [
 name = "natrix"
 version = "0.3.0"
 dependencies = [
+ "cfg-if",
  "console_log",
  "const-sha1",
  "const_base",

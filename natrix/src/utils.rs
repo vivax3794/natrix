@@ -48,6 +48,7 @@ macro_rules! debug_panic {
         ::log::error!($($msg),*);
         if cfg!(debug_assertions) {
             panic!($($msg),*);
+
         }
     };
 }

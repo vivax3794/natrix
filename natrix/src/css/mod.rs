@@ -31,39 +31,44 @@ unsafe extern "C" {
     fn __wasm_call_ctors();
 }
 
-/// Register a css stylesheet to go in the bundler.
-/// Any code in here wont be included in the final wasm build.
-/// And will be run at compile time.
-///
-/// This macro must not be called from within a function.
-#[macro_export]
-#[cfg(feature = "_internal_collect_css")]
-macro_rules! register_css {
-    ($style:expr) => {
-        $crate::macro_ref::inventory::submit!($crate::macro_ref::CssEmit(|| {
-            use $crate::css::prelude::*;
-            $crate::macro_ref::log::trace!(concat!("generating css for ", file!(), " ", line!()));
-            let sheet: $crate::macro_ref::StyleSheet = $style;
-            sheet.to_css()
-        }));
-    };
-}
-
-/// Register a css stylesheet to go in the bundler.
-/// Any code in here wont be included in the final wasm build.
-/// And will be run at compile time.
-///
-/// This macro must not be called from within a function.
-#[macro_export]
-#[cfg(not(feature = "_internal_collect_css"))]
-macro_rules! register_css {
-    ($style:expr) => {
-        const _: fn() -> $crate::macro_ref::StyleSheet = || {
-            use $crate::css::prelude::*;
-            $crate::macro_ref::log::warn!("Register css code called in non-collection mode");
-            $style
-        };
-    };
+cfg_if::cfg_if! {
+    if #[cfg(feature = "_internal_collect_css")] {
+        /// Register a css stylesheet to go in the bundler.
+        /// Any code in here wont be included in the final wasm build.
+        /// And will be run at compile time.
+        ///
+        /// This macro must not be called from within a function.
+        #[macro_export]
+        #[cfg(feature = "_internal_collect_css")]
+        macro_rules! register_css {
+            ($style:expr) => {
+                $crate::macro_ref::inventory::submit!($crate::macro_ref::CssEmit(|| {
+                    use $crate::css::prelude::*;
+                    $crate::macro_ref::log::trace!(concat!("generating css for ", file!(), " ", line!()));
+                    let sheet: $crate::macro_ref::StyleSheet = $style;
+                    sheet.to_css()
+                }));
+            };
+        }
+    }
+    else {
+        /// Register a css stylesheet to go in the bundler.
+        /// Any code in here wont be included in the final wasm build.
+        /// And will be run at compile time.
+        ///
+        /// This macro must not be called from within a function.
+        #[macro_export]
+        #[cfg(not(feature = "_internal_collect_css"))]
+        macro_rules! register_css {
+            ($style:expr) => {
+                const _: fn() -> $crate::macro_ref::StyleSheet = || {
+                    use $crate::css::prelude::*;
+                    $crate::macro_ref::log::warn!("Register css code called in non-collection mode");
+                    $style
+                };
+            };
+        }
+    }
 }
 
 /// Css prelude
