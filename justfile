@@ -8,7 +8,7 @@ default:
     cd natrix && rustup run nightly wasm-pack test --headless --chrome --all-features
 
 # Run the full set of tests and checks
-full: test check check_docs check_deps
+full: check_deps test check check_docs
 
 # Run the full set of tests
 test: test_native test_web integration_tests_dev integration_tests_build project_gen_test
