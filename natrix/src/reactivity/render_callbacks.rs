@@ -8,11 +8,11 @@ use crate::dom::attributes::AttributeResult;
 use crate::dom::classes::ClassResult;
 use crate::dom::element::{ElementRenderResult, MaybeStaticElement, generate_fallback_node};
 use crate::dom::{ToAttribute, ToClass};
+use crate::error_handling::{debug_expect, debug_panic};
 use crate::get_document;
 use crate::reactivity::component::Component;
 use crate::reactivity::signal::{ReactiveHook, RenderingState, UpdateResult};
 use crate::reactivity::state::{HookKey, KeepAlive, RenderCtx, State};
-use crate::utils::{debug_expect, debug_panic};
 
 /// A noop hook used to fill the `Rc<RefCell<...>>` while the initial render pass runs so that that
 /// a real hook can be swapped in once initialized

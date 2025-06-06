@@ -3,12 +3,25 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use futures_channel::mpsc::{UnboundedReceiver, UnboundedSender};
-
-use crate::dom::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
+use crate::dom::element::{
+    DynElement,
+    Element,
+    ElementRenderResult,
+    MaybeStaticElement,
+    generate_fallback_node,
+};
+use crate::error_handling::debug_panic;
 use crate::get_document;
 use crate::reactivity::signal::RenderingState;
-use crate::reactivity::state::{ComponentData, E, EventToken, HookKey, KeepAlive, State};
+use crate::reactivity::state::{
+    ComponentData,
+    E,
+    EagerMessageSender,
+    EventToken,
+    HookKey,
+    KeepAlive,
+    State,
+};
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
 /// associating a component with its reactive state as well as converting to a struct to its
@@ -140,39 +153,24 @@ pub trait Component: ComponentBase {
     }
 }
 
-/// Type of the emitting message handler
-type MessageHandler<P, M> = Box<dyn Fn(E<P>, M, EventToken)>;
-
-/// Trait for maybe getting a message handler
-trait MaybeHandler<C: Component, M> {
-    /// Get the message handler
-    fn get(self) -> Option<MessageHandler<C, M>>;
+/// Maybe a handler
+trait MaybeHandler<P: Component, C: Component> {
+    /// Setup the handler if it is present
+    fn apply(self, ctx: &mut State<P>, this: &mut State<C>);
 }
 
-impl<C: Component, M> MaybeHandler<C, M> for () {
-    fn get(self) -> Option<MessageHandler<C, M>> {
-        None
-    }
-}
-impl<C: Component, M> MaybeHandler<C, M> for MessageHandler<C, M> {
-    fn get(self) -> Option<MessageHandler<C, M>> {
-        Some(self)
-    }
+impl<P: Component, C: Component> MaybeHandler<P, C> for () {
+    fn apply(self, _ctx: &mut State<P>, _this: &mut State<C>) {}
 }
 
-/// Trait for maybe getting a message receiver
-trait MaybeRecv<M> {
-    /// Get the message handler
-    fn get(self) -> Option<UnboundedReceiver<M>>;
-}
-impl<M> MaybeRecv<M> for () {
-    fn get(self) -> Option<UnboundedReceiver<M>> {
-        None
-    }
-}
-impl<M> MaybeRecv<M> for UnboundedReceiver<M> {
-    fn get(self) -> Option<UnboundedReceiver<M>> {
-        Some(self)
+impl<P: Component, C: Component, F> MaybeHandler<P, C> for F
+where
+    F: Fn(E<P>, C::EmitMessage, EventToken),
+    F: Clone + 'static,
+{
+    fn apply(self, ctx: &mut State<P>, this: &mut State<C>) {
+        let emit = ctx.emit_sender(self);
+        this.register_parent(emit);
     }
 }
 
@@ -180,101 +178,94 @@ impl<M> MaybeRecv<M> for UnboundedReceiver<M> {
 ///
 /// This exists because of type system limitations.
 #[must_use = "This is useless if not mounted"]
-pub struct SubComponent<I: Component, Im, Ir> {
+pub struct SubComponent<I: Component, Handler> {
     /// The component data
-    data: I,
-    /// Message handler
-    message_handler: Im,
-    /// The receiver for messages
-    receiver: Ir,
+    data: Rc<RefCell<State<I>>>,
+    /// Handler for out emitted messages
+    handler: Handler,
 }
 
-impl<I: Component> SubComponent<I, (), ()> {
+impl<I: Component> SubComponent<I, ()> {
     /// Create a new sub component wrapper
     #[inline]
     pub fn new(data: I) -> Self {
         SubComponent {
-            data,
-            message_handler: (),
-            receiver: (),
+            data: State::new(data.into_data()),
+            handler: (),
         }
     }
 }
-impl<I: Component, Ir> SubComponent<I, (), Ir> {
+impl<I: Component> SubComponent<I, ()> {
     /// Handle messages from the component
     #[inline]
-    pub fn on<P: Component>(
-        self,
-        handler: impl Fn(E<P>, I::EmitMessage, EventToken) + 'static,
-    ) -> SubComponent<I, MessageHandler<P, I::EmitMessage>, Ir> {
+    pub fn on<P, F>(self, handler: F) -> SubComponent<I, F>
+    where
+        P: Component,
+        F: Fn(E<P>, I::EmitMessage, EventToken) + 'static + Clone,
+    {
         SubComponent {
             data: self.data,
-            message_handler: Box::new(handler),
-            receiver: self.receiver,
+            handler,
         }
     }
 }
 
 /// Allows sending messages to the component
-#[derive(Clone)]
 #[must_use]
-pub struct Sender<M>(UnboundedSender<M>);
+pub struct Sender<C: Component>(EagerMessageSender<C>);
 
-impl<M> Sender<M> {
+impl<C: Component> Clone for Sender<C> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+impl<C: Component> Sender<C> {
     /// Send a message to the component
     #[inline]
-    pub fn send(&self, msg: M, _token: EventToken) {
-        if self.0.unbounded_send(msg).is_err() {
-            log::error!("Failed to send message to component, receiver is closed.");
+    pub fn send(&self, msg: C::ReceiveMessage, _token: EventToken) {
+        let result = self.0.send(super::state::InternalMessage::FromParent(msg));
+        if result.is_none() {
+            log::warn!("Sending message to unmounted componen");
         }
     }
 }
 
-impl<I: Component, Im> SubComponent<I, Im, ()> {
+impl<I: Component, Handler> SubComponent<I, Handler> {
     /// Get a sender to allow sending messages to the component
     #[inline]
-    pub fn sender(
-        self,
-    ) -> (
-        SubComponent<I, Im, UnboundedReceiver<I::ReceiveMessage>>,
-        Sender<I::ReceiveMessage>,
-    ) {
-        let (tx, rx) = futures_channel::mpsc::unbounded();
-        let comp = SubComponent {
-            data: self.data,
-            message_handler: self.message_handler,
-            receiver: rx,
-        };
-
-        (comp, Sender(tx))
+    pub fn sender(&self) -> Sender<I> {
+        if let Ok(data) = self.data.try_borrow() {
+            let eager = data.eager_sender();
+            Sender(eager)
+        } else {
+            debug_panic!("State already borrowed during construction");
+            Sender(EagerMessageSender::create_closed_fallback())
+        }
     }
 }
 
-impl<I, P, H, R> DynElement<P> for SubComponent<I, H, R>
+impl<I, P, Handler> DynElement<P> for SubComponent<I, Handler>
 where
     I: Component,
     P: Component,
-    H: MaybeHandler<P, I::EmitMessage> + 'static,
-    R: MaybeRecv<I::ReceiveMessage> + 'static,
+    Handler: MaybeHandler<P, I>,
 {
     fn render(
         self: Box<Self>,
         ctx: &mut State<P>,
         render_state: &mut RenderingState,
     ) -> ElementRenderResult {
-        let data = self.data.into_state();
+        let data = self.data;
         let element = I::render();
 
-        let mut borrow_data = data.borrow_mut();
-        if let Some(handler) = self.message_handler.get() {
-            let (tx, rx) = futures_channel::mpsc::unbounded();
-            borrow_data.register_parent(tx);
+        let Ok(mut borrow_data) = data.try_borrow_mut() else {
+            debug_panic!("State already borrowed during construction");
+            return ElementRenderResult::Node(generate_fallback_node());
+        };
 
-            ctx.spawn_listening_task(handler, rx);
-        }
-        if let Some(receiver) = self.receiver.get() {
-            borrow_data.spawn_receivier_task(receiver);
-        }
+        self.handler.apply(ctx, &mut borrow_data);
+
         I::on_mount(&mut borrow_data, EventToken::new());
 
         let mut hooks = Vec::new();
@@ -292,12 +283,12 @@ where
     }
 }
 
-impl<I, P, H, R> Element<P> for SubComponent<I, H, R>
+impl<I, P, Handler> Element<P> for SubComponent<I, Handler>
 where
     I: Component,
     P: Component,
-    H: MaybeHandler<P, I::EmitMessage> + 'static,
-    R: MaybeRecv<I::ReceiveMessage> + 'static,
+    Handler: 'static,
+    Self: DynElement<P>,
 {
     fn into_generic(self) -> MaybeStaticElement<P> {
         MaybeStaticElement::Dynamic(Box::new(self))
@@ -338,7 +329,7 @@ pub fn mount<C: Component>(component: C) {
     #[cfg(feature = "console_log")]
     if cfg!(target_arch = "wasm32") {
         if let Err(err) = console_log::init_with_level(log::Level::Trace) {
-            crate::utils::debug_panic!("Failed to create logger: {err}");
+            crate::error_handling::debug_panic!("Failed to create logger: {err}");
         }
     }
     #[cfg(feature = "_internal_extract_css")]

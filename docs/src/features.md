@@ -43,10 +43,17 @@ We opted for this over normal default cargo features because we think it is impo
 Libraries should *never* enable this feature flag.
 The intent is that even if a library uses all the below features it should not be tempted to simply use `default-features = true`.
 
-* `console_log` - A library would almost never want to enable this.
+* `console_log`
+* `async`
 
 ### `console_log`
 Automatically sets up [`console_log`](https://crates.io/crates/console_log) on [`mount`](reactivity::component::mount).
+
+### `async`
+Enables the use of [`ctx.use_async`](reactivity::state::State::use_async) 
+
+### `async_utils`
+Enables the various async wrappers for browser apis in [`async_utils`](async_utils)
 
 ### `test_utils`
 Various testing utilities, this should be enabled via a `[dev-dependencies]`.

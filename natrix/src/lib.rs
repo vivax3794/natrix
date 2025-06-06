@@ -8,11 +8,11 @@
 pub mod async_utils;
 pub mod css;
 pub mod dom;
+mod error_handling;
 pub mod panics;
 pub mod reactivity;
 pub mod test_utils;
 mod type_macros;
-mod utils;
 
 pub use wasm_bindgen::intern;
 

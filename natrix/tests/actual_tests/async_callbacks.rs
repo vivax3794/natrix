@@ -1,3 +1,5 @@
+#![cfg(feature = "async_utils")]
+
 use std::time::Duration;
 
 use natrix::async_utils;

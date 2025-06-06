@@ -1,12 +1,12 @@
 //! Implementation of the `Element` trait for various abstract types.
 
 use super::HtmlElement;
+use crate::error_handling::debug_panic;
 use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::ReactiveNode;
 use crate::reactivity::signal::RenderingState;
 use crate::reactivity::state::{RenderCtx, State};
 use crate::type_macros;
-use crate::utils::debug_panic;
 
 /// A result of the rendering process.
 pub(crate) enum ElementRenderResult {

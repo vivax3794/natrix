@@ -24,11 +24,11 @@ use crate::css::selectors::{CompoundSelector, IntoCompoundSelector, SimpleSelect
 use crate::dom::element::{Element, MaybeStaticElement, generate_fallback_node};
 use crate::dom::events::{Event, EventHandler};
 use crate::dom::{ToAttribute, ToClass};
+use crate::error_handling::{debug_expect, debug_panic};
 use crate::get_document;
 use crate::reactivity::component::Component;
 use crate::reactivity::signal::RenderingState;
 use crate::reactivity::state::{EventToken, State};
-use crate::utils::{debug_expect, debug_panic};
 
 /// A deferred function to do something once state is available
 pub(crate) type DeferredFunc<C> = Box<dyn FnOnce(&mut State<C>, &mut RenderingState)>;

@@ -106,7 +106,9 @@ struct MyParent;
 
 impl Component for MyParent {
     fn render() -> impl Element<Self> {
-        let (child, sender) = SubComponent::new(MyChild::default()).sender();
+        let child = SubComponent::new(MyChild::default());
+        let sender = child.sender();
+
         e::div()
             .child(child)
             // We use `move` to move ownership of the sender into the closure
@@ -121,4 +123,5 @@ As you see this generally requires you to use a `let` binding to split the retur
 
 ### When do messages get processed?
 
-Messages passing uses async channels internally, this means the messages will be processed once the current components reactivity cycle is finished. This will still run before the next reflow of the browser, and all messages are batched for efficiency.
+Messages are process right away if possible, if the target is already borrowed (for example if a message is sent in a message handler) the message will be deferred until that components update step.
+

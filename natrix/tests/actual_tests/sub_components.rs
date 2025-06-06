@@ -43,7 +43,8 @@ impl Component for RootOne {
     type EmitMessage = NoMessages;
     type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
-        let (child, sender) = SubComponent::new(Counter { value: 0 }).sender();
+        let child = SubComponent::new(Counter { value: 0 });
+        let sender = child.sender();
         let sender_clone = sender.clone();
 
         e::div()
@@ -121,9 +122,6 @@ fn parent_to_child() {
     assert_eq!(double.text_content(), Some("0".to_owned()));
 
     add_button.click();
-    assert_eq!(button.text_content(), Some("0".to_owned()));
-    assert_eq!(double.text_content(), Some("0".to_owned()));
-
     assert_eq!(button.text_content(), Some("10".to_owned()));
     assert_eq!(double.text_content(), Some("20".to_owned()));
 
@@ -163,7 +161,8 @@ impl Component for RootTwo {
     type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         |ctx: R<Self>| {
-            let (child, sender) = SubComponent::new(ChildTwo { value: 0 }).sender();
+            let child = SubComponent::new(ChildTwo { value: 0 });
+            let sender = child.sender();
 
             ctx.on_change(
                 |ctx| {
@@ -237,24 +236,23 @@ impl Component for RootRecursive {
     type ReceiveMessage = NoMessages;
 
     fn render() -> impl Element<Self> {
-        |ctx: R<Self>| {
-            let (child, sender) = SubComponent::new(RecursiveChild { value: 0 }).sender();
-            let child_sender = sender.clone();
+        let child = SubComponent::new(RecursiveChild { value: 0 });
+        let sender = child.sender();
+        let child_sender = child.sender();
 
-            e::div()
-                .child(child.on(move |ctx: E<Self>, msg, token| {
-                    *ctx.last = msg;
-                    if msg < *ctx.max_rounds {
-                        child_sender.send(msg + 1, token);
-                    }
-                }))
-                .child(e::div().id(RESULT_ID).text(|ctx: R<Self>| *ctx.last))
-                .child(e::button().id(START_ID).text("Start").on::<events::Click>(
-                    move |_ctx: E<Self>, token, _| {
-                        sender.send(1, token);
-                    },
-                ))
-        }
+        e::div()
+            .child(child.on(move |ctx: E<Self>, msg, token| {
+                *ctx.last = msg;
+                if msg < *ctx.max_rounds {
+                    child_sender.send(msg + 1, token);
+                }
+            }))
+            .child(e::div().id(RESULT_ID).text(|ctx: R<Self>| *ctx.last))
+            .child(e::button().id(START_ID).text("Start").on::<events::Click>(
+                move |_ctx: E<Self>, token, _| {
+                    sender.send(1, token);
+                },
+            ))
     }
 }
 
@@ -273,7 +271,6 @@ fn recursive_message_test() {
     assert_eq!(result.text_content(), Some("0".to_owned()));
 
     start.click();
-
     assert_eq!(child.text_content(), Some("3".to_owned()));
     assert_eq!(result.text_content(), Some("3".to_owned()));
 }

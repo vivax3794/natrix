@@ -9,10 +9,10 @@ use crate::dom::element::{
     generate_fallback_node,
 };
 use crate::dom::{ToAttribute, ToClass};
+use crate::error_handling::debug_panic;
 use crate::reactivity::component::{Component, ComponentBase, NoMessages};
 use crate::reactivity::signal::SignalMethods;
 use crate::reactivity::state::ComponentData;
-use crate::utils::debug_panic;
 
 impl ComponentData for () {
     type FieldRef<'a> = [&'a mut dyn SignalMethods; 0];

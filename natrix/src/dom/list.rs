@@ -3,11 +3,11 @@
 use std::cmp::Ordering;
 
 use crate::dom::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
+use crate::error_handling::{debug_expect, debug_panic};
 use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::DummyHook;
 use crate::reactivity::signal::{ReactiveHook, RenderingState, UpdateResult};
 use crate::reactivity::state::{HookKey, KeepAlive, R as Ra, RenderCtx, State};
-use crate::utils::{debug_expect, debug_panic};
 
 /// List lets you efficiently render a list of items
 /// It takes a function that returns a vector of items and a render function

@@ -1,16 +1,52 @@
 //! Variosu async versions of js callback apis
-use std::task::{Context, Poll};
+#![cfg(feature = "async_utils")]
 use std::time::Duration;
 
-use futures_channel::mpsc::UnboundedReceiver;
 use futures_channel::oneshot;
-use futures_util::stream::StreamExt;
-use futures_util::task::noop_waker;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::Closure;
 use web_sys::js_sys::Function;
 
-use crate::utils::{DropGuard, debug_panic};
+use crate::error_handling::debug_panic;
+
+/// A guard that executes a callback when dropped.
+///
+/// This is primarily used to cleanup js resources when stuff like a Future is dropped.
+pub(crate) struct DropGuard<F>
+where
+    F: FnOnce(),
+{
+    /// The callback to be executed on drop.
+    callback: Option<F>,
+}
+
+impl<F> DropGuard<F>
+where
+    F: FnOnce(),
+{
+    /// Creates a new guard that will call the provided function on drop.
+    pub(crate) fn new(callback: F) -> Self {
+        Self {
+            callback: Some(callback),
+        }
+    }
+
+    /// Disables the callback, preventing it from being called on drop.
+    pub(crate) fn cancel(&mut self) {
+        self.callback = None;
+    }
+}
+
+impl<F> Drop for DropGuard<F>
+where
+    F: FnOnce(),
+{
+    fn drop(&mut self) {
+        if let Some(callback) = self.callback.take() {
+            callback();
+        }
+    }
+}
 
 /// Sleeps for the given duration using js `setTimeout`.
 ///
@@ -94,40 +130,89 @@ pub async fn next_animation_frame() {
     .await;
 }
 
-/// Wait for at least one mesassge on the channel
-/// Returns `None` if the channel is closed
-pub(crate) async fn recv_batch<T>(
-    rx: &mut UnboundedReceiver<T>,
-) -> Option<impl Iterator<Item = T>> {
-    let first = rx.next().await?;
-    Some(RecvBatchIter {
-        rx,
-        first: Some(first),
-    })
-}
+#[cfg(test)]
+mod tests {
+    use std::cell::Cell;
 
-/// A *iterator* that drains the available messages from a `UnboundedReceiver`.
-struct RecvBatchIter<'a, T> {
-    /// The receiver to drain messages from.
-    rx: &'a mut UnboundedReceiver<T>,
-    /// The first message that was received.
-    first: Option<T>,
-}
+    use super::*;
 
-impl<T> Iterator for RecvBatchIter<'_, T> {
-    type Item = T;
+    #[test]
+    fn test_drop_guard_basic_functionality() {
+        let called = Cell::new(false);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(first) = self.first.take() {
-            return Some(first);
+        {
+            let _guard = DropGuard::new(|| called.set(true));
+            assert!(!called.get()); // Not called yet
+        } // guard drops here
+
+        assert!(called.get()); // Called after drop
+    }
+
+    #[test]
+    fn test_drop_guard_cancel() {
+        let called = Cell::new(false);
+
+        {
+            let mut guard = DropGuard::new(|| called.set(true));
+            guard.cancel();
+        } // guard drops here, but callback was canceled
+
+        assert!(!called.get());
+    }
+
+    #[test]
+    fn test_multiple_drop_guards() {
+        let counter = Cell::new(0);
+
+        {
+            let _guard1 = DropGuard::new(|| counter.set(counter.get() + 1));
+            let _guard2 = DropGuard::new(|| counter.set(counter.get() + 2));
+            let _guard3 = DropGuard::new(|| counter.set(counter.get() + 3));
+
+            assert_eq!(counter.get(), 0);
+        } // Guards drop in reverse order (LIFO)
+
+        assert_eq!(counter.get(), 6); // 3 + 2 + 1
+    }
+
+    #[test]
+    #[should_panic(expected = "Callback panic")]
+    #[expect(clippy::panic, reason = "Its a test")]
+    fn test_drop_guard_panicking_callback() {
+        {
+            let _guard = DropGuard::new(|| panic!("Callback panic"));
+        } // guard drops here and should panic
+    }
+
+    #[test]
+    fn test_drop_guard_with_captured_values() {
+        let mut value = String::from("initial");
+
+        {
+            let _guard = DropGuard::new(|| {
+                value = String::from("modified");
+            });
         }
 
-        let waker = noop_waker();
-        let mut cx = Context::from_waker(&waker);
+        assert_eq!(value, "modified");
+    }
 
-        match self.rx.poll_next_unpin(&mut cx) {
-            Poll::Ready(Some(item)) => Some(item),
-            Poll::Ready(None) | Poll::Pending => None,
+    #[test]
+    fn test_nested_drop_guards() {
+        let counter = Cell::new(0);
+
+        {
+            let _outer = DropGuard::new(|| {
+                counter.set(counter.get() + 1);
+
+                let _inner = DropGuard::new(|| {
+                    counter.set(counter.get() + 10);
+                });
+                // inner guard drops here (inside outer callback)
+            });
+            // outer drops here
         }
+
+        assert_eq!(counter.get(), 11); // 1 + 10
     }
 }
