@@ -97,7 +97,7 @@ impl<C: Component, T> HtmlElement<C, T> {
         let element = self.element.clone();
 
         self.deferred.push(Box::new(move |ctx, rendering_state| {
-            let ctx_weak = ctx.deferred_borrow(EventToken::new());
+            let ctx_weak = ctx.this.clone();
 
             let callback: Box<dyn Fn(web_sys::Event) + 'static> = Box::new(move |event| {
                 crate::panics::return_if_panic!();
@@ -107,8 +107,12 @@ impl<C: Component, T> HtmlElement<C, T> {
                     return;
                 };
 
-                let Some(mut ctx) = ctx_weak.borrow_mut() else {
+                let Some(ctx) = ctx_weak.upgrade() else {
                     debug_panic!("Component dropped without event handlers being cleaned up");
+                    return;
+                };
+                let Ok(mut ctx) = ctx.try_borrow_mut() else {
+                    debug_panic!("Component already mutably borrowed in event handler");
                     return;
                 };
 

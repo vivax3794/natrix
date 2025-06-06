@@ -151,57 +151,6 @@ impl Component for ChildTwo {
     }
 }
 
-#[derive(Component)]
-struct RootTwo {
-    value: u8,
-}
-
-impl Component for RootTwo {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        |ctx: R<Self>| {
-            let child = SubComponent::new(ChildTwo { value: 0 });
-            let sender = child.sender();
-
-            ctx.on_change(
-                |ctx| {
-                    *ctx.value;
-                },
-                move |ctx, token| {
-                    sender.send(*ctx.value, token);
-                },
-            );
-
-            e::div()
-                .child(child)
-                .child(
-                    e::button()
-                        .id(ADD_ID)
-                        .on::<events::Click>(|ctx: E<Self>, _token, _| {
-                            *ctx.value += 1;
-                        }),
-                )
-        }
-    }
-}
-
-#[wasm_bindgen_test]
-fn on_change() {
-    crate::mount_test(RootTwo { value: 0 });
-
-    let button = crate::get(BUTTON_ID);
-    let add_button = crate::get(ADD_ID);
-
-    assert_eq!(button.text_content(), Some("0".to_owned()));
-
-    add_button.click();
-    assert_eq!(button.text_content(), Some("1".to_owned()));
-
-    add_button.click();
-    assert_eq!(button.text_content(), Some("2".to_owned()));
-}
-
 const RC_CHILD_ID: &str = "RC_CHILD";
 const START_ID: &str = "START";
 const RESULT_ID: &str = "RESULT";

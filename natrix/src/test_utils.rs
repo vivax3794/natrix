@@ -22,11 +22,25 @@ thread_local! {
      static CURRENT_COMP: Cell<KeepAlive>  = Cell::new(Box::new(()));
 }
 
+/// Has a logger be initlized?
+#[cfg(feature = "console_log")]
+static LOGGER_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// Mount a component at the test location (creating/resetting it if needed)
 /// # Panics
 /// If the js is in a invalid state or the element is not found
 pub fn mount_test<C: Component>(component: C) {
+    #[cfg(feature = "console_log")]
+    {
+        let was_logger_active = LOGGER_ACTIVE.fetch_or(true, std::sync::atomic::Ordering::Relaxed);
+        if !was_logger_active {
+            console_log::init_with_level(log::Level::Trace).expect("Failed to setup logging");
+        }
+    }
+
     setup();
+
+    log::debug!("Mounting test component {}", std::any::type_name::<C>());
     let result = render_component(component, MOUNT_POINT).expect("Failed to mount");
     CURRENT_COMP.with(|cell| cell.set(Box::new(result)));
 }
@@ -42,6 +56,7 @@ pub fn setup() {
         .expect("Failed to get document");
 
     if let Some(element) = document.get_element_by_id(MOUNT_PARENT) {
+        log::trace!("Removed old test tree");
         element.remove();
     }
 
@@ -61,6 +76,8 @@ pub fn setup() {
         .expect("Could not find <body>")
         .append_child(&parent)
         .expect("Failed to append child");
+
+    log::trace!("Setup test target");
 }
 
 /// Get a html element based on id

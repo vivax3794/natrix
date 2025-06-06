@@ -1,12 +1,10 @@
 //! Types for handling the component state
 
 use std::any::Any;
-use std::cell::{RefCell, RefMut};
-use std::marker::PhantomData;
+use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 
-use ouroboros::self_referencing;
 use slotmap::{SlotMap, new_key_type};
 use smallvec::SmallVec;
 
@@ -78,6 +76,19 @@ pub(crate) enum InternalMessage<C: Component> {
     FromParent(C::ReceiveMessage),
     /// Message from a child
     FromChild(Box<dyn FnOnce(&mut State<C>)>),
+}
+
+impl<C: Component> std::fmt::Debug for InternalMessage<C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::FromParent(_msg) => f
+                .debug_tuple("InternalMessage::FromParent")
+                .finish_non_exhaustive(),
+            Self::FromChild(_msg) => f
+                .debug_tuple("InternalMessage::FromChild")
+                .finish_non_exhaustive(),
+        }
+    }
 }
 
 /// The queue of messages sent to a component while it was borrowed
@@ -233,6 +244,7 @@ impl<T: Component> State<T> {
     /// This is to allow batching messages handling.
     /// Calling `.clear` and `.update` is meant for the caller
     fn handle_message(&mut self, message: InternalMessage<T>) {
+        log::debug!("Handling message {message:?}");
         match message {
             InternalMessage::FromParent(message) => {
                 T::handle_message(self, message, EventToken::new());
@@ -248,6 +260,7 @@ impl<T: Component> State<T> {
     fn drain_message_queue(&mut self) {
         let queue = if let Ok(mut queue) = self.deferred_messages.try_borrow_mut() {
             if queue.is_empty() {
+                log::trace!("No messages to process");
                 return;
             }
 
@@ -261,6 +274,7 @@ impl<T: Component> State<T> {
             return;
         };
 
+        log::debug!("Processing {} deferred messages", queue.len());
         for message in queue {
             self.handle_message(message);
         }
@@ -350,7 +364,14 @@ impl<T: Component> State<T> {
 
     /// Loop over signals and update any depdant hooks for changed signals
     /// This also drains the deferred message queue
+    #[cfg_attr(debug_assertions, track_caller)]
     pub(crate) fn update(&mut self) {
+        if cfg!(debug_assertions) {
+            let location = std::panic::Location::caller();
+            log::trace!("Called update from {location}");
+        }
+
+        log::debug!("Performing update cycle for {}", std::any::type_name::<T>());
         self.drain_message_queue();
 
         let mut hooks = Vec::new();
@@ -367,6 +388,8 @@ impl<T: Component> State<T> {
                 }
             }
         }
+
+        log::trace!("{} hooks updating", hooks.len());
         while let Some((hook_key, _)) = hooks.pop() {
             self.run_with_hook_and_self(hook_key, |ctx, hook| match hook.update(ctx, hook_key) {
                 UpdateResult::Nothing => {}
@@ -380,6 +403,7 @@ impl<T: Component> State<T> {
                 }
             });
         }
+        log::trace!("Update cycle complete");
     }
 
     /// Get the unwrapped data referenced by this guard
@@ -435,6 +459,7 @@ impl<T: Component> State<T> {
 
     /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
     /// framework assumptions.
+    #[cfg(feature = "async")]
     pub fn deferred_borrow(&self, _token: EventToken) -> DeferredCtx<T> {
         DeferredCtx {
             inner: self.this.clone(),
@@ -466,31 +491,6 @@ fn drop_hook<T: Component>(ctx: &mut State<T>, hook: HookKey) {
         let mut hooks = hook.0.drop_us();
         for hook in hooks.drain(..) {
             drop_hook(ctx, hook);
-        }
-    }
-}
-
-/// A wrapper future that checks `has_panicked` before resolving.
-#[cfg(feature = "async")]
-#[pin_project::pin_project]
-struct PanicCheckFuture<F> {
-    /// The future to run
-    #[pin]
-    inner: F,
-}
-
-#[cfg(feature = "async")]
-impl<F: Future> Future for PanicCheckFuture<F> {
-    type Output = F::Output;
-
-    fn poll(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Self::Output> {
-        if crate::panics::has_panicked() {
-            std::task::Poll::Pending
-        } else {
-            self.project().inner.poll(cx)
         }
     }
 }
@@ -579,81 +579,6 @@ impl<C: Component> RenderCtx<'_, C> {
         F: Fn(&mut State<C>) -> &mut R,
     {
         (guard.getter)(self.ctx)
-    }
-
-    /// Register a event handler to run when the given reactive items change.
-    /// This method takes two closures, the first one will be called to register the reactive value
-    /// to rerun for. This is given a `RenderCtx` so you can use stuff like `.watch`
-    ///
-    /// This is meant to be used to inform external code of changes to the state.
-    /// For updating internal state in response to changes instead upt for updating state via
-    /// methods as this will be WAY more efficient.
-    /// As such you are not given mutable access to the state.
-    /// But you are given an `EventToken` which can be used to emit messages to the parent
-    /// component or otherwise do most event-handler things.
-    pub fn on_change<Fr, Fe>(&mut self, reactive_func: Fr, handler_func: Fe)
-    where
-        Fr: Fn(&mut RenderCtx<C>) + 'static,
-        Fe: Fn(&State<C>, EventToken) + 'static,
-    {
-        let signal_state = self.ctx.pop_signals();
-
-        (reactive_func)(self);
-
-        let inner = self.ctx.pop_signals();
-        (handler_func)(self.ctx, EventToken::new());
-        self.ctx.set_signals(inner);
-
-        let me = self.ctx.insert_hook(Box::new(ChangeHook {
-            func: Box::new(handler_func),
-            reactive_func: Box::new(reactive_func),
-            hooks: Vec::new(),
-            keep_alive: Vec::new(),
-        }));
-        self.ctx.reg_dep(me);
-        self.render_state.hooks.push(me);
-        self.ctx.set_signals(signal_state);
-    }
-}
-
-/// A hook that is used to run a on change function as a hook
-struct ChangeHook<C: Component> {
-    /// The function to call when the signal changes
-    func: Box<dyn Fn(&State<C>, EventToken)>,
-    /// The reactive function to call when the signal changes
-    reactive_func: Box<dyn Fn(&mut RenderCtx<C>)>,
-    /// Hooks
-    hooks: Vec<HookKey>,
-    /// Keep alive
-    keep_alive: Vec<KeepAlive>,
-}
-
-impl<C> ReactiveHook<C> for ChangeHook<C>
-where
-    C: Component,
-{
-    fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
-        (self.func)(ctx, EventToken::new());
-
-        let prev_hooks = std::mem::take(&mut self.hooks);
-        self.keep_alive.clear();
-
-        ctx.clear();
-        (self.reactive_func)(&mut RenderCtx {
-            ctx,
-            render_state: RenderingState {
-                keep_alive: &mut self.keep_alive,
-                hooks: &mut self.hooks,
-                parent_dep: you,
-            },
-        });
-        ctx.reg_dep(you);
-
-        UpdateResult::DropHooks(prev_hooks)
-    }
-
-    fn drop_us(self: Box<Self>) -> Vec<HookKey> {
-        self.hooks
     }
 }
 
@@ -939,107 +864,137 @@ impl<F> Guard<F> {
     }
 }
 
-/// A combiend `Weak` and `RefCell` that facilities upgrading and borrowing as a shared
-/// operation
-#[must_use]
-pub struct DeferredCtx<T: Component> {
-    /// The `Weak<RefCell<T>>` in question
-    inner: Weak<RefCell<State<T>>>,
-}
+cfg_if::cfg_if! {
+    if #[cfg(feature = "async")] {
+        use std::marker::PhantomData;
+        use std::cell::RefMut;
 
-// We put a bound on `'p` so that users are not able to store the upgraded reference (unless
-// they want to use ouroboros themself to store it alongside the weak).
-#[self_referencing]
-struct DeferredRefInner<'p, T: Component> {
-    rc: Rc<RefCell<State<T>>>,
-    lifetime: PhantomData<&'p ()>,
-    #[borrows(rc)]
-    #[covariant]
-    reference: RefMut<'this, State<T>>,
-}
+        /// A wrapper future that checks `has_panicked` before resolving.
+        #[pin_project::pin_project]
+        struct PanicCheckFuture<F> {
+            /// The future to run
+            #[pin]
+            inner: F,
+        }
 
-/// a `RefMut` that also holds a `Rc`.
-/// See the `DeferredCtx::borrow_mut` on drop semantics and safety
-#[cfg_attr(feature = "nightly", must_not_suspend)]
-#[must_use]
-pub struct DeferredRef<'p, T: Component>(DeferredRefInner<'p, T>);
+        impl<F: Future> Future for PanicCheckFuture<F> {
+            type Output = F::Output;
 
-impl<T: Component> DeferredCtx<T> {
-    /// Borrow this `Weak<RefCell<...>>`, this will create a `Rc` for as long as the borrow is
-    /// active. Returns `None` if the component was dropped. Its recommended to use the
-    /// following construct to safely cancel async tasks:
-    /// ```ignore
-    /// let Some(mut borrow) = ctx.borrow_mut() else {return;};
-    /// // ...
-    /// drop(borrow);
-    /// foo().await;
-    /// let Some(mut borrow) = ctx.borrow_mut() else {return;};
-    /// // ...
-    /// ```
-    ///
-    /// # Reactivity
-    /// Calling this function clears the internal reactive flags (which is safe as long as the
-    /// borrow safety rules below are followed).
-    /// Once this value is dropped it will trigger a reactive update for any changed fields.
-    ///
-    /// # Borrow Safety
-    /// The framework guarantees that it will never hold a borrow between event calls.
-    /// This means the only source of panics is if you are holding a borrow when you yield to
-    /// the event loop, i.e you should *NOT* hold this value across `.await` points.
-    /// framework will regularly borrow the state on any registered event handler trigger, for
-    /// example a user clicking a button.
-    ///
-    /// Keeping this type across an `.await` point or otherwise leading control to the event
-    /// loop while the borrow is active could also lead to reactivity failrues and desyncs, and
-    /// should be considered UB (not ub as in compile ub, but as in this framework makes no
-    /// guarantees about what state the reactivity system will be in)
-    ///
-    /// ## Nightly
-    /// The nightly feature flag enables a lint to detect this misuse.
-    /// See the [Features]() chapther for details on how to set it up (it requires a bit more
-    /// setup than just turning on the feature flag).
-    #[expect(
-        clippy::missing_panics_doc,
-        reason = "This happens when we already are in a panic"
-    )]
-    #[must_use]
-    pub fn borrow_mut(&self) -> Option<DeferredRef<'_, T>> {
-        assert!(!crate::panics::has_panicked());
+            fn poll(
+                self: std::pin::Pin<&mut Self>,
+                cx: &mut std::task::Context<'_>,
+            ) -> std::task::Poll<Self::Output> {
+                if crate::panics::has_panicked() {
+                    std::task::Poll::Pending
+                } else {
+                    self.project().inner.poll(cx)
+                }
+            }
+        }
 
-        let rc = self.inner.upgrade()?;
-        let borrow = DeferredRefInner::try_new(rc, PhantomData, |rc| rc.try_borrow_mut());
+        /// A combiend `Weak` and `RefCell` that facilities upgrading and borrowing as a shared
+        /// operation
+        #[must_use]
+        pub struct DeferredCtx<T: Component> {
+            /// The `Weak<RefCell<T>>` in question
+            inner: Weak<RefCell<State<T>>>,
+        }
 
-        let Ok(mut borrow) = borrow else {
-            debug_panic!(
-                "Deferred state borrowed while already borrowed. This might happen due to holding it across a yield point"
-            );
-            return None;
-        };
+        // We put a bound on `'p` so that users are not able to store the upgraded reference (unless
+        // they want to use ouroboros themself to store it alongside the weak).
+        #[ouroboros::self_referencing]
+        struct DeferredRefInner<'p, T: Component> {
+            rc: Rc<RefCell<State<T>>>,
+            lifetime: PhantomData<&'p ()>,
+            #[borrows(rc)]
+            #[covariant]
+            reference: RefMut<'this, State<T>>,
+        }
 
-        borrow.with_reference_mut(|ctx| ctx.clear());
-        Some(DeferredRef(borrow))
-    }
-}
+        /// a `RefMut` that also holds a `Rc`.
+        /// See the `DeferredCtx::borrow_mut` on drop semantics and safety
+        #[cfg_attr(feature = "nightly", must_not_suspend)]
+        #[must_use]
+        pub struct DeferredRef<'p, T: Component>(DeferredRefInner<'p, T>);
 
-impl<T: Component> Deref for DeferredRef<'_, T> {
-    type Target = State<T>;
+        impl<T: Component> DeferredCtx<T> {
+            /// Borrow this `Weak<RefCell<...>>`, this will create a `Rc` for as long as the borrow is
+            /// active. Returns `None` if the component was dropped. Its recommended to use the
+            /// following construct to safely cancel async tasks:
+            /// ```ignore
+            /// let Some(mut borrow) = ctx.borrow_mut() else {return;};
+            /// // ...
+            /// drop(borrow);
+            /// foo().await;
+            /// let Some(mut borrow) = ctx.borrow_mut() else {return;};
+            /// // ...
+            /// ```
+            ///
+            /// # Reactivity
+            /// Calling this function clears the internal reactive flags (which is safe as long as the
+            /// borrow safety rules below are followed).
+            /// Once this value is dropped it will trigger a reactive update for any changed fields.
+            ///
+            /// # Borrow Safety
+            /// The framework guarantees that it will never hold a borrow between event calls.
+            /// This means the only source of panics is if you are holding a borrow when you yield to
+            /// the event loop, i.e you should *NOT* hold this value across `.await` points.
+            /// framework will regularly borrow the state on any registered event handler trigger, for
+            /// example a user clicking a button.
+            ///
+            /// Keeping this type across an `.await` point or otherwise leading control to the event
+            /// loop while the borrow is active could also lead to reactivity failrues and desyncs, and
+            /// should be considered UB (not ub as in compile ub, but as in this framework makes no
+            /// guarantees about what state the reactivity system will be in)
+            ///
+            /// ## Nightly
+            /// The nightly feature flag enables a lint to detect this misuse.
+            /// See the [Features]() chapther for details on how to set it up (it requires a bit more
+            /// setup than just turning on the feature flag).
+            #[expect(
+                clippy::missing_panics_doc,
+                reason = "This happens when we already are in a panic"
+            )]
+            #[must_use]
+            pub fn borrow_mut(&self) -> Option<DeferredRef<'_, T>> {
+                assert!(!crate::panics::has_panicked());
 
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        self.0.borrow_reference()
-    }
-}
-impl<T: Component> DerefMut for DeferredRef<'_, T> {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.with_reference_mut(|cell| &mut **cell)
-    }
-}
+                let rc = self.inner.upgrade()?;
+                let borrow = DeferredRefInner::try_new(rc, PhantomData, |rc| rc.try_borrow_mut());
 
-impl<T: Component> Drop for DeferredRef<'_, T> {
-    fn drop(&mut self) {
-        self.0.with_reference_mut(|ctx| {
-            ctx.update();
-        });
+                let Ok(mut borrow) = borrow else {
+                    debug_panic!(
+                        "Deferred state borrowed while already borrowed. This might happen due to holding it across a yield point"
+                    );
+                    return None;
+                };
+
+                borrow.with_reference_mut(|ctx| ctx.clear());
+                Some(DeferredRef(borrow))
+            }
+        }
+
+        impl<T: Component> Deref for DeferredRef<'_, T> {
+            type Target = State<T>;
+
+            #[inline]
+            fn deref(&self) -> &Self::Target {
+                self.0.borrow_reference()
+            }
+        }
+        impl<T: Component> DerefMut for DeferredRef<'_, T> {
+            #[inline]
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                self.0.with_reference_mut(|cell| &mut **cell)
+            }
+        }
+
+        impl<T: Component> Drop for DeferredRef<'_, T> {
+            fn drop(&mut self) {
+                self.0.with_reference_mut(|ctx| {
+                    ctx.update();
+                });
+            }
+        }
     }
 }
