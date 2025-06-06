@@ -87,8 +87,7 @@ fn simple_button_child() {
 }
 
 #[wasm_bindgen_test]
-async fn child_to_parent() {
-    use natrix::async_utils;
+fn child_to_parent() {
     crate::mount_test(RootOne { double: 0 });
 
     let button = crate::get(BUTTON_ID);
@@ -98,24 +97,20 @@ async fn child_to_parent() {
     assert_eq!(double.text_content(), Some("0".to_owned()));
 
     button.click();
-    async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("1".to_owned()));
     assert_eq!(double.text_content(), Some("2".to_owned()));
 
     button.click();
-    async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("2".to_owned()));
     assert_eq!(double.text_content(), Some("4".to_owned()));
 
     button.click();
-    async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("3".to_owned()));
     assert_eq!(double.text_content(), Some("6".to_owned()));
 }
 
 #[wasm_bindgen_test]
-async fn parent_to_child() {
-    use natrix::async_utils;
+fn parent_to_child() {
     crate::mount_test(RootOne { double: 0 });
 
     let button = crate::get(BUTTON_ID);
@@ -129,17 +124,14 @@ async fn parent_to_child() {
     assert_eq!(button.text_content(), Some("0".to_owned()));
     assert_eq!(double.text_content(), Some("0".to_owned()));
 
-    async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("10".to_owned()));
     assert_eq!(double.text_content(), Some("20".to_owned()));
 
     add_button.click();
-    async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("20".to_owned()));
     assert_eq!(double.text_content(), Some("40".to_owned()));
 
     add_button.click();
-    async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("30".to_owned()));
     assert_eq!(double.text_content(), Some("60".to_owned()));
 }
@@ -196,7 +188,7 @@ impl Component for RootTwo {
 }
 
 #[wasm_bindgen_test]
-async fn on_change() {
+fn on_change() {
     crate::mount_test(RootTwo { value: 0 });
 
     let button = crate::get(BUTTON_ID);
@@ -205,11 +197,9 @@ async fn on_change() {
     assert_eq!(button.text_content(), Some("0".to_owned()));
 
     add_button.click();
-    natrix::async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("1".to_owned()));
 
     add_button.click();
-    natrix::async_utils::next_animation_frame().await;
     assert_eq!(button.text_content(), Some("2".to_owned()));
 }
 
@@ -269,8 +259,7 @@ impl Component for RootRecursive {
 }
 
 #[wasm_bindgen_test]
-async fn recursive_message_test() {
-    use natrix::async_utils;
+fn recursive_message_test() {
     crate::mount_test(RootRecursive {
         max_rounds: 3,
         last: 0,
@@ -284,7 +273,6 @@ async fn recursive_message_test() {
     assert_eq!(result.text_content(), Some("0".to_owned()));
 
     start.click();
-    async_utils::next_animation_frame().await;
 
     assert_eq!(child.text_content(), Some("3".to_owned()));
     assert_eq!(result.text_content(), Some("3".to_owned()));
