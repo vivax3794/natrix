@@ -112,7 +112,8 @@ pub(crate) fn build_wasm(config: &options::BuildConfig) -> Result<PathBuf> {
         .env(natrix_shared::MACRO_SETTINGS, settings);
 
     if config.profile == BuildProfile::Release {
-        let mut rustc_flags = String::from("-C target-feature=+bulk-memory,+reference-types ");
+        let mut rustc_flags =
+            String::from("-C target-feature=+bulk-memory,+reference-types,+tail-call,+multivalue ");
         if rustc_is_nightly {
             let std_features = String::from("optimize_for_size");
             command
