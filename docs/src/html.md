@@ -58,7 +58,6 @@ Child elements can also be reactive as closures implement the [`Element`](dom::e
 # impl Component for MyComponent {
 #     fn render() -> impl Element<Self> {
 e::div()
-    .class("my-component")
     .child(e::button()
         .text("Click me!")
         .on::<events::Click>(|ctx: E<Self>, _, _| {
@@ -90,17 +89,19 @@ e::div()
 # ;
 ```
 
-Most standard html attributes have helper functions, for example `id`, `class`, `href`, `src`, etc.
+Most standard html attributes have type-safe helper functions, for example `id`, `class`, `href`, `src`, etc.
 For non-global attributes natrix only exposes them on the supporting elements.
 
 ```rust,no_run
 # extern crate natrix;
 # use natrix::prelude::*;
+use natrix::dom::attributes;
+
 # let _: e::HtmlElement<(), _> =
 e::a()
     .href("https://example.com")
-    .target("_blank")
-    .rel("noopener noreferrer")
+    .target(attributes::Target::NewTab) // _blank
+    .rel(vec![attributes::Rel::NoOpener, attributes::Rel::NoReferrer])
 # ;
 ```
 
@@ -130,7 +131,6 @@ Attributes can also be reactive as closures implement the [`ToAttribute`](dom::T
 # impl Component for MyComponent {
 #     fn render() -> impl Element<Self> {
 e::button()
-    .class("my-button")
     .disabled(|ctx: R<Self>| !*ctx.is_active)
     .text("Click me!")
     .on::<events::Click>(|ctx: E<Self>, _, _| {
@@ -140,6 +140,16 @@ e::button()
 # }
 ```
 
+Importantly for the attribute helpers [`AttributeKind`](dom::attributes::ToAttribute::AttributeKind) determines what kind of values are allowed for that helper. Important a attribute kind of for example `bool` also supports `Option<bool>`, a closure returning `bool`, etc. For example this wont compile:
+```rust,compile_fail
+# extern crate natrix;
+# use natrix::prelude::*;
+# let _: e::HtmlElement<(), _> =
+e::a()
+    .target("_blank") // error: expected `attributes::Target`, found `&'static str`
+# ;
+```
+
 ## Classes
 
 The [`.class`](dom::html_elements::HtmlElement::class) method is _not_ a alias for [`.attr`](dom::html_elements::HtmlElement::attr), it will add the class to the element, and not replace it. This is because the `class` attribute is a special case in HTML, and is used to apply CSS styles to elements. The [`.class`](dom::html_elements::HtmlElement::class) method will add the class to the element, and not replace any existing ones.
@@ -147,11 +157,14 @@ The [`.class`](dom::html_elements::HtmlElement::class) method is _not_ a alias f
 ```rust,no_run
 # extern crate natrix;
 # use natrix::prelude::*;
+#
+const FOO: Class = natrix::class!(); // unique class name
+const BAR: Class = natrix::class!();
+
 # let _: e::HtmlElement<(), _> =
 e::div()
-    .class("foo")
-    .class("bar")
-    .class("baz")
+    .class(FOO)
+    .class(BAR)
 # ;
 ```
 
@@ -161,6 +174,8 @@ Classes can also be reactive as closures implement the [`ToClass`](dom::ToClass)
 # extern crate natrix;
 # use natrix::prelude::*;
 #
+const ACTIVE: Class = natrix::class!();
+
 # #[derive(Component)]
 # struct MyComponent {
 #     pub is_active: bool,
@@ -169,10 +184,9 @@ Classes can also be reactive as closures implement the [`ToClass`](dom::ToClass)
 # impl Component for MyComponent {
 #     fn render() -> impl Element<Self> {
 e::div()
-    .class("my-component")
     .class(|ctx: R<Self>| {
         if *ctx.is_active {
-            Some("active")
+            Some(ACTIVE)
         } else {
             None
         }
