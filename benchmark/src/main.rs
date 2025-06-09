@@ -2,6 +2,8 @@ use natrix::class;
 use natrix::prelude::*;
 use wasm_bench_runtime::Bencher;
 
+const BUTTON: Id = natrix::id!();
+
 #[derive(Component, Default)]
 struct Buttons<const N: u32> {
     state: u32,
@@ -14,7 +16,7 @@ impl<const N: u32> Component for Buttons<N> {
         for _ in 0..N {
             res = res.child(
                 e::button()
-                    .id("BUTTON")
+                    .id(BUTTON)
                     .text(|ctx: R<Self>| *ctx.state)
                     .on::<events::Click>(|ctx: E<Self>, _, _| {
                         *ctx.state += 1;
@@ -33,7 +35,7 @@ struct ToggleNode<const N: u32> {
 
 impl<const N: u32> Component for ToggleNode<N> {
     fn render() -> impl Element<Self> {
-        let mut res = e::div().child(e::button().id("BUTTON").on::<events::Click>(
+        let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
             |ctx: E<Self>, _, _| {
                 *ctx.state = !*ctx.state;
             },
@@ -62,7 +64,7 @@ struct ToggleText<const N: u32> {
 
 impl<const N: u32> Component for ToggleText<N> {
     fn render() -> impl Element<Self> {
-        let mut res = e::div().child(e::button().id("BUTTON").on::<events::Click>(
+        let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
             |ctx: E<Self>, _, _| {
                 *ctx.state = !*ctx.state;
             },
@@ -83,7 +85,7 @@ struct ToggleAttr<const N: u32> {
 
 impl<const N: u32> Component for ToggleAttr<N> {
     fn render() -> impl Element<Self> {
-        let mut res = e::div().child(e::button().id("BUTTON").on::<events::Click>(
+        let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
             |ctx: E<Self>, _, _| {
                 *ctx.state = !*ctx.state;
             },
@@ -107,7 +109,7 @@ struct ToggleClass<const N: u32> {
 
 impl<const N: u32> Component for ToggleClass<N> {
     fn render() -> impl Element<Self> {
-        let mut res = e::div().child(e::button().id("BUTTON").on::<events::Click>(
+        let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
             |ctx: E<Self>, _, _| {
                 *ctx.state = !*ctx.state;
             },
@@ -130,7 +132,7 @@ struct ToggleExist<const N: u32> {
 
 impl<const N: u32> Component for ToggleExist<N> {
     fn render() -> impl Element<Self> {
-        let mut res = e::div().child(e::button().id("BUTTON").on::<events::Click>(
+        let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
             |ctx: E<Self>, _, _| {
                 *ctx.state = !*ctx.state;
             },
@@ -158,7 +160,7 @@ impl<const N: u32> Component for ToggleAtOnce<N> {
         e::div()
             .child(
                 e::button()
-                    .id("BUTTON")
+                    .id(BUTTON)
                     .on::<events::Click>(|ctx: E<Self>, _, _| {
                         *ctx.state = !*ctx.state;
                     }),
@@ -189,7 +191,7 @@ macro_rules! define_large_fields {
         impl Component for LargeFields {
             fn render() -> impl Element<Self> {
                 e::div()
-                    .child(e::button().id("BUTTON").on::<events::Click>(
+                    .child(e::button().id(BUTTON).on::<events::Click>(
                         |ctx: E<Self>, _, _| {
                             $(
                                 *ctx.$field += 1;
@@ -218,7 +220,7 @@ impl<const N: u32> Component for UpdateNested<N> {
 
         for _ in 0..N {
             res = e::button()
-                .id("BUTTON")
+                .id(BUTTON)
                 .text(|ctx: R<Self>| *ctx.state)
                 .on::<events::Click>(|ctx: E<Self>, _, _| {
                     *ctx.state += 1;
@@ -257,7 +259,7 @@ fn main() {
         natrix::test_utils::mount_test(Buttons::<10000>::default());
         bencher
             .bench("update large", 0, |_| {
-                let button = natrix::test_utils::get("BUTTON");
+                let button = natrix::test_utils::get(BUTTON.0);
                 button.click();
             })
             .await;
@@ -265,7 +267,7 @@ fn main() {
         natrix::test_utils::mount_test(ToggleNode::<10000>::default());
         bencher
             .bench("toggle nodes", 0, |_| {
-                let button = natrix::test_utils::get("BUTTON");
+                let button = natrix::test_utils::get(BUTTON.0);
                 button.click();
             })
             .await;
@@ -273,7 +275,7 @@ fn main() {
         natrix::test_utils::mount_test(ToggleText::<10000>::default());
         bencher
             .bench("toggle text", 0, |_| {
-                let button = natrix::test_utils::get("BUTTON");
+                let button = natrix::test_utils::get(BUTTON.0);
                 button.click();
             })
             .await;
@@ -281,7 +283,7 @@ fn main() {
         natrix::test_utils::mount_test(ToggleAttr::<10000>::default());
         bencher
             .bench("toggle attribute", 0, |_| {
-                let button = natrix::test_utils::get("BUTTON");
+                let button = natrix::test_utils::get(BUTTON.0);
                 button.click();
             })
             .await;
@@ -289,7 +291,7 @@ fn main() {
         natrix::test_utils::mount_test(ToggleClass::<10000>::default());
         bencher
             .bench("toggle class", 0, |_| {
-                let button = natrix::test_utils::get("BUTTON");
+                let button = natrix::test_utils::get(BUTTON.0);
                 button.click();
             })
             .await;
@@ -297,7 +299,7 @@ fn main() {
         natrix::test_utils::mount_test(ToggleExist::<10000>::default());
         bencher
             .bench("toggle exist", 0, |_| {
-                let button = natrix::test_utils::get("BUTTON");
+                let button = natrix::test_utils::get(BUTTON.0);
                 button.click();
             })
             .await;
@@ -305,7 +307,7 @@ fn main() {
         natrix::test_utils::mount_test(ToggleAtOnce::<10000>::default());
         bencher
             .bench("toggle at once", 0, |_| {
-                let button = natrix::test_utils::get("BUTTON");
+                let button = natrix::test_utils::get(BUTTON.0);
                 button.click();
             })
             .await;
@@ -313,7 +315,7 @@ fn main() {
         natrix::test_utils::mount_test(LargeFields::default());
         bencher
             .bench("update large fields", 0, |_| {
-                let button = natrix::test_utils::get("BUTTON");
+                let button = natrix::test_utils::get(BUTTON.0);
                 button.click();
             })
             .await;
@@ -321,7 +323,7 @@ fn main() {
         natrix::test_utils::mount_test(UpdateNested::<300>::default());
         bencher
             .bench("update nested", 0, |_| {
-                let button = natrix::test_utils::get("BUTTON");
+                let button = natrix::test_utils::get(BUTTON.0);
                 button.click();
             })
             .await;

@@ -3,7 +3,7 @@ use wasm_bindgen_test::*;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-const ROOT_ID: &str = "__HELLO";
+const ROOT_ID: Id = natrix::id!();
 
 #[derive(Component, Default)]
 struct Generic<T>(T);

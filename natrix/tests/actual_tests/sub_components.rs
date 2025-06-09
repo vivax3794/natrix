@@ -4,7 +4,7 @@ use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
 
-const BUTTON_ID: &str = "BUTTON";
+const BUTTON_ID: Id = natrix::id!();
 
 #[derive(Component)]
 struct Counter {
@@ -30,9 +30,9 @@ impl Component for Counter {
     }
 }
 
-const DOUBLE_ID: &str = "DOUBLE_ID";
-const ADD_ID: &str = "ADD_ID";
-const PARENT_ADD_ID: &str = "PARENT_ADD_ID";
+const DOUBLE_ID: Id = natrix::id!();
+const ADD_ID: Id = natrix::id!();
+const PARENT_ADD_ID: Id = natrix::id!();
 
 #[derive(Component)]
 struct RootOne {
@@ -151,9 +151,9 @@ impl Component for ChildTwo {
     }
 }
 
-const RC_CHILD_ID: &str = "RC_CHILD";
-const START_ID: &str = "START";
-const RESULT_ID: &str = "RESULT";
+const RC_CHILD_ID: Id = natrix::id!();
+const START_ID: Id = natrix::id!();
+const RESULT_ID: Id = natrix::id!();
 
 #[derive(Component)]
 struct RecursiveChild {

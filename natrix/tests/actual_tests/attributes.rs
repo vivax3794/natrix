@@ -4,8 +4,8 @@ use natrix::reactivity::NonReactive;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 wasm_bindgen_test_configure!(run_in_browser);
 
-const ROOT: &str = "ROOT";
-const BUTTON: &str = "BUTTON";
+const ROOT: Id = natrix::id!();
+const BUTTON: Id = natrix::id!();
 
 #[derive(Component, Default)]
 struct Generic<T>(T);

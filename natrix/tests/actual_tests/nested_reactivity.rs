@@ -3,9 +3,9 @@ use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
 
-const BUTTON_1: &str = "_BUTTON_1";
-const BUTTON_2: &str = "_BUTTON_2";
-const TEXT: &str = "_TEXT";
+const BUTTON_1: Id = natrix::id!();
+const BUTTON_2: Id = natrix::id!();
+const TEXT: Id = natrix::id!();
 
 #[derive(Component, Default)]
 struct DoubleCounter {

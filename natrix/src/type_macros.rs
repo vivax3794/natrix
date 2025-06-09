@@ -35,20 +35,20 @@ macro_rules! strings_cow {
 /// Call the given macro with every numeric type
 macro_rules! numerics {
     ($macro:ident) => {
-        $macro!(u8, itoa);
-        $macro!(u16, itoa);
-        $macro!(u32, itoa);
-        $macro!(u64, itoa);
-        $macro!(u128, itoa);
-        $macro!(usize, itoa);
-        $macro!(i8, itoa);
-        $macro!(i16, itoa);
-        $macro!(i32, itoa);
-        $macro!(i64, itoa);
-        $macro!(i128, itoa);
-        $macro!(isize, itoa);
-        $macro!(f32, ryu);
-        $macro!(f64, ryu);
+        $macro!(u8, itoa, Integer);
+        $macro!(u16, itoa, Integer);
+        $macro!(u32, itoa, Integer);
+        $macro!(u64, itoa, Integer);
+        $macro!(u128, itoa, Integer);
+        $macro!(usize, itoa, Integer);
+        $macro!(i8, itoa, Integer);
+        $macro!(i16, itoa, Integer);
+        $macro!(i32, itoa, Integer);
+        $macro!(i64, itoa, Integer);
+        $macro!(i128, itoa, Integer);
+        $macro!(isize, itoa, Integer);
+        $macro!(f32, ryu, Float);
+        $macro!(f64, ryu, Float);
     };
 }
 

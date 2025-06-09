@@ -14,6 +14,8 @@
 //! # ;
 //! ```
 
+use std::marker::PhantomData;
+
 use smallvec::SmallVec;
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, intern};
@@ -23,9 +25,10 @@ use super::classes::ClassResult;
 use crate::css::selectors::{CompoundSelector, IntoCompoundSelector, SimpleSelector};
 use crate::dom::element::{Element, MaybeStaticElement, generate_fallback_node};
 use crate::dom::events::{Event, EventHandler};
-use crate::dom::{ToAttribute, ToClass};
+use crate::dom::{ToAttribute, ToClass, attributes};
 use crate::error_handling::{debug_expect, debug_panic};
 use crate::get_document;
+use crate::prelude::Id;
 use crate::reactivity::component::Component;
 use crate::reactivity::signal::RenderingState;
 use crate::reactivity::state::{EventToken, State};
@@ -37,11 +40,11 @@ pub(crate) type DeferredFunc<C> = Box<dyn FnOnce(&mut State<C>, &mut RenderingSt
 #[must_use = "Web elements are useless if not rendered"]
 pub struct HtmlElement<C: Component, T = ()> {
     /// The name of the tag
-    pub(crate) element: web_sys::Element,
+    pub element: web_sys::Element,
     /// The deferred actions
     pub(crate) deferred: SmallVec<[DeferredFunc<C>; 10]>,
-    /// Phantom data to allow for genericity
-    pub(crate) phantom: std::marker::PhantomData<T>,
+    /// Phantom data
+    _phantom: PhantomData<T>,
 }
 
 impl<C: Component, T> HtmlElement<C, T> {
@@ -59,7 +62,7 @@ impl<C: Component, T> HtmlElement<C, T> {
         Self {
             element: node,
             deferred: SmallVec::new(),
-            phantom: std::marker::PhantomData,
+            _phantom: PhantomData,
         }
     }
 
@@ -68,7 +71,7 @@ impl<C: Component, T> HtmlElement<C, T> {
         HtmlElement {
             element: self.element,
             deferred: self.deferred,
-            phantom: std::marker::PhantomData,
+            _phantom: PhantomData,
         }
     }
 
@@ -94,7 +97,8 @@ impl<C: Component, T> HtmlElement<C, T> {
     #[inline]
     pub fn on<E: Event>(mut self, function: impl EventHandler<C, E>) -> Self {
         let function = function.func();
-        let element = self.element.clone();
+        let element: &web_sys::Element = self.element.as_ref();
+        let element = element.clone();
 
         self.deferred.push(Box::new(move |ctx, rendering_state| {
             let ctx_weak = ctx.this.clone();
@@ -181,7 +185,8 @@ impl<C: Component, T> HtmlElement<C, T> {
             }
         };
 
-        debug_expect!(self.element.append_child(&node), "Failed to append child");
+        let element: &web_sys::Element = self.element.as_ref();
+        debug_expect!(element.append_child(&node), "Failed to append child");
 
         self
     }
@@ -267,33 +272,31 @@ macro_rules! elements {
 
 /// A macro to define `attr` helpers for the the various elements
 macro_rules! attr_helpers {
-    ($($tag:ident => $($attr:ident),+;)*) => {
-        $(
+    ($tag:ident => $($attr:ident($kind:path, $attr_name:literal)),+) => {
             pastey::paste! {
                 impl<C: Component> HtmlElement<C, [< Tag $tag:camel >]> {
                     $(
-                        #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/" $tag "##" $attr ">"]
+                        #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/" $tag "##" $attr_name ">"]
                         #[inline]
-                        pub fn $attr(self, value: impl ToAttribute<C>) -> Self {
-                            self.attr(stringify!($attr), value)
+                        pub fn $attr(self, value: impl ToAttribute<C, AttributeKind = $kind>) -> Self {
+                            self.attr($attr_name, value)
                            }
                     )+
                 }
             }
-        )*
     };
 }
 
 /// Generate a `attr` helpers implementation for the global attributes
 macro_rules! global_attrs {
-    ($($attr:ident),*) => {
+    ($($attr:ident($kind:path, $attr_value:literal)),*) => {
         impl<C: Component, T> HtmlElement<C, T> {
             pastey::paste! {
                 $(
-                    #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Global_attributes/" $attr ">"]
+                    #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Global_attributes/" $attr_value ">"]
                     #[inline]
-                    pub fn $attr(self, value: impl ToAttribute<C>) -> Self {
-                        self.attr(stringify!($attr), value)
+                    pub fn $attr(self, value: impl ToAttribute<C, AttributeKind=$kind>) -> Self {
+                        self.attr($attr_value, value)
                     }
                 )*
             }
@@ -334,45 +337,15 @@ button, datalist, fieldset, form, input, label, legend, meter, optgroup, option,
 details, dialog, summary
 }
 
-attr_helpers! {
-    a => href, target, rel, download, hreflang, referrerpolicy;
-    audio => autoplay, controls, muted, preload, src;
-    button => disabled, form, formaction, formenctype, formmethod, formnovalidate, formtarget, name, value;
-    canvas => height, width;
-    col => span;
-    colgroup => span;
-    details => open;
-    embed => height, src, width;
-    fieldset => disabled, form;
-    form => acceptcharset, action, autocomplete, enctype, method, name, novalidate, target;
-    iframe => allow, allowfullscreen, allowpaymentrequest, height, loading, name, referrerpolicy, sandbox, src, width;
-    img => alt, crossorigin, decoding, height, ismap, loading, referrerpolicy, sizes, src, srcset, usemap, width;
-    input => accept, alt, autocomplete, checked, dirname, disabled, form, formaction, formenctype, formmethod, formnovalidate, formtarget, height, list, max, maxlength, min, minlength, multiple, name, pattern, placeholder, readonly, required, size, src, step, value;
-    li => value;
-    map => name;
-    meter => form, high, low, max, min, optimum, value;
-    object => data, form, height, name, usemap, width;
-    ol => reversed, start;
-    optgroup => disabled, label;
-    option => disabled, label, selected, value;
-    picture => srcset;
-    progress => max, value;
-    script => crossorigin, defer, integrity, nomodule, referrerpolicy, src;
-    select => autocomplete, disabled, form, multiple, name, required, size;
-    source => media, sizes, src, srcset;
-    summary => open;
-    table => summary;
-    textarea => autocomplete, cols, dirname, disabled, form, maxlength, minlength, name, placeholder, readonly, required, rows, wrap;
-    time => datetime;
-    track => default, kind, label, src, srclang;
-    video => autoplay, controls, crossorigin, height, muted, playsinline, poster, preload, src, width;
-}
-
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes
 global_attrs! {
-    autocapitalize, autofocus, enterkeyhint, inert, inputmode, nonce, role, writingsuggestions,
-    accesskey, contenteditable, contextmenu, dir, draggable, dropzone, hidden, id, lang, spellcheck, style, tabindex, title, translate
+    access_key(char, "accesskey"), auto_focus(bool, "auto_focus"), content_editable(attributes::ContentEditable, "content_editable"),
+    dir(attributes::Direction, "dir"), draggable(attributes::TrueFalse, "draggable"), enter_key_hint(attributes::EnterkeyHint, "enterkeyhint"),
+    hidden(bool, "hidden"), id(Id, "id"), inert(bool, "inert"), input_mode(attributes::InputMode, "inputmode"), lang(String, "lang"),
+    popover(attributes::PopOver, "popover"), spellcheck(bool, "spellcheck"), tab_index(attributes::Integer, "tabindex"),
+    title(String, "title"), translate(attributes::YesNo, "translate"), auto_capitalize(attributes::AutoCapitalize, "autocapitalize")
 }
+
 aria_attrs! {
     autocomplete,
     checked,
@@ -399,3 +372,68 @@ aria_attrs! {
     valuenow,
     valuetext
 }
+
+attr_helpers!(a =>
+    download(bool, "download"), href(String, "href"), href_lang(String, "hreflang"),
+    ping(String, "ping"), referrer_policy(attributes::ReferrerPolicy, "referrer_policy"), rel(attributes::Rel, "rel"),
+    target(attributes::Target, "target")
+);
+
+/// `<a rel="noopener noreferrer" referrerpolicy="no-referrer">`
+pub fn a_secure<C: Component>() -> HtmlElement<C, TagA> {
+    a().referrer_policy(attributes::ReferrerPolicy::NoReferrer)
+        .rel(vec![attributes::Rel::NoOpener, attributes::Rel::NoReferrer])
+}
+
+impl<C: Component> HtmlElement<C, TagA> {
+    /// add `target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"`
+    ///
+    /// Warning: This overwrites any existing `rel` and `noreferrer` attributes
+    #[inline]
+    pub fn open_in_new_tab(self) -> Self {
+        self.target(attributes::Target::NewTab)
+            .referrer_policy(attributes::ReferrerPolicy::NoReferrer)
+            .rel(vec![attributes::Rel::NoOpener, attributes::Rel::NoReferrer])
+    }
+}
+
+// TODO: type safe coords
+attr_helpers!(area =>
+    alt(String, "alt"), coords(String, "coords"), download(bool, "download"),
+    href(String, "href"), ping(String, "ping"), referrer_policy(attributes::ReferrerPolicy, "referrerpolicy"),
+    rel(attributes::Rel, "rel"), shape(attributes::Shape, "shape"), target(attributes::Target, "target")
+);
+attr_helpers!(audio =>
+    auto_play(bool, "autoplay"), controls(bool, "controls"), controls_list(attributes::ControlsList, "controlslist"),
+    crossorigin(attributes::CrossOrigin, "crossorigin"), disable_remote_playback(bool, "disableremoteplayback"),
+    loop_audio(bool, "loop"), muted(bool, "muted"), preload(attributes::AudioPreload, "preload"), src(String, "src")
+);
+attr_helpers!(blockquote => cite(String, "cite"));
+attr_helpers!(button =>
+    command(attributes::Command, "command"), command_for(Id, "commandfor"),
+    disabled(bool, "disabled"), form(Id, "form"), form_action(String, "formaction"),
+    form_encoding_type(attributes::EncodingType, "formenvtype"), form_method(attributes::FormMethod, "formmethod"),
+    form_no_validate(bool, "formnovalidate"), form_target(attributes::Target, "formtarget"),
+    name(String, "name"), popover_target(Id, "popovertarget"),
+    popover_target_action(attributes::PopoverAction, "popovertargetaction"), button_type(attributes::ButtonType, "type"), value(String, "value")
+);
+attr_helpers!(canvas => height(attributes::Integer, "height"), width(attributes::Integer, "width"));
+attr_helpers!(col => span(attributes::Integer, "span"));
+attr_helpers!(colgroup => span(attributes::Integer, "span"));
+attr_helpers!(data => value(String, "data"));
+attr_helpers!(del => cite(String, "cite")); // TODO: datetime
+attr_helpers!(details => open(bool, "open"), name(String, "name")); // TODO: Enforce `unique_str`
+attr_helpers!(dialog => open(bool, "open")); // TODO: deny tabindex
+attr_helpers!(embed =>
+    height(attributes::Integer, "height"), width(attributes::Integer, "width"),
+    src(String, "src"), mime_type(String, "type")
+);
+attr_helpers!(fieldset => disabled(bool, "disabled"), form(Id, "form"), name(String, "name"));
+attr_helpers!(form =>
+    auto_complete(attributes::OnOff, "autocomplete"), name(String, "name"), rel(attributes::Rel, "rel"),
+    action(String, "action"), encoding_type(attributes::EncodingType, "enctype"), method(attributes::FormMethod, "method"),
+    no_validate(bool, "novalidate"), target(attributes::Target, "target")
+);
+
+// TODO: making tests pass
+attr_helpers!(img => src(String, "src"));

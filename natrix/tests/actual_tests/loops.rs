@@ -5,9 +5,9 @@ use wasm_bindgen_test::wasm_bindgen_test;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-const ADD_BUTTON_ID: &str = "__ADD_BUTTON";
-const REMOVE_BUTTON_ID: &str = "__REMOVE_BUTTON";
-const CHANGE_BUTTON_ID: &str = "__CHANGE_BUTTON";
+const ADD_BUTTON_ID: Id = natrix::id!();
+const REMOVE_BUTTON_ID: Id = natrix::id!();
+const CHANGE_BUTTON_ID: Id = natrix::id!();
 
 #[derive(Component, Default)]
 struct ManualLoop {
@@ -32,17 +32,17 @@ impl Component for ManualLoop {
                 |ctx: &State<Self>| &ctx.items,
                 |_ctx, getter| {
                     e::div()
-                        .id(format!("item-parent-{}", getter.index))
+                        .attr("id", format!("item-parent-{}", getter.index))
                         .child(
                             e::div()
                                 .text(move |ctx: R<Self>| getter.get_watched(ctx))
-                                .id(format!("item-{}", getter.index)),
+                                .attr("id", format!("item-{}", getter.index)),
                         )
                         .child(move |ctx: R<Self>| {
                             e::div()
                                 .text(getter.get_watched(ctx))
                                 .text(ctx.watch(|ctx| ctx.items.len()))
-                                .id(format!("item-2-{}", getter.index))
+                                .attr("id", format!("item-2-{}", getter.index))
                         })
                 },
             ))

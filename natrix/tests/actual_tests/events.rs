@@ -4,7 +4,7 @@ use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
 
-const BUTTON_ID: &str = "__BUTTON";
+const BUTTON_ID: Id = natrix::id!();
 
 #[derive(Component)]
 struct Counter {

@@ -44,7 +44,7 @@ pub enum MaybeStaticElement<C: Component> {
     /// A already statically rendered element.
     Static(ElementRenderResult),
     /// A html element
-    Html(HtmlElement<C, ()>),
+    Html(HtmlElement<C>),
     /// A element that needs to be rendered.
     Dynamic(Box<dyn DynElement<C>>),
 }
@@ -60,9 +60,7 @@ impl<C: Component> MaybeStaticElement<C> {
             MaybeStaticElement::Static(element) => element,
             MaybeStaticElement::Html(html) => {
                 let HtmlElement {
-                    element,
-                    deferred,
-                    phantom: _,
+                    element, deferred, ..
                 } = html;
 
                 for modification in deferred {
@@ -124,7 +122,7 @@ macro_rules! string_element {
     ($t:ty) => {
         impl StaticElement for $t {
             fn render(self) -> ElementRenderResult {
-                ElementRenderResult::Text((*self).to_string().into_boxed_str())
+                ElementRenderResult::Text(self.to_string().into_boxed_str())
             }
         }
     };
@@ -133,7 +131,7 @@ type_macros::strings!(string_element);
 
 /// Generate a implementation of `Element` for a specific integer type.
 macro_rules! int_element {
-    ($T:ident, $fmt:ident) => {
+    ($T:ident, $fmt:ident, $_name:ident) => {
         impl StaticElement for $T {
             fn render(self) -> ElementRenderResult {
                 let mut buffer = $fmt::Buffer::new();
@@ -159,7 +157,7 @@ pub(crate) fn generate_fallback_node() -> web_sys::Node {
 
 /// Impl `Element` for a static element
 macro_rules! impl_to_static {
-    ($t:ty $(, $fmt:ident)?) => {
+    ($t:ty $(, $fmt:ident, $name:ident)?) => {
         impl<C: Component> Element<C> for $t {
             #[inline]
             fn into_generic(self) -> MaybeStaticElement<C> {

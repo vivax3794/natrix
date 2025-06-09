@@ -1,16 +1,14 @@
-use std::hint::black_box;
-
 use natrix::prelude::*;
 use natrix::register_css;
 
 mod reload_tests;
 
 const HELLO_TEXT: &str = "HELLO WORLD, TEST TEST!";
-const HELLO_ID: &str = "HELLO";
-const PANIC_ID: &str = "PANIC";
-const BUTTON_ID: &str = "BUTTON";
-const RELOAD_ID: &str = "RELOAD";
-const IMG_ID: &str = "IMG_ID";
+const HELLO_ID: Id = natrix::id!();
+const PANIC_ID: Id = natrix::id!();
+const BUTTON_ID: Id = natrix::id!();
+const RELOAD_ID: Id = natrix::id!();
+const IMG_ID: Id = natrix::id!();
 
 register_css! {
     StyleSheet::new()
@@ -34,13 +32,7 @@ struct HelloWorld {
 impl Component for HelloWorld {
     fn render() -> impl Element<Self> {
         e::div()
-            .child(
-                e::h1()
-                    .text(HELLO_TEXT)
-                    .id(HELLO_ID)
-                    .class("hello_world")
-                    .class(format!("dyn{}", black_box("amic"))),
-            )
+            .child(e::h1().text(HELLO_TEXT).id(HELLO_ID))
             .child(SubComponent::new(integration_tests_dependency::DepComp))
             .child(e::button().id(PANIC_ID).text("PANIC").on::<events::Click>(
                 |_ctx: E<Self>, _, _| {
@@ -106,7 +98,7 @@ mod driver_tests {
         let start = Instant::now();
         let mut last_refresh = Instant::now();
         loop {
-            let element = driver.find(By::Id(HELLO_ID)).await;
+            let element = driver.find(By::Id(HELLO_ID.0)).await;
             sleep(Duration::from_millis(100)).await;
             if element.is_ok() {
                 break;
@@ -127,7 +119,7 @@ mod driver_tests {
     #[tokio::test]
     async fn loading_framework_works() {
         let client = create_client().await;
-        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+        let element = client.find(By::Id(HELLO_ID.0)).await.unwrap();
         let text = element.text().await.unwrap();
         assert_eq!(text, HELLO_TEXT);
     }
@@ -135,7 +127,7 @@ mod driver_tests {
     #[tokio::test]
     async fn primary_global_css() {
         let client = create_client().await;
-        let element = client.find(By::Id(HELLO_ID)).await.unwrap();
+        let element = client.find(By::Id(HELLO_ID.0)).await.unwrap();
         let text = element.css_value("background-color").await.unwrap();
         assert_eq!(text, "rgba(1, 2, 3, 1)");
     }
@@ -144,7 +136,7 @@ mod driver_tests {
     async fn simple_dep() {
         let client = create_client().await;
         let element = client
-            .find(By::Id(integration_tests_dependency::DEP_ID))
+            .find(By::Id(integration_tests_dependency::DEP_ID.0))
             .await
             .unwrap();
         let text = element.text().await.unwrap();
@@ -155,8 +147,8 @@ mod driver_tests {
     async fn panic_button() {
         let client = create_client().await;
 
-        let panic_button = client.find(By::Id(PANIC_ID)).await.unwrap();
-        let button = client.find(By::Id(BUTTON_ID)).await.unwrap();
+        let panic_button = client.find(By::Id(PANIC_ID.0)).await.unwrap();
+        let button = client.find(By::Id(BUTTON_ID.0)).await.unwrap();
 
         button.click().await.unwrap();
         let text = button.text().await.unwrap();
@@ -176,7 +168,7 @@ mod driver_tests {
     #[tokio::test]
     async fn assets() {
         let client = create_client().await;
-        let element = client.find(By::Id(IMG_ID)).await.unwrap();
+        let element = client.find(By::Id(IMG_ID.0)).await.unwrap();
         let rect = element.rect().await.unwrap();
         let width = rect.width;
 
@@ -193,7 +185,7 @@ mod driver_tests {
         }
 
         let client = create_client().await;
-        let element = client.find(By::Id(RELOAD_ID)).await.unwrap();
+        let element = client.find(By::Id(RELOAD_ID.0)).await.unwrap();
 
         let text = element.text().await.unwrap();
         assert_eq!(text, reload_tests::VALUE);
@@ -210,7 +202,7 @@ mod driver_tests {
         let start = Instant::now();
         loop {
             sleep(Duration::from_millis(100)).await;
-            if let Ok(element) = client.find(By::Id(RELOAD_ID)).await {
+            if let Ok(element) = client.find(By::Id(RELOAD_ID.0)).await {
                 if let Ok(text) = element.text().await {
                     if text == new_text {
                         break;
@@ -233,7 +225,7 @@ mod driver_tests {
         let start = Instant::now();
         loop {
             sleep(Duration::from_millis(100)).await;
-            if let Ok(element) = client.find(By::Id(RELOAD_ID)).await {
+            if let Ok(element) = client.find(By::Id(RELOAD_ID.0)).await {
                 if let Ok(text) = element.text().await {
                     if text == reload_tests::VALUE {
                         break;

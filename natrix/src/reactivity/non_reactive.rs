@@ -99,6 +99,8 @@ impl<E: Element<()> + 'static, C: Component> Element<C> for NonReactive<E> {
 }
 
 impl<A: ToAttribute<()>, C: Component> ToAttribute<C> for NonReactive<A> {
+    type AttributeKind = A::AttributeKind;
+
     fn calc_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
         match self.0.calc_attribute(name, node) {
             AttributeResult::SetIt(res) => AttributeResult::SetIt(res),

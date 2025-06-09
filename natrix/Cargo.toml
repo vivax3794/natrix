@@ -46,6 +46,7 @@ simple_logger = {version="5.0", features=["stderr"], default-features=false, opt
 
 # Other
 cfg-if = "1.0.0"
+bitflags = { version = "2.9.1", default-features = false }
 
 [features]
 default_app = ["console_log", "async"]

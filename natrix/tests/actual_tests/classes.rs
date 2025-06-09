@@ -3,11 +3,11 @@ use wasm_bindgen_test::wasm_bindgen_test;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-const BUTTON_ID: &str = "BUTTON";
-const DECREMENT_ID: &str = "DECREMENT";
-const CLICKED_CLASS: &str = "clicked";
-const NOT_CLICKED_CLASS: &str = "not-clicked";
-const CLICKED_MORE_THAN_2_CLASS: &str = "clicked-more-than-2";
+const BUTTON_ID: Id = natrix::id!();
+const DECREMENT_ID: Id = natrix::id!();
+const CLICKED_CLASS: Class = natrix::class!();
+const NOT_CLICKED_CLASS: Class = natrix::class!();
+const CLICKED_MORE_THAN_2_CLASS: Class = natrix::class!();
 
 #[derive(Component)]
 struct HelloWorld {
@@ -55,7 +55,7 @@ fn test_class_initial() {
     crate::mount_test(HelloWorld { counter: 0 });
     let button = crate::get(BUTTON_ID);
 
-    assert_eq!(button.class_name(), NOT_CLICKED_CLASS);
+    assert_eq!(button.class_name(), NOT_CLICKED_CLASS.0);
 }
 
 #[wasm_bindgen_test]
@@ -64,7 +64,7 @@ fn test_class_pure_str_change() {
     let button = crate::get(BUTTON_ID);
 
     button.click();
-    assert_eq!(button.class_name(), CLICKED_CLASS);
+    assert_eq!(button.class_name(), CLICKED_CLASS.0);
 }
 
 #[wasm_bindgen_test]
@@ -75,9 +75,9 @@ fn test_option() {
     button.click();
     button.click();
     button.click();
-    assert!(button.class_name().contains(CLICKED_MORE_THAN_2_CLASS));
+    assert!(button.class_name().contains(CLICKED_MORE_THAN_2_CLASS.0));
 
     let decrement = crate::get(DECREMENT_ID);
     decrement.click();
-    assert_eq!(button.class_name(), CLICKED_CLASS);
+    assert_eq!(button.class_name(), CLICKED_CLASS.0);
 }

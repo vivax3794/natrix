@@ -138,13 +138,15 @@ fn generate_main_rs(root: &Path, name: &str, nightly: bool) -> Result<(), anyhow
 
 use natrix::prelude::*;
 
+const HELLO_ID: Id = natrix::id!();
+
 #[derive(Component)]
 struct HelloWorld;
 
 impl Component for HelloWorld {{
     {nightly_associated_types_are_optional}
     fn render() -> impl Element<Self> {{
-        e::h1().text("Hello {name}").id("HELLO")
+        e::h1().text("Hello {name}").id(HELLO_ID)
     }}
 }}
 
@@ -164,7 +166,7 @@ mod tests {{
     #[wasm_bindgen_test]
     fn test() {{
         test_utils::mount_test(HelloWorld);
-        let element = test_utils::get("HELLO");
+        let element = test_utils::get(HELLO_ID);
         assert_eq!(element.text_content(), Some("Hello {name}".to_string()));
     }}
 }}

@@ -4,7 +4,7 @@ use wasm_bindgen_test::*;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-const HELLO_ID: &str = "__HELLO";
+const HELLO_ID: Id = natrix::id!();
 
 #[derive(Component)]
 struct HelloWorld;
