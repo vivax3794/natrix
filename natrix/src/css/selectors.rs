@@ -1,5 +1,7 @@
 //! Css selectors
 
+use std::ops::Deref;
+
 /// A list of selectors (`,`)
 #[derive(Debug)]
 pub struct SelectorList(pub Vec<FinalizedSelector>);
@@ -360,6 +362,7 @@ impl IntoSimpleSelector for SimpleSelector {
 }
 
 /// A class generated from the `class` macro
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Class(pub &'static str);
 
 impl<C: crate::reactivity::Component> crate::dom::ToClass<C> for Class {
@@ -371,6 +374,20 @@ impl<C: crate::reactivity::Component> crate::dom::ToClass<C> for Class {
 impl IntoSimpleSelector for Class {
     fn into_simple(self) -> SimpleSelector {
         SimpleSelector::Class(self.0.into())
+    }
+}
+
+impl Deref for Class {
+    type Target = str;
+
+    fn deref(&self) -> &'static Self::Target {
+        self.0
+    }
+}
+
+impl From<Class> for &'static str {
+    fn from(value: Class) -> Self {
+        value.0
     }
 }
 
@@ -388,9 +405,12 @@ macro_rules! class {
 }
 
 /// A id generate from the `id` macro
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Id(pub &'static str);
 
 impl<C: crate::reactivity::Component> crate::dom::ToAttribute<C> for Id {
+    type AttributeKind = Id;
+
     fn calc_attribute(
         self,
         _name: &'static str,
@@ -403,6 +423,20 @@ impl<C: crate::reactivity::Component> crate::dom::ToAttribute<C> for Id {
 impl IntoSimpleSelector for Id {
     fn into_simple(self) -> SimpleSelector {
         SimpleSelector::Id(self.0.into())
+    }
+}
+
+impl Deref for Id {
+    type Target = str;
+
+    fn deref(&self) -> &'static Self::Target {
+        self.0
+    }
+}
+
+impl From<Id> for &'static str {
+    fn from(value: Id) -> Self {
+        value.0
     }
 }
 
