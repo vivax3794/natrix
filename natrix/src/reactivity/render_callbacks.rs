@@ -2,7 +2,7 @@
 
 use std::borrow::Cow;
 
-use wasm_bindgen::{JsCast, intern};
+use wasm_bindgen::JsCast;
 
 use crate::dom::attributes::AttributeResult;
 use crate::dom::classes::ClassResult;
@@ -278,18 +278,32 @@ impl<C: Component, T: ToClass<C>> ReactiveValue<C> for ReactiveClass<T> {
     ) {
         let class_list = node.class_list();
 
-        if let Some(prev) = state.take() {
-            debug_expect!(
-                class_list.remove_1(&prev),
-                "Failed to remove class from element"
-            );
-        }
-
         let new = match self.data.calc_class(node) {
-            ClassResult::SetIt(res) => res.inspect(|res| {
-                debug_expect!(class_list.add_1(intern(res)), "Failed to add class");
-            }),
+            ClassResult::SetIt(res) => {
+                match (&state, &res) {
+                    (None, None) => {}
+                    (Some(prev), None) => {
+                        debug_expect!(class_list.remove_1(prev), "Failed to remove class");
+                    }
+                    (None, Some(new)) => {
+                        debug_expect!(class_list.add_1(new), "Failed to add class");
+                    }
+                    (Some(prev), Some(new)) => {
+                        debug_expect!(class_list.replace(prev, new), "Failed to replace class");
+                    }
+                }
+
+                res
+            }
             ClassResult::Dynamic(dynamic) => {
+                log::debug!("Nested reactive classes, doing naive instant remove.");
+                if let Some(prev) = state.take() {
+                    debug_expect!(
+                        class_list.remove_1(&prev),
+                        "Failed to remove class from element"
+                    );
+                }
+
                 dynamic(ctx, render_state);
                 None
             }
