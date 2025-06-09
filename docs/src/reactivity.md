@@ -86,6 +86,33 @@ e::div()
 This can be more usefully used for example when dealing with a [`Vec`](std::vec::Vec) of items.
 For example `ctx.watch(|ctx| ctx.items[2])`
 
+## Nested closures
+In a similar vein to `watch`, you can return a closure from a closure, which basically constructs separate reactive barriers for the same output.
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+# #[derive(Component)]
+# struct HelloWorld {
+#     show: bool,
+#     counter: u8,
+# }
+# impl Component for HelloWorld {
+#     fn render() -> impl Element<Self> {
+e::div()
+    .child(|ctx: R<Self>| {
+        if *ctx.show {
+            (|ctx: R<Self>| *ctx.counter).into_generic()
+        } else {
+            e::div().text("Nothing to see").into_generic()
+        }
+    })
+#      }
+# }
+```
+Here both `ctx.show` and `ctx.counter` are used to render the same dom node, but when `ctx.counter` changes only that inner closure re-runs.
+Now the example above might not be a good usecase, it involves a extra reactive hook allocation, and all the memory footprint that comes with that. All to save a single boolean check, likely not worth it.
+But for more complex surrounding logic it might make sense to do.
+
 ## `guard_...`
 
 ### Problem
@@ -215,4 +242,5 @@ impl Component for HelloWorld {
 ```
 
 See the docs in the [`List`](dom::list::List) module for more details.
+
 
