@@ -53,7 +53,7 @@ edition = "2024"
 
 [dependencies]
 {natrix_decl}
-log = {{version = "0.4", features = ["max_level_warn", "release_max_level_off"]}}
+log = {{version = "0.4", features = ["max_level_warn", "release_max_level_error"]}}
 
 [dev-dependencies]
 {natrix_test_table}
