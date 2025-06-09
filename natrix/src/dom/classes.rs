@@ -6,7 +6,6 @@ use super::html_elements::DeferredFunc;
 use crate::reactivity::Component;
 use crate::reactivity::render_callbacks::{ReactiveClass, SimpleReactive};
 use crate::reactivity::state::RenderCtx;
-use crate::type_macros;
 
 /// The result of applying a class
 pub(crate) enum ClassResult<C: Component> {
@@ -21,18 +20,6 @@ pub trait ToClass<C: Component> {
     /// Convert the value to a class name
     fn calc_class(self, node: &web_sys::Element) -> ClassResult<C>;
 }
-
-/// Generate a `ToClass` implementation for a string type
-macro_rules! class_string {
-    ($type:ty, $cow:expr) => {
-        impl<C: Component> ToClass<C> for $type {
-            fn calc_class(self, _node: &web_sys::Element) -> ClassResult<C> {
-                ClassResult::SetIt(Some(($cow)(self)))
-            }
-        }
-    };
-}
-type_macros::strings_cow!(class_string);
 
 impl<C: Component, T: ToClass<C>> ToClass<C> for Option<T> {
     fn calc_class(self, node: &web_sys::Element) -> ClassResult<C> {
