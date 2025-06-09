@@ -91,16 +91,18 @@ impl<C: Component> ReactiveNode<C> {
 
         (me, node)
     }
+}
 
-    /// Pulled out update method to facilite marking it as `default` on nightly
+impl<C: Component> ReactiveHook<C> for ReactiveNode<C> {
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
-        let hooks = std::mem::take(&mut self.hooks);
-        let new_node = self.render(ctx, you);
+        let this = &mut *self;
+        let hooks = std::mem::take(&mut this.hooks);
+        let new_node = this.render(ctx, you);
 
         let new_node = match new_node {
             ElementRenderResult::Node(new_node) => new_node,
             ElementRenderResult::Text(new_text) => {
-                if let Some(target_node) = self.target_node.dyn_ref::<web_sys::Text>() {
+                if let Some(target_node) = this.target_node.dyn_ref::<web_sys::Text>() {
                     target_node.set_text_content(Some(&new_text));
                     return UpdateResult::DropHooks(hooks);
                 }
@@ -109,24 +111,18 @@ impl<C: Component> ReactiveNode<C> {
             }
         };
 
-        let Some(parent) = self.target_node.parent_node() else {
+        let Some(parent) = this.target_node.parent_node() else {
             debug_panic!("Parent node of target node not found.");
             return UpdateResult::DropHooks(hooks);
         };
 
         debug_expect!(
-            parent.replace_child(&new_node, &self.target_node),
+            parent.replace_child(&new_node, &this.target_node),
             "Failed to replace parent"
         );
-        self.target_node = new_node;
+        this.target_node = new_node;
 
         UpdateResult::DropHooks(hooks)
-    }
-}
-
-impl<C: Component> ReactiveHook<C> for ReactiveNode<C> {
-    fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
-        self.update(ctx, you)
     }
 
     fn drop_us(self: Box<Self>) -> Vec<HookKey> {
