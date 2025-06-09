@@ -364,13 +364,7 @@ impl<T: Component> State<T> {
 
     /// Loop over signals and update any depdant hooks for changed signals
     /// This also drains the deferred message queue
-    #[cfg_attr(debug_assertions, track_caller)]
     pub(crate) fn update(&mut self) {
-        if cfg!(debug_assertions) {
-            let location = std::panic::Location::caller();
-            log::trace!("Called update from {location}");
-        }
-
         log::debug!("Performing update cycle for {}", std::any::type_name::<T>());
         self.drain_message_queue();
 
