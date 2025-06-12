@@ -321,6 +321,10 @@ macro_rules! aria_attrs {
     };
 }
 
+// POLICY:
+// "sane defaults" should not be the defaults for element constructors.
+// and should instead be implemented via extra method, such as `a_secure`
+
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Element
 elements! {
 h1, h2, h3, h4, h5, h6,
@@ -386,14 +390,10 @@ pub fn a_secure<C: Component>() -> HtmlElement<C, TagA> {
 }
 
 impl<C: Component> HtmlElement<C, TagA> {
-    /// add `target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"`
-    ///
-    /// Warning: This overwrites any existing `rel` and `noreferrer` attributes
+    /// add `target="_blank"`
     #[inline]
     pub fn open_in_new_tab(self) -> Self {
         self.target(attributes::Target::NewTab)
-            .referrer_policy(attributes::ReferrerPolicy::NoReferrer)
-            .rel(vec![attributes::Rel::NoOpener, attributes::Rel::NoReferrer])
     }
 }
 
@@ -435,5 +435,21 @@ attr_helpers!(form =>
     no_validate(bool, "novalidate"), target(attributes::Target, "target")
 );
 
-// TODO: making tests pass
+// TODO: allow attribute
+attr_helpers!(iframe =>
+    height(attributes::Integer, "height"), loading(attributes::IframeLoading, "loading"),
+    name(String, "name"), referrer_policy(attributes::ReferrerPolicy, "referrerpolicy"),
+    sandbox(attributes::SandboxAllow, "sandbox"), src(String, "src"), srcdoc(String, "srcdoc"), width(attributes::Integer, "width")
+);
+
+/// `<iframe referrerpolicy="no-referrer" sandbox="" credentialless>`
+pub fn iframe_secure<C: Component>() -> HtmlElement<C, TagIframe> {
+    iframe()
+        .referrer_policy(attributes::ReferrerPolicy::NoReferrer)
+        .sandbox(Vec::<attributes::SandboxAllow>::new())
+        // This is a experimental attribute, so no helper
+        .attr("credentialless", true)
+}
+
+// TODO: smaking tests pass
 attr_helpers!(img => src(String, "src"));

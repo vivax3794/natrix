@@ -521,3 +521,39 @@ define_attribute_enum! {
         Characters => "characters"
     }
 }
+
+define_attribute_enum! {
+    #[derive(Default, Copy)]
+    enum IframeLoading,
+    "loading",
+    "https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/iframe#loading",
+    {
+        #[default]
+        Eager => "eager",
+        Lazy => "lazy",
+    }
+}
+
+define_attribute_enum! {
+    #[derive(Copy)]
+    enum SandboxAllow,
+    "sandbox",
+    "https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/iframe#sandbox",
+    {
+        Downloads => "allow-downloads",
+        Forms => "allow-forms",
+        Modals => "allow-modals",
+        OrientationLock => "allow-orientation-lock",
+        PointerLock => "allow-pointer-lock",
+        Popups => "allow-popups",
+        PopupsToEscapeSandbox => "allow-popups-to-escape-sandbox",
+        Presentation => "allow-presentation",
+        SameOrigin => "allow-same-origin",
+        Scripts => "allow-scripts",
+        TopNavigation => "allow-top-navigation",
+        TopNavigationByUserActivation => "allow-top-navigation-by-user-activation",
+        TopNavigationToCustomProtocols => "allow-top-navigation-to-custom-protocls",
+    }
+}
+
+impl_to_attribute_for_vec!(SandboxAllow);
