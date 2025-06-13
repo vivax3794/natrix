@@ -39,8 +39,8 @@ check:
 
 check_deps:
     cargo update
-    cargo hack udeps --each-feature --ignore-private --all-targets
     cargo outdated -R --workspace --exit-code 1
+    cargo hack udeps --each-feature --ignore-private --all-targets
     cd natrix && cargo deny check all --exclude-dev
     cd natrix-cli && cargo deny check all --exclude-dev --hide-inclusion-graph
 
