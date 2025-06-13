@@ -121,7 +121,7 @@ ssg = false # Default: True
 ```
 
 for example if you are doing something like this you need to set `ssg = false`
-```rust,no_compile
+```rust,compile_fail
 fn main() {
     let document = web_sys::window().unwrap(); // This will fail during ssg
     // ...
