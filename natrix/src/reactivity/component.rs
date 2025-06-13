@@ -1,6 +1,7 @@
 //! Component traits
 
 use std::cell::RefCell;
+use std::ops::ControlFlow;
 use std::rc::Rc;
 
 use crate::dom::element::{
@@ -310,11 +311,11 @@ pub struct RenderResult<C: Component> {
     keep_alive: Vec<KeepAlive>,
 }
 
-/// Mount the specified component at natrixses default location.
+/// Mount the specified component at natrixses default location. and calls `setup_runtime`
 /// This is what should be used when building with the natrix cli.
 ///
 /// IMPORTANT: This is the intended entry point for `natrix-cli` build applications, and the natrix
-/// cli build system expects this to be called.
+/// cli build system expects this to be called. And you should not attempt to access browser ap
 ///
 /// **WARNING:** This method implicitly leaks the memory of the root component
 /// # Panics
@@ -324,25 +325,7 @@ pub struct RenderResult<C: Component> {
     reason = "This will never happen if `natrix build` is used, and also happens early in the app lifecycle"
 )]
 pub fn mount<C: Component>(component: C) {
-    crate::panics::set_panic_hook();
-
-    #[cfg(feature = "console_log")]
-    if cfg!(target_arch = "wasm32") {
-        if let Err(err) = console_log::init_with_level(log::Level::Trace) {
-            crate::error_handling::debug_panic!("Failed to create logger: {err}");
-        }
-    }
-    #[cfg(feature = "_internal_extract_css")]
-    if let Err(err) = simple_logger::init_with_level(log::Level::Trace) {
-        eprintln!("Failed to setup logger {err}");
-    }
-    log::info!("Logging initialized");
-
-    #[cfg(feature = "_internal_collect_css")]
-    crate::css::css_collect();
-
-    if cfg!(feature = "_internal_extract_css") {
-        log::info!("Css extract mode, aboring mount.");
+    if let ControlFlow::Break(()) = crate::setup_runtime() {
         return;
     }
 

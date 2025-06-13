@@ -110,5 +110,20 @@ This configures all asset URLs to be prefixed with the specified path.
 > [!IMPORTANT]
 > Always include a leading slash in your `base_path` value.
 
-### SSG
-By default natrix extracts metadata from your application, importantly for this to work your application must call [`mount`](reactivity::component::mount), and should not access any browser apis before or after it.
+### SSG 
+By default natrix extracts metadata from your application, importantly for this to work your application must call [`mount`](reactivity::component::mount), and should not access any browser apis before or after it. 
+If your application does not use `mount` (or [`setup_runtime`](setup_runtime)) you should set this option to `false`.
+
+This will force css to be injected at runtime instead, and more importantly will not attempt to build and call your binary during bundling.
+```toml
+[package.metadata.natrix]
+ssg = false # Default: True
+```
+
+for example if you are doing something like this you need to set `ssg = false`
+```rust,no_compile
+fn main() {
+    let document = web_sys::window().unwrap(); // This will fail during ssg
+    // ...
+}
+```
