@@ -81,12 +81,12 @@ pub use reactivity::component::{Component, NoMessages, SubComponent, mount};
 pub use reactivity::state::{RenderCtx, State};
 
 /// Setup the various runtime systems for natrix.
-/// This installs the panic hook, initalises loggers if enabled.
+/// This installs the panic hook, initialises loggers if enabled.
 /// if in bundler-mode it will also be the entrypoint that extracts the css to a static file.
 /// Or if in non-ssg mode (i.e dev or explicitly requested in config) be the one that mounts the
 /// styles to the dom.
 ///
-/// If this returns `ControFlow::Break` you shoud exit immeditaly.
+/// If this returns `ControlFlow::Break` you should exit immediately.
 /// As this indicated a bundle-time run of the application and no component should be attempted
 /// mounted.
 ///

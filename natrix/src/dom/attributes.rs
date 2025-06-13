@@ -552,7 +552,7 @@ define_attribute_enum! {
         Scripts => "allow-scripts",
         TopNavigation => "allow-top-navigation",
         TopNavigationByUserActivation => "allow-top-navigation-by-user-activation",
-        TopNavigationToCustomProtocols => "allow-top-navigation-to-custom-protocls",
+        TopNavigationToCustomProtocols => "allow-top-navigation-to-custom-protocols",
     }
 }
 
