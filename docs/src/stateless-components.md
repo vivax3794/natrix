@@ -1,6 +1,6 @@
 # State-Less Components
 
-Stateless components are, technically speaking, not even a explicit feature of natrix. But just a by product of the design. They are simply functions (or methods, or anything else) that returns `impl Element<...>`, this chapther is here to outline what they usually look like and some common patterns.
+Stateless components are, technically speaking, not even a explicit feature of natrix. But just a by product of the design. They are simply functions (or methods, or anything else) that returns `impl Element<...>`, this chapther is here to outline what they usually look like and some common patterns. And is not a exhustive list of whats possible with the amazing work of art thats rust trait system.
 
 As mentioned in the component chaphter `Element` is generic over the component state it references, this is true even if it doesnt reference any state.
 This means that your stateless component functions needs to be generic:
@@ -147,6 +147,81 @@ impl Component for HelloWorld {
             .child(fancy_button(|ctx: E<Self>, _, _| {
                 *ctx.counter += 1;
             }))
+    }
+}
+```
+
+----
+
+## Concrete stateless components
+
+Yet again this isnt a explicit feature, but rather "common sense".
+You can also write helper functions that dont use generics, and hence can declare their closures directly.
+
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+#[derive(Component)]
+struct Counter {
+    value: i16,
+}
+
+fn change_button(delta: i16) -> impl Element<Counter> {
+    e::button()
+        .text(delta)
+        .on::<events::Click>(move |ctx: E<Counter>, _, _| {
+            *ctx.value += delta;
+        })
+}
+
+impl Component for Counter {
+    fn render() -> impl Element<Self> {
+        e::div()
+            .child(change_button(-10))
+            .child(change_button(-1))
+            .text(|ctx: R<Self>| *ctx.value)
+            .child(change_button(1))
+            .child(change_button(10))
+    }
+}
+```
+
+## Non event handling closures.
+
+Also nothing stopping you from taking explicit closures.
+
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+fn change_button<C: Component>(
+    delta: i16,
+    modify: impl Fn(E<C>, i16) + 'static,
+) -> impl Element<C> {
+    e::button()
+        .text(delta)
+        .on::<events::Click>(move |ctx: E<C>, _, _| modify(ctx, delta))
+}
+
+fn change_buttons<C: Component>(
+    modify: impl Fn(E<C>, i16) + Clone + 'static
+) -> impl Element<C> {
+    e::div()
+        .child(change_button(-10, modify.clone()))
+        .child(change_button(-1, modify.clone()))
+        .child(change_button(1, modify.clone()))
+        .child(change_button(10, modify.clone()))
+}
+
+#[derive(Component)]
+struct Counter {
+    value: i16,
+}
+
+impl Component for Counter {
+    fn render() -> impl Element<Self> {
+        e::div()
+            .text(|ctx: R<Self>| *ctx.value)
+            .child(change_buttons(|ctx: E<Self>, delta| {*ctx.value += delta;}))
     }
 }
 ```
