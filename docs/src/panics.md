@@ -1,6 +1,6 @@
 # Panic Policy
 
-The framework only makes use of `debug_assert!`, its our goal that any issues should be highlighted in debug builds, but not in release builds. On release builds natrix will silently fail in many cases, this is to ensure that the framework does not panic in production.
+The framework makes liberal use of debug only panics, but is very careful about panics in release! its our goal that any issues should be highlighted in debug builds, but not in release builds. On release builds natrix will silently fail in many cases, this is to ensure that the framework does not panic in production.
 
 ## When does Natrix panic (in debug builds)?
 
@@ -29,6 +29,6 @@ The framework only makes use of `debug_assert!`, its our goal that any issues sh
     - Using interior mutability to move a [`EventToken`](reactivity::state::EventToken) outside its intended scope will likely lead to bugs if used to call apis in non-event contexts.
     - Using interior mutability to move a [`Guard`](reactivity::state::Guard), or using it after a `.await`, will invalidate its guarantees.
 
-## What does natrix does in the case of a panic?
+## What does natrix do in the case of a panic?
 Unlike native rust, a panic in wasm does not prevent the program from continuing. This can lead to unexpected behavior if state is left in a invalid state, or worse lead to undefined behavior.
 Therefor natrix will always do its best to prevent further rust execution after a panic, this is done by checking a panic flag at the start of every event handler, natrix also effectively freezes all async code using a special wrapping future that stops propagation of `.poll` calls on panic. 
