@@ -271,7 +271,7 @@ pub(crate) fn optimize_wasm(wasm_file: &PathBuf) -> Result<RenameMap, anyhow::Er
                 }
 
                 // This is not a mistake
-                // The wasm-opt output is initally
+                // The wasm-opt output is initially
                 // __Wasmbindgen_adjaijda => A
                 // ...
                 //
@@ -286,7 +286,7 @@ pub(crate) fn optimize_wasm(wasm_file: &PathBuf) -> Result<RenameMap, anyhow::Er
     // HACK: https://github.com/WebAssembly/binaryen/issues/7657
     // wasm-opt does not report the renaming of the wbg module
     //
-    // as of writting it is always renamed to "a" due to being the only module
+    // as of writing it is always renamed to "a" due to being the only module
     mapping.insert("wbg".into(), "a".into());
 
     spinner.finish();
