@@ -59,3 +59,35 @@ fn updates_text() {
     button.click();
     assert_eq!(button.text_content(), Some("value: 3".to_owned()));
 }
+
+#[derive(Component)]
+struct TwoValues {
+    foo: u8,
+    bar: u8,
+}
+
+impl Component for TwoValues {
+    type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
+
+    fn render() -> impl Element<Self> {
+        e::button()
+            .id(BUTTON_ID)
+            .text(|ctx: R<Self>| format!("{}-{}", *ctx.foo, *ctx.bar))
+            .on::<events::Click>(|ctx: E<Self>, _, _| {
+                *ctx.foo += 1;
+            })
+    }
+}
+
+#[wasm_bindgen_test]
+fn test_two_values() {
+    crate::mount_test(TwoValues { foo: 0, bar: 0 });
+
+    let button = crate::get(BUTTON_ID);
+
+    assert_eq!(button.text_content(), Some("0-0".to_string()));
+
+    button.click();
+    assert_eq!(button.text_content(), Some("1-0".to_string()));
+}
