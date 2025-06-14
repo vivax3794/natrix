@@ -101,9 +101,9 @@ In a similar vein to `watch`, you can return a closure from a closure, which bas
 e::div()
     .child(|ctx: R<Self>| {
         if *ctx.show {
-            (|ctx: R<Self>| *ctx.counter).into_generic()
+            (|ctx: R<Self>| *ctx.counter).render()
         } else {
-            e::div().text("Nothing to see").into_generic()
+            e::div().text("Nothing to see").render()
         }
     })
 #      }
@@ -135,9 +135,9 @@ e::div()
             let value = ctx.option.unwrap();
             e::h1()
                 .text(format!("Value: {}", value))
-                .into_generic()
+                .render()
         } else {
-            "None".into_generic()
+            "None".render()
         }
     })
 #      }
@@ -161,9 +161,9 @@ e::div()
         if ctx.watch(|ctx| ctx.option.is_some()) {
             e::h1()
                 .text(|ctx: R<Self>| ctx.option.unwrap())
-                .into_generic()
+                .render()
         } else {
-            "None".into_generic()
+            "None".render()
         }
     })
 #      }
@@ -196,9 +196,9 @@ e::div()
         if let Some(guard) = guard_option!(|ctx| ctx.option.as_ref()) {
             e::h1()
                 .text(move |ctx: R<Self>| *ctx.get(&guard))
-                .into_generic()
+                .render()
         } else {
-            "None".into_generic()
+            "None".render()
         }
     })
 #      }
