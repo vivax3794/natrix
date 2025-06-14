@@ -81,8 +81,8 @@ impl Component for () {
 pub struct NonReactive<E>(pub E);
 
 impl<E: Element<()> + 'static, C: Component> Element<C> for NonReactive<E> {
-    fn into_generic(self) -> MaybeStaticElement<C> {
-        match self.0.into_generic() {
+    fn render(self) -> MaybeStaticElement<C> {
+        match self.0.render() {
             MaybeStaticElement::Static(node) => MaybeStaticElement::Static(node),
             MaybeStaticElement::Html(html) => {
                 if !html.deferred.is_empty() {

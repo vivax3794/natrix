@@ -4,10 +4,7 @@ use std::borrow::Cow;
 
 use wasm_bindgen::JsCast;
 
-use crate::dom::attributes::AttributeResult;
-use crate::dom::classes::ClassResult;
 use crate::dom::element::{ElementRenderResult, MaybeStaticElement, generate_fallback_node};
-use crate::dom::{ToAttribute, ToClass};
 use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::get_document;
 use crate::reactivity::component::Component;
@@ -132,25 +129,27 @@ impl<C: Component> ReactiveHook<C> for ReactiveNode<C> {
 
 /// A trait to allow `SimpleReactive` to deduplicate common reactive logic for attributes, classes,
 /// styles, etc
-pub(crate) trait ReactiveValue<C: Component> {
+pub(crate) trait ReactiveValue {
     /// Any potential state needed to apply the change
     type State: Default;
 
     /// Actually apply the change
-    fn apply(
-        self,
-        ctx: &mut State<C>,
-        render_state: &mut RenderingState,
-        node: &web_sys::Element,
-        state: &mut Self::State,
-    );
+    fn apply(self, node: &web_sys::Element, state: &mut Self::State);
+}
+
+/// The result of a simple reactive call
+pub(crate) enum SimpleReactiveResult<C: Component, K> {
+    /// Apply the value
+    Apply(K),
+    /// Call the inner reactive function
+    Call(Box<dyn FnOnce(&mut State<C>, &mut RenderingState)>),
 }
 
 /// A common wrapper for simple reactive operations to deduplicate dependency tracking code
-pub(crate) struct SimpleReactive<C: Component, K: ReactiveValue<C>> {
+pub(crate) struct SimpleReactive<C: Component, K: ReactiveValue> {
     /// The callback to call, takes state and returns the needed data for the reactive
     /// transformation
-    callback: Box<dyn Fn(&mut RenderCtx<C>) -> K>,
+    callback: Box<dyn Fn(&mut RenderCtx<C>, &web_sys::Element) -> SimpleReactiveResult<C, K>>,
     /// The node to apply transformations to
     node: web_sys::Element,
     /// Vector of various objects to be kept alive for the duration of the rendered content
@@ -161,7 +160,7 @@ pub(crate) struct SimpleReactive<C: Component, K: ReactiveValue<C>> {
     state: K::State,
 }
 
-impl<C: Component, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K> {
+impl<C: Component, K: ReactiveValue> ReactiveHook<C> for SimpleReactive<C, K> {
     fn drop_us(self: Box<Self>) -> Vec<HookKey> {
         self.hooks
     }
@@ -171,35 +170,42 @@ impl<C: Component, K: ReactiveValue<C>> ReactiveHook<C> for SimpleReactive<C, K>
 
         ctx.clear();
         self.keep_alive.clear();
-        let value = (self.callback)(&mut RenderCtx {
-            ctx,
-            render_state: RenderingState {
-                keep_alive: &mut self.keep_alive,
-                hooks: &mut self.hooks,
-                parent_dep: you,
-            },
-        });
-        ctx.reg_dep(you);
-
-        value.apply(
-            ctx,
-            &mut RenderingState {
-                keep_alive: &mut self.keep_alive,
-                hooks: &mut self.hooks,
-                parent_dep: you,
+        let value = (self.callback)(
+            &mut RenderCtx {
+                ctx,
+                render_state: RenderingState {
+                    keep_alive: &mut self.keep_alive,
+                    hooks: &mut self.hooks,
+                    parent_dep: you,
+                },
             },
             &self.node,
-            &mut self.state,
         );
+        ctx.reg_dep(you);
+
+        match value {
+            SimpleReactiveResult::Apply(value) => {
+                value.apply(&self.node, &mut self.state);
+            }
+            SimpleReactiveResult::Call(func) => func(
+                ctx,
+                &mut RenderingState {
+                    keep_alive: &mut self.keep_alive,
+                    hooks: &mut self.hooks,
+                    parent_dep: you,
+                },
+            ),
+        }
+
         UpdateResult::DropHooks(hooks)
     }
 }
 
-impl<C: Component, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
+impl<C: Component, K: ReactiveValue + 'static> SimpleReactive<C, K> {
     /// Creates a new simple reactive hook, applying the initial transformation.
     /// Returns a Rc of the hook
     pub(crate) fn init_new(
-        callback: Box<dyn Fn(&mut RenderCtx<C>) -> K>,
+        callback: Box<dyn Fn(&mut RenderCtx<C>, &web_sys::Element) -> SimpleReactiveResult<C, K>>,
         node: web_sys::Element,
         ctx: &mut State<C>,
     ) -> HookKey {
@@ -221,92 +227,55 @@ impl<C: Component, K: ReactiveValue<C> + 'static> SimpleReactive<C, K> {
 }
 
 /// Reactivly set a element attribute
-pub(crate) struct ReactiveAttribute<T> {
+pub(crate) struct ReactiveAttribute {
     /// The attribute name to set
     pub(crate) name: &'static str,
     /// The attribute value to apply
-    pub(crate) data: T,
+    pub(crate) data: Option<Cow<'static, str>>,
 }
 
-impl<C: Component, T: ToAttribute<C>> ReactiveValue<C> for ReactiveAttribute<T> {
+impl ReactiveValue for ReactiveAttribute {
     type State = ();
 
-    fn apply(
-        self,
-        ctx: &mut State<C>,
-        render_state: &mut RenderingState,
-        node: &web_sys::Element,
-        _state: &mut Self::State,
-    ) {
-        match self.data.calc_attribute(self.name, node) {
-            AttributeResult::SetIt(Some(res)) => {
-                log_or_panic_result!(
-                    node.set_attribute(self.name, &res),
-                    "Failed to update attribute"
-                );
-            }
-            AttributeResult::SetIt(None) => {
-                log_or_panic_result!(
-                    node.remove_attribute(self.name),
-                    "Failed to remove attribute"
-                );
-            }
-            AttributeResult::IsDynamic(apply) => apply(ctx, render_state),
+    fn apply(self, node: &web_sys::Element, _state: &mut Self::State) {
+        if let Some(res) = self.data {
+            log_or_panic_result!(
+                node.set_attribute(self.name, &res),
+                "Failed to update attribute"
+            );
+        } else {
+            log_or_panic_result!(
+                node.remove_attribute(self.name),
+                "Failed to remove attribute"
+            );
         }
     }
 }
 
 /// Reactively set a element class
-pub(crate) struct ReactiveClass<T> {
+pub(crate) struct ReactiveClass {
     /// The class value to apply
-    pub(crate) data: T,
+    pub(crate) data: Option<Cow<'static, str>>,
 }
 
-impl<C: Component, T: ToClass<C>> ReactiveValue<C> for ReactiveClass<T> {
+impl ReactiveValue for ReactiveClass {
     type State = Option<Cow<'static, str>>;
 
-    fn apply(
-        self,
-        ctx: &mut State<C>,
-        render_state: &mut RenderingState,
-        node: &web_sys::Element,
-        state: &mut Self::State,
-    ) {
+    fn apply(self, node: &web_sys::Element, state: &mut Self::State) {
         let class_list = node.class_list();
 
-        let new = match self.data.calc_class(node) {
-            ClassResult::SetIt(res) => {
-                match (&state, &res) {
-                    (None, None) => {}
-                    (Some(prev), None) => {
-                        log_or_panic_result!(class_list.remove_1(prev), "Failed to remove class");
-                    }
-                    (None, Some(new)) => {
-                        log_or_panic_result!(class_list.add_1(new), "Failed to add class");
-                    }
-                    (Some(prev), Some(new)) => {
-                        log_or_panic_result!(
-                            class_list.replace(prev, new),
-                            "Failed to replace class"
-                        );
-                    }
-                }
-
-                res
+        match (&state, &self.data) {
+            (None, None) => {}
+            (Some(prev), None) => {
+                log_or_panic_result!(class_list.remove_1(prev), "Failed to remove class");
             }
-            ClassResult::Dynamic(dynamic) => {
-                log::debug!("Nested reactive classes, doing naive instant remove.");
-                if let Some(prev) = state.take() {
-                    log_or_panic_result!(
-                        class_list.remove_1(&prev),
-                        "Failed to remove class from element"
-                    );
-                }
-
-                dynamic(ctx, render_state);
-                None
+            (None, Some(new)) => {
+                log_or_panic_result!(class_list.add_1(new), "Failed to add class");
             }
-        };
-        *state = new;
+            (Some(prev), Some(new)) => {
+                log_or_panic_result!(class_list.replace(prev, new), "Failed to replace class");
+            }
+        }
+        *state = self.data;
     }
 }

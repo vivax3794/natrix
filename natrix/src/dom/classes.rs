@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use super::html_elements::DeferredFunc;
 use crate::reactivity::Component;
-use crate::reactivity::render_callbacks::{ReactiveClass, SimpleReactive};
+use crate::reactivity::render_callbacks::{ReactiveClass, SimpleReactive, SimpleReactiveResult};
 use crate::reactivity::state::RenderCtx;
 
 /// The result of applying a class
@@ -48,9 +48,15 @@ where
 {
     fn calc_class(self, node: &web_sys::Element) -> ClassResult<C> {
         let node = node.clone();
+
         ClassResult::Dynamic(Box::new(move |ctx, rendering_state| {
             let hook = SimpleReactive::init_new(
-                Box::new(move |ctx| ReactiveClass { data: self(ctx) }),
+                Box::new(move |ctx, node| match self(ctx).calc_class(node) {
+                    ClassResult::SetIt(value) => {
+                        SimpleReactiveResult::Apply(ReactiveClass { data: value })
+                    }
+                    ClassResult::Dynamic(inner) => SimpleReactiveResult::Call(inner),
+                }),
                 node.clone(),
                 ctx,
             );

@@ -162,7 +162,7 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// ```
     #[inline]
     pub fn child<E: Element<C> + 'static>(mut self, child: E) -> Self {
-        let node = match child.into_generic() {
+        let node = match child.render() {
             MaybeStaticElement::Static(result) => result.into_node(),
             MaybeStaticElement::Html(html) => {
                 self.deferred.extend(html.deferred);
@@ -240,7 +240,7 @@ impl<C: Component, T> HtmlElement<C, T> {
 
 impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
     #[inline]
-    fn into_generic(self) -> MaybeStaticElement<C> {
+    fn render(self) -> MaybeStaticElement<C> {
         MaybeStaticElement::Html(self.generic())
     }
 }

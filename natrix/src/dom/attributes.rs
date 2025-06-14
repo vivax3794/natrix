@@ -7,7 +7,11 @@ use wasm_bindgen::intern;
 use super::html_elements::DeferredFunc;
 use crate::error_handling::log_or_panic;
 use crate::reactivity::component::Component;
-use crate::reactivity::render_callbacks::{ReactiveAttribute, SimpleReactive};
+use crate::reactivity::render_callbacks::{
+    ReactiveAttribute,
+    SimpleReactive,
+    SimpleReactiveResult,
+};
 use crate::reactivity::state::RenderCtx;
 use crate::type_macros;
 
@@ -47,6 +51,7 @@ macro_rules! attribute_string {
         impl<C: Component> ToAttribute<C> for $t {
             type AttributeKind = String;
 
+            #[inline]
             fn calc_attribute(
                 self,
                 _name: &'static str,
@@ -63,6 +68,7 @@ type_macros::strings_cow!(attribute_string);
 impl<C: Component> ToAttribute<C> for char {
     type AttributeKind = char;
 
+    #[inline]
     fn calc_attribute(self, _name: &'static str, _node: &web_sys::Element) -> AttributeResult<C> {
         AttributeResult::SetIt(Some(Cow::from(self.to_string())))
     }
@@ -74,6 +80,7 @@ macro_rules! attribute_int {
         impl<C: Component> ToAttribute<C> for $t {
             type AttributeKind = $name;
 
+            #[inline]
             fn calc_attribute(
                 self,
                 _name: &'static str,
@@ -93,6 +100,7 @@ type_macros::numerics!(attribute_int);
 impl<C: Component> ToAttribute<C> for bool {
     type AttributeKind = bool;
 
+    #[inline]
     fn calc_attribute(self, _name: &'static str, _node: &web_sys::Element) -> AttributeResult<C> {
         AttributeResult::SetIt(self.then(|| Cow::from("")))
     }
@@ -101,6 +109,7 @@ impl<C: Component> ToAttribute<C> for bool {
 impl<C: Component, T: ToAttribute<C>> ToAttribute<C> for Option<T> {
     type AttributeKind = T::AttributeKind;
 
+    #[inline]
     fn calc_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
         if let Some(inner) = self {
             inner.calc_attribute(name, node)
@@ -115,6 +124,7 @@ impl<C: Component, T: ToAttribute<C, AttributeKind = K>, E: ToAttribute<C, Attri
 {
     type AttributeKind = K;
 
+    #[inline]
     fn calc_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
         match self {
             Ok(inner) => inner.calc_attribute(name, node),
@@ -131,15 +141,20 @@ where
 {
     type AttributeKind = R::AttributeKind;
 
+    #[inline]
     fn calc_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C> {
         let node = node.clone();
 
         AttributeResult::IsDynamic(Box::new(move |ctx, render_state| {
             let hook = SimpleReactive::init_new(
-                Box::new(move |ctx| ReactiveAttribute {
-                    name,
-                    data: self(ctx),
-                }),
+                Box::new(
+                    move |ctx, node| match self(ctx).calc_attribute(name, node) {
+                        AttributeResult::SetIt(value) => {
+                            SimpleReactiveResult::Apply(ReactiveAttribute { name, data: value })
+                        }
+                        AttributeResult::IsDynamic(inner) => SimpleReactiveResult::Call(inner),
+                    },
+                ),
                 node.clone(),
                 ctx,
             );
@@ -208,6 +223,7 @@ macro_rules! impl_to_attribute_for_vec {
         impl<C: Component> ToAttribute<C> for Vec<$T> {
             type AttributeKind = $T;
 
+            #[inline]
             fn calc_attribute(
                 self,
                 name: &'static str,

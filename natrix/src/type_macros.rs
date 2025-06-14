@@ -1,17 +1,5 @@
 //! Macros for implementing a trait on specific kinds of types.
 
-/// Call the given macro with every string type
-macro_rules! strings {
-    ($macro:ident) => {
-        $macro!(&'static str);
-        $macro!(::std::string::String);
-        $macro!(::std::borrow::Cow<'static, str>);
-        $macro!(::std::rc::Rc<str>);
-        $macro!(::std::sync::Arc<str>);
-        $macro!(::std::boxed::Box<str>);
-    };
-}
-
 /// Call the given macro with every string type, but converted to a `Cow`
 macro_rules! strings_cow {
     ($macro:ident) => {
@@ -21,13 +9,13 @@ macro_rules! strings_cow {
         ));
         $macro!(::std::borrow::Cow<'static, str>, |this| this);
         $macro!(::std::rc::Rc<str>, |this: ::std::rc::Rc<str>| {
-            ::std::borrow::Cow::from(this.to_string())
+            ::std::borrow::Cow::from(String::from(&*this))
         });
         $macro!(::std::sync::Arc<str>, |this: ::std::sync::Arc<str>| {
-            ::std::borrow::Cow::from(this.to_string())
+            ::std::borrow::Cow::from(String::from(&*this))
         });
         $macro!(::std::boxed::Box<str>, |this: ::std::boxed::Box<str>| {
-            ::std::borrow::Cow::Owned(this.into_string())
+            ::std::borrow::Cow::Owned(String::from(this))
         });
     };
 }
@@ -52,4 +40,4 @@ macro_rules! numerics {
     };
 }
 
-pub(crate) use {numerics, strings, strings_cow};
+pub(crate) use {numerics, strings_cow};

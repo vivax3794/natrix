@@ -196,9 +196,27 @@ gh_action:
 
 [working-directory: './stress_test_binary_size']
 stress_size: install_cli
-    wc -c dist/code_bg.wasm || true
-    natrix build
-    wc -c dist/code_bg.wasm
+    @echo
+    @echo "--- Checking initial size (if file exists)..."
+    @wc -c dist/code_bg.wasm || echo "No initial file."
+
+    @echo
+    @echo "--- Building Wasm with 'natrix build'..."
+    @natrix build
+
+    @echo
+    @echo "--- Compression Size Report ---"
+    @( \
+        set -e; \
+        UNCOMPRESSED=$(wc -c < dist/code_bg.wasm | tr -d ' '); \
+        GZIPPED=$(gzip --stdout --best dist/code_bg.wasm | wc -c | tr -d ' '); \
+        BROTLI=$(brotli --stdout --best dist/code_bg.wasm | wc -c | tr -d ' '); \
+        \
+        printf "Uncompressed : %'d bytes\n" $UNCOMPRESSED; \
+        printf "Gzip (-9)    : %'d bytes\n" $GZIPPED; \
+        printf "Brotli (-11) : %'d bytes\n" $BROTLI; \
+    )
+
 
 [working-directory: './benchmark']
 bench: install_cli

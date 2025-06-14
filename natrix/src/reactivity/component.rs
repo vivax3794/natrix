@@ -277,7 +277,7 @@ where
             parent_dep: HookKey::default(),
         };
 
-        let node = element.into_generic().render(&mut borrow_data, &mut state);
+        let node = element.render().render(&mut borrow_data, &mut state);
         drop(borrow_data);
         render_state.keep_alive.push(Box::new(data));
         node
@@ -291,7 +291,7 @@ where
     Handler: 'static,
     Self: DynElement<P>,
 {
-    fn into_generic(self) -> MaybeStaticElement<P> {
+    fn render(self) -> MaybeStaticElement<P> {
         MaybeStaticElement::Dynamic(Box::new(self))
     }
 }
@@ -373,7 +373,7 @@ pub fn render_component<C: Component>(
         parent_dep: HookKey::default(),
     };
     let node = element
-        .into_generic()
+        .render()
         .render(&mut borrow_data, &mut state)
         .into_node();
 

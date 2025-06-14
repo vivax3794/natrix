@@ -117,7 +117,7 @@ pub(crate) fn build_wasm(config: &options::BuildConfig) -> Result<PathBuf> {
         if rustc_is_nightly {
             let std_features = String::from("optimize_for_size");
             command
-                .args(["-Z", "build-std=core,std,panic_abort"])
+                .args(["-Z", "build-std=std,panic_abort"])
                 .arg(format!("-Zbuild-std-features={std_features}"));
             rustc_flags.push_str("-Zfmt-debug=none -Zlocation-detail=none -Zshare-generics=y");
         } else {
@@ -190,7 +190,20 @@ pub(crate) fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         .arg("--strip-dwarf")
         .arg("--strip-producers")
         .arg("--strip-target-features");
-    command.args(["--converge", "-Oz"]);
+
+    command.args([
+        "--converge",
+        "--flatten",
+        "--rereloop",
+        "--monomorphize",
+        "--type-unfinalizing",
+        "--generate-global-effects",
+        "-Oz",
+        "-Oz",
+        "--generate-global-effects",
+        "--type-finalizing",
+        "-Oz",
+    ]);
 
     let result = command.status()?.success();
 

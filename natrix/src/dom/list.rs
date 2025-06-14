@@ -175,10 +175,7 @@ where
                         parent_dep: you,
                     };
 
-                    let node = hook
-                        .into_generic()
-                        .render(ctx, &mut render_state)
-                        .into_node();
+                    let node = hook.render().render(ctx, &mut render_state).into_node();
                     let previous = self
                         .existing_hooks
                         .last()
@@ -262,7 +259,7 @@ where
     R: Clone,
     E: Element<C> + 'static,
 {
-    fn into_generic(self) -> MaybeStaticElement<C> {
+    fn render(self) -> MaybeStaticElement<C> {
         MaybeStaticElement::Dynamic(Box::new(self))
     }
 }
