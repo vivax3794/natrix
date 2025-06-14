@@ -23,7 +23,7 @@ lightningcss = { version = "1.0.0-alpha.66", default-features = false, features 
 wasmparser = {version="0.235", features=[], default-features = false}
 rustc_version = "0.4.1"
 cargo_metadata = "0.20"
-tungstenite = { version = "0.26.2" }
+tungstenite = { version = "0.27" }
 data-encoding = {version="2.9.0", default-features = false, features = ["alloc"]}
 ignore = "0.4.23"
 serde = { version = "1.0.219", features = ["derive"] }
