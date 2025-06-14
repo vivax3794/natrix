@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use wasm_bindgen::intern;
 
 use super::html_elements::DeferredFunc;
-use crate::error_handling::debug_panic;
+use crate::error_handling::log_or_panic;
 use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::{ReactiveAttribute, SimpleReactive};
 use crate::reactivity::state::RenderCtx;
@@ -221,7 +221,7 @@ macro_rules! impl_to_attribute_for_vec {
                         {
                             value
                         } else {
-                            debug_panic!(concat!(
+                            log_or_panic!(concat!(
                                 "`",
                                 stringify!($T),
                                 "` produced dynamic value or None"

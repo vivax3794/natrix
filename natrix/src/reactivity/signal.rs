@@ -99,7 +99,7 @@ pub trait SignalMethods {
     /// deduplication in the `State struct`
     ///
     /// We are doing the cleaning in the `State` struct because it lets us deduplicate the changed
-    /// hooks in `.update` without looping over the hashset twice.
+    /// hooks in `.update` without looping over the vec twice.
     fn deps(&mut self) -> std::vec::Drain<'_, HookKey>;
     /// Return the value of the `written` field
     fn changed(&self) -> bool;
@@ -113,6 +113,10 @@ impl<T> SignalMethods for Signal<T> {
 
     fn register_dep(&mut self, dep: HookKey) {
         if self.read.get() {
+            if cfg!(debug_assertions) {
+                // log_or_panic_assert!(!self.deps.contains(&dep), "Duplicate hook in signal");
+            }
+
             self.deps.push(dep);
         }
     }

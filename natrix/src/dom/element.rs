@@ -1,7 +1,7 @@
 //! Implementation of the `Element` trait for various abstract types.
 
 use super::HtmlElement;
-use crate::error_handling::debug_panic;
+use crate::error_handling::log_or_panic;
 use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::ReactiveNode;
 use crate::reactivity::signal::RenderingState;
@@ -25,7 +25,7 @@ impl ElementRenderResult {
                 if let Ok(node) = web_sys::Text::new_with_data(&text) {
                     node.into()
                 } else {
-                    debug_panic!("Failed to create text node");
+                    log_or_panic!("Failed to create text node");
                     generate_fallback_node()
                 }
             }

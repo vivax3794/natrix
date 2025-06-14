@@ -98,7 +98,7 @@ pub fn setup_runtime() -> ControlFlow<()> {
     #[cfg(feature = "console_log")]
     if cfg!(target_arch = "wasm32") {
         if let Err(err) = console_log::init_with_level(log::Level::Trace) {
-            crate::error_handling::debug_panic!("Failed to create logger: {err}");
+            crate::error_handling::log_or_panic!("Failed to create logger: {err}");
         }
     }
     #[cfg(feature = "_internal_extract_css")]

@@ -8,7 +8,7 @@ use crate::dom::attributes::AttributeResult;
 use crate::dom::classes::ClassResult;
 use crate::dom::element::{ElementRenderResult, MaybeStaticElement, generate_fallback_node};
 use crate::dom::{ToAttribute, ToClass};
-use crate::error_handling::{debug_expect, debug_panic};
+use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::get_document;
 use crate::reactivity::component::Component;
 use crate::reactivity::signal::{ReactiveHook, RenderingState, UpdateResult};
@@ -74,7 +74,7 @@ impl<C: Component> ReactiveNode<C> {
         let me = ctx.insert_hook(Box::new(DummyHook));
 
         let Some(dummy_node) = get_document().body() else {
-            debug_panic!("Document body not found");
+            log_or_panic!("Document body not found");
             return (me, generate_fallback_node());
         };
         let dummy_node = dummy_node.into();
@@ -112,11 +112,11 @@ impl<C: Component> ReactiveHook<C> for ReactiveNode<C> {
         };
 
         let Some(parent) = this.target_node.parent_node() else {
-            debug_panic!("Parent node of target node not found.");
+            log_or_panic!("Parent node of target node not found.");
             return UpdateResult::DropHooks(hooks);
         };
 
-        debug_expect!(
+        log_or_panic_result!(
             parent.replace_child(&new_node, &this.target_node),
             "Failed to replace parent"
         );
@@ -240,13 +240,13 @@ impl<C: Component, T: ToAttribute<C>> ReactiveValue<C> for ReactiveAttribute<T> 
     ) {
         match self.data.calc_attribute(self.name, node) {
             AttributeResult::SetIt(Some(res)) => {
-                debug_expect!(
+                log_or_panic_result!(
                     node.set_attribute(self.name, &res),
                     "Failed to update attribute"
                 );
             }
             AttributeResult::SetIt(None) => {
-                debug_expect!(
+                log_or_panic_result!(
                     node.remove_attribute(self.name),
                     "Failed to remove attribute"
                 );
@@ -279,13 +279,16 @@ impl<C: Component, T: ToClass<C>> ReactiveValue<C> for ReactiveClass<T> {
                 match (&state, &res) {
                     (None, None) => {}
                     (Some(prev), None) => {
-                        debug_expect!(class_list.remove_1(prev), "Failed to remove class");
+                        log_or_panic_result!(class_list.remove_1(prev), "Failed to remove class");
                     }
                     (None, Some(new)) => {
-                        debug_expect!(class_list.add_1(new), "Failed to add class");
+                        log_or_panic_result!(class_list.add_1(new), "Failed to add class");
                     }
                     (Some(prev), Some(new)) => {
-                        debug_expect!(class_list.replace(prev, new), "Failed to replace class");
+                        log_or_panic_result!(
+                            class_list.replace(prev, new),
+                            "Failed to replace class"
+                        );
                     }
                 }
 
@@ -294,7 +297,7 @@ impl<C: Component, T: ToClass<C>> ReactiveValue<C> for ReactiveClass<T> {
             ClassResult::Dynamic(dynamic) => {
                 log::debug!("Nested reactive classes, doing naive instant remove.");
                 if let Some(prev) = state.take() {
-                    debug_expect!(
+                    log_or_panic_result!(
                         class_list.remove_1(&prev),
                         "Failed to remove class from element"
                     );

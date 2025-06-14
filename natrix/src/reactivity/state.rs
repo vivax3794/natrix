@@ -2,13 +2,14 @@
 
 use std::any::Any;
 use std::cell::RefCell;
+use std::collections::BinaryHeap;
 use std::ops::{Deref, DerefMut};
 use std::rc::{Rc, Weak};
 
 use slotmap::{SlotMap, new_key_type};
 use smallvec::SmallVec;
 
-use crate::error_handling::debug_panic;
+use crate::error_handling::log_or_panic;
 use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::DummyHook;
 use crate::reactivity::signal::{ReactiveHook, RenderingState, SignalMethods, UpdateResult};
@@ -155,7 +156,7 @@ impl<C: Component> EagerMessageSender<C> {
 
             let deferred = self.deferred.upgrade()?;
             let Ok(mut deferred) = deferred.try_borrow_mut() else {
-                debug_panic!("Failed to borrow deferred message queue");
+                log_or_panic!("Failed to borrow deferred message queue");
                 return None;
             };
 
@@ -166,7 +167,31 @@ impl<C: Component> EagerMessageSender<C> {
     }
 }
 
-// pub(crate) FromChildSender<Msg> = ;
+/// A temporary item for the `BinaryHeap` in `update`
+struct OrderAssociatedData<T, O> {
+    /// The data in question
+    data: T,
+    /// The value to order based on
+    ordering: O,
+}
+
+impl<T, O: PartialEq> PartialEq for OrderAssociatedData<T, O> {
+    fn eq(&self, other: &Self) -> bool {
+        self.ordering == other.ordering
+    }
+}
+impl<T, O: Eq> Eq for OrderAssociatedData<T, O> {}
+
+impl<T, O: PartialOrd> PartialOrd for OrderAssociatedData<T, O> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.ordering.partial_cmp(&other.ordering)
+    }
+}
+impl<T, O: Ord> Ord for OrderAssociatedData<T, O> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.ordering.cmp(&other.ordering)
+    }
+}
 
 /// The core component state, stores all framework data
 pub struct State<T: Component> {
@@ -270,7 +295,7 @@ impl<T: Component> State<T> {
             std::mem::swap(&mut new_vec, &mut *queue);
             new_vec
         } else {
-            debug_panic!("Message queue already borrowed while in drain_message_queue");
+            log_or_panic!("Message queue already borrowed while in drain_message_queue");
             return;
         };
 
@@ -323,7 +348,7 @@ impl<T: Component> State<T> {
             if let Some(value) = self.next_insertion_order_value.checked_add(1) {
                 value
             } else {
-                debug_panic!("Insertion order overflow");
+                log_or_panic!("Insertion order overflow");
                 0
             };
         key
@@ -368,27 +393,28 @@ impl<T: Component> State<T> {
         log::debug!("Performing update cycle for {}", std::any::type_name::<T>());
         self.drain_message_queue();
 
-        let mut hooks = Vec::new();
+        let mut hooks = BinaryHeap::new();
         for signal in self.data.signals_mut() {
             if signal.changed() {
                 for dep in signal.deps() {
                     let dep_insertion_order = self.hooks.get(dep).map(|x| x.1).unwrap_or_default();
-
-                    if let Err(index) = hooks
-                        .binary_search_by(|(_, insert): &(_, u64)| dep_insertion_order.cmp(insert))
-                    {
-                        hooks.insert(index.saturating_add(0), (dep, dep_insertion_order));
-                    }
+                    hooks.push(OrderAssociatedData {
+                        data: dep,
+                        ordering: std::cmp::Reverse(dep_insertion_order),
+                    });
                 }
             }
         }
 
         log::trace!("{} hooks updating", hooks.len());
-        while let Some((hook_key, _)) = hooks.pop() {
+        while let Some(OrderAssociatedData { data: hook_key, .. }) = hooks.pop() {
             self.run_with_hook_and_self(hook_key, |ctx, hook| match hook.update(ctx, hook_key) {
                 UpdateResult::Nothing => {}
                 UpdateResult::RunHook(dep) => {
-                    hooks.push((dep, 0));
+                    hooks.push(OrderAssociatedData {
+                        data: dep,
+                        ordering: std::cmp::Reverse(u64::MIN), // This item should be the next item
+                    });
                 }
                 UpdateResult::DropHooks(deps) => {
                     for dep in deps {
@@ -445,7 +471,7 @@ impl<T: Component> State<T> {
     /// Register a new sender from the parent component
     pub(crate) fn register_parent(&mut self, sender: EmitMessageSender<T::EmitMessage>) {
         if self.to_parent_emit.is_some() {
-            debug_panic!("`to_parent_emit` set twice");
+            log_or_panic!("`to_parent_emit` set twice");
         }
 
         self.to_parent_emit = Some(sender);
@@ -957,7 +983,7 @@ cfg_if::cfg_if! {
                 let borrow = DeferredRefInner::try_new(rc, PhantomData, |rc| rc.try_borrow_mut());
 
                 let Ok(mut borrow) = borrow else {
-                    debug_panic!(
+                    log_or_panic!(
                         "Deferred state borrowed while already borrowed. This might happen due to holding it across a yield point"
                     );
                     return None;

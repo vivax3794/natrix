@@ -7,7 +7,7 @@ use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::Closure;
 use web_sys::js_sys::Function;
 
-use crate::error_handling::debug_panic;
+use crate::error_handling::log_or_panic;
 
 /// A guard that executes a callback when dropped.
 ///
@@ -77,7 +77,7 @@ async fn wait_with_cancellation<T: Copy + 'static>(
     let function: Function = closure.as_ref().clone().into();
 
     let Ok(id) = setup(&function) else {
-        debug_panic!("{}", setup_err_msg);
+        log_or_panic!("{}", setup_err_msg);
         return;
     };
 
@@ -86,7 +86,7 @@ async fn wait_with_cancellation<T: Copy + 'static>(
     });
 
     if rx.await.is_err() {
-        debug_panic!("{}", recv_err_msg);
+        log_or_panic!("{}", recv_err_msg);
         return;
     }
 
@@ -119,7 +119,7 @@ pub async fn next_animation_frame() {
         move |frame_id| {
             let res = crate::get_window().cancel_animation_frame(frame_id);
             if res.is_err() {
-                debug_panic!(
+                log_or_panic!(
                     "Failed to cancel animation frame. This is a bug in the browser or the framework."
                 );
             }

@@ -26,7 +26,7 @@ use crate::css::selectors::{CompoundSelector, IntoCompoundSelector, SimpleSelect
 use crate::dom::element::{Element, MaybeStaticElement, generate_fallback_node};
 use crate::dom::events::{Event, EventHandler};
 use crate::dom::{ToAttribute, ToClass, attributes};
-use crate::error_handling::{debug_expect, debug_panic};
+use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::get_document;
 use crate::prelude::Id;
 use crate::reactivity::component::Component;
@@ -55,7 +55,7 @@ impl<C: Component, T> HtmlElement<C, T> {
         let node = if let Ok(node) = get_document().create_element(intern(tag)) {
             node
         } else {
-            debug_panic!("Failed to create <{tag}>");
+            log_or_panic!("Failed to create <{tag}>");
             generate_fallback_node().unchecked_into()
         };
 
@@ -107,16 +107,16 @@ impl<C: Component, T> HtmlElement<C, T> {
                 crate::panics::return_if_panic!();
 
                 let Ok(event) = event.dyn_into() else {
-                    debug_panic!("Unexpected event type");
+                    log_or_panic!("Unexpected event type");
                     return;
                 };
 
                 let Some(ctx) = ctx_weak.upgrade() else {
-                    debug_panic!("Component dropped without event handlers being cleaned up");
+                    log_or_panic!("Component dropped without event handlers being cleaned up");
                     return;
                 };
                 let Ok(mut ctx) = ctx.try_borrow_mut() else {
-                    debug_panic!("Component already mutably borrowed in event handler");
+                    log_or_panic!("Component already mutably borrowed in event handler");
                     return;
                 };
 
@@ -127,7 +127,7 @@ impl<C: Component, T> HtmlElement<C, T> {
             let closure = Closure::wrap(callback);
             let function = closure.as_ref().unchecked_ref();
 
-            debug_expect!(
+            log_or_panic_result!(
                 element.add_event_listener_with_callback(intern(E::EVENT_NAME), function),
                 "Failed to attach event handler"
             );
@@ -170,13 +170,13 @@ impl<C: Component, T> HtmlElement<C, T> {
             }
             MaybeStaticElement::Dynamic(dynamic) => {
                 let Ok(comment) = web_sys::Comment::new() else {
-                    debug_panic!("Failed to create placeholder comment node");
+                    log_or_panic!("Failed to create placeholder comment node");
                     return self;
                 };
                 let comment_clone = comment.clone();
                 self.deferred.push(Box::new(move |ctx, rendering_state| {
                     let node = dynamic.render(ctx, rendering_state).into_node();
-                    debug_expect!(
+                    log_or_panic_result!(
                         comment_clone.replace_with_with_node_1(&node),
                         "Failed to swap in child"
                     );
@@ -186,7 +186,7 @@ impl<C: Component, T> HtmlElement<C, T> {
         };
 
         let element: &web_sys::Element = self.element.as_ref();
-        debug_expect!(element.append_child(&node), "Failed to append child");
+        log_or_panic_result!(element.append_child(&node), "Failed to append child");
 
         self
     }
@@ -203,7 +203,7 @@ impl<C: Component, T> HtmlElement<C, T> {
         match value.calc_attribute(intern(key), &self.element) {
             AttributeResult::SetIt(res) => {
                 if let Some(res) = res {
-                    debug_expect!(
+                    log_or_panic_result!(
                         self.element.set_attribute(key, &res),
                         "Failed to set attribute"
                     );
@@ -223,7 +223,7 @@ impl<C: Component, T> HtmlElement<C, T> {
         match class.calc_class(&self.element) {
             ClassResult::SetIt(res) => {
                 if let Some(res) = res {
-                    debug_expect!(
+                    log_or_panic_result!(
                         self.element.class_list().add_1(intern(&res)),
                         "Failed to add class"
                     );

@@ -2,6 +2,8 @@
 
 use std::ops::Deref;
 
+use crate::error_handling::log_or_panic_assert;
+
 /// A list of selectors (`,`)
 #[derive(Debug)]
 pub struct SelectorList(pub Vec<FinalizedSelector>);
@@ -250,7 +252,7 @@ impl NthArgument {
 
     /// Set the selector to use
     pub fn of(mut self, selector: impl IntoComplexSelector) -> Self {
-        debug_assert!(
+        log_or_panic_assert!(
             self.selector.is_none(),
             "`selector` of NthArgument already set"
         );

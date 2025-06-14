@@ -11,7 +11,7 @@ use crate::dom::element::{
     MaybeStaticElement,
     generate_fallback_node,
 };
-use crate::error_handling::debug_panic;
+use crate::error_handling::log_or_panic;
 use crate::get_document;
 use crate::reactivity::signal::RenderingState;
 use crate::reactivity::state::{
@@ -240,7 +240,7 @@ impl<I: Component, Handler> SubComponent<I, Handler> {
             let eager = data.eager_sender();
             Sender(eager)
         } else {
-            debug_panic!("State already borrowed during construction");
+            log_or_panic!("State already borrowed during construction");
             Sender(EagerMessageSender::create_closed_fallback())
         }
     }
@@ -261,7 +261,7 @@ where
         let element = I::render();
 
         let Ok(mut borrow_data) = data.try_borrow_mut() else {
-            debug_panic!("State already borrowed during construction");
+            log_or_panic!("State already borrowed during construction");
             return ElementRenderResult::Node(generate_fallback_node());
         };
 

@@ -9,7 +9,7 @@ use crate::dom::element::{
     generate_fallback_node,
 };
 use crate::dom::{ToAttribute, ToClass};
-use crate::error_handling::debug_panic;
+use crate::error_handling::log_or_panic;
 use crate::reactivity::component::{Component, ComponentBase, NoMessages};
 use crate::reactivity::signal::SignalMethods;
 use crate::reactivity::state::ComponentData;
@@ -36,7 +36,7 @@ impl Component for () {
     type ReceiveMessage = NoMessages;
 
     fn render() -> impl Element<Self> {
-        debug_panic!(
+        log_or_panic!(
             "Attempted to render a `()` as a component. This is most definitely not what you intended."
         );
         generate_fallback_node()
@@ -86,12 +86,12 @@ impl<E: Element<()> + 'static, C: Component> Element<C> for NonReactive<E> {
             MaybeStaticElement::Static(node) => MaybeStaticElement::Static(node),
             MaybeStaticElement::Html(html) => {
                 if !html.deferred.is_empty() {
-                    debug_panic!("Html element with reactive values in `NonReactive` context.");
+                    log_or_panic!("Html element with reactive values in `NonReactive` context.");
                 }
                 MaybeStaticElement::Static(ElementRenderResult::Node(html.element.into()))
             }
             MaybeStaticElement::Dynamic(_) => {
-                debug_panic!("Dynamic element in NonReactive context");
+                log_or_panic!("Dynamic element in NonReactive context");
                 MaybeStaticElement::Static(ElementRenderResult::Node(generate_fallback_node()))
             }
         }
@@ -105,7 +105,7 @@ impl<A: ToAttribute<()>, C: Component> ToAttribute<C> for NonReactive<A> {
         match self.0.calc_attribute(name, node) {
             AttributeResult::SetIt(res) => AttributeResult::SetIt(res),
             AttributeResult::IsDynamic(_) => {
-                debug_panic!("Dynamic Attribute in `NonReactive` context");
+                log_or_panic!("Dynamic Attribute in `NonReactive` context");
                 AttributeResult::SetIt(None)
             }
         }
@@ -117,7 +117,7 @@ impl<A: ToClass<()>, C: Component> ToClass<C> for NonReactive<A> {
         match self.0.calc_class(node) {
             ClassResult::SetIt(res) => ClassResult::SetIt(res),
             ClassResult::Dynamic(_) => {
-                debug_panic!("Dynamic Class in `NonReactive` context");
+                log_or_panic!("Dynamic Class in `NonReactive` context");
                 ClassResult::SetIt(None)
             }
         }

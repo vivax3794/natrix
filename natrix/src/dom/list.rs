@@ -3,7 +3,7 @@
 use std::cmp::Ordering;
 
 use crate::dom::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
-use crate::error_handling::{debug_expect, debug_panic};
+use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::DummyHook;
 use crate::reactivity::signal::{ReactiveHook, RenderingState, UpdateResult};
@@ -143,9 +143,12 @@ where
                     to_drop.extend(&state.hooks);
 
                     if let Some(node) = state.node.parent_node() {
-                        debug_expect!(node.remove_child(&state.node), "Failed to remove node");
+                        log_or_panic_result!(
+                            node.remove_child(&state.node),
+                            "Failed to remove node"
+                        );
                     } else {
-                        debug_panic!("Parent node not found");
+                        log_or_panic!("Parent node not found");
                     }
                 }
                 UpdateResult::DropHooks(to_drop)
@@ -182,12 +185,12 @@ where
                         .map_or_else(|| self.start_marker.clone(), |state| state.node.clone());
                     let next = previous.next_sibling();
                     if let Some(parent) = previous.parent_node() {
-                        debug_expect!(
+                        log_or_panic_result!(
                             parent.insert_before(&node, next.as_ref()),
                             "Failed to insert node"
                         );
                     } else {
-                        debug_panic!("Parent node not found");
+                        log_or_panic!("Parent node not found");
                     }
 
                     let item_state = ListItemState {
@@ -229,7 +232,7 @@ where
         let fragment = document.create_document_fragment();
         let start_marker = document.create_comment("list start");
 
-        debug_expect!(
+        log_or_panic_result!(
             fragment.append_child(&start_marker),
             "Failed to append start marker"
         );

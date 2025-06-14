@@ -7,14 +7,23 @@ pub(crate) fn cold_path() {}
 /// Panic on `Err` value in debug mode.
 ///
 /// See `debug_panic` for usage philosophy.
-macro_rules! debug_expect {
+macro_rules! log_or_panic_result {
     ($expr:expr, $($msg:expr),*) => {
         let res = $expr;
         match res {
             Ok(_) => {}
             Err(_) => {
-                $crate::error_handling::debug_panic!($($msg),*);
+                $crate::error_handling::log_or_panic!($($msg),*);
             }
+        }
+    };
+}
+
+/// Version of stdlib `debug_assert` that uses `debug_panic` in order to get logging.
+macro_rules! log_or_panic_assert {
+    ($check:expr, $($msg:expr),*) => {
+        if !$check {
+            $crate::error_handling::log_or_panic!($($msg),*);
         }
     };
 }
@@ -47,7 +56,7 @@ macro_rules! debug_expect {
 /// if user code holds onto a `RefCell` borrow across a await point, but we do not use it for the
 /// `sleep` api even tho not checking the bounds of the input is a bug, because its a bug
 /// triggerable from user input and should be communicated as such using `Option`/`Result`
-macro_rules! debug_panic {
+macro_rules! log_or_panic {
     ($($msg:expr),*) => {
         $crate::error_handling::cold_path();
 
@@ -61,7 +70,7 @@ macro_rules! debug_panic {
 }
 
 /// Log a error to the console
-pub(crate) use {debug_expect, debug_panic};
+pub(crate) use {log_or_panic, log_or_panic_assert, log_or_panic_result};
 
 #[cfg(test)]
 mod tests {
@@ -70,7 +79,7 @@ mod tests {
     #[test]
     #[cfg_attr(debug_assertions, should_panic(expected = "Error in release mode"))]
     fn test_debug_expect() {
-        debug_expect!(Err::<(), _>("error"), "Error in release mode");
+        log_or_panic_result!(Err::<(), _>("error"), "Error in release mode");
     }
 
     #[test]
@@ -80,6 +89,6 @@ mod tests {
     )]
     fn test_debug_panic() {
         // Should not panic in release mode
-        debug_panic!("This won't panic in release");
+        log_or_panic!("This won't panic in release");
     }
 }
