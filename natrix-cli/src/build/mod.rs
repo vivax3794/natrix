@@ -38,7 +38,8 @@ pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManife
     let source_wasm_file = wasm_js::build_wasm(config).context("Building wasm")?;
     let (wasm_file, js_file) = wasm_js::wasm_bindgen(config, &source_wasm_file)?;
     if config.profile == options::BuildProfile::Release {
-        wasm_js::optimize_wasm(&wasm_file)?;
+        let rename_map = wasm_js::optimize_wasm(&wasm_file)?;
+        wasm_js::minimize_js(&js_file, rename_map)?;
     }
 
     let wasm_file = cache_bust_file(config, wasm_file)?;

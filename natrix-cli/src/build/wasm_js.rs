@@ -1,5 +1,7 @@
 //! Build the wasm and js of a file
 
+use std::collections::{HashMap, HashSet};
+use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::{fs, process};
 
@@ -8,6 +10,40 @@ use crate::options::BuildProfile;
 use crate::prelude::*;
 use crate::project_gen::FEATURE_RUNTIME_CSS;
 use crate::{options, utils};
+
+/// A renaming map for the wasm-bindgen glue code.
+#[derive(Debug)]
+pub(crate) struct RenameMap(HashMap<Box<str>, Box<str>>);
+
+/// A visitor to rename ast nodes
+struct RenameVisitor<'a> {
+    /// The alloactor to use
+    allocator: &'a oxc::allocator::Allocator,
+    /// The mapping in question
+    mapping: RenameMap,
+}
+
+impl<'a> oxc::ast_visit::VisitMut<'a> for RenameVisitor<'a> {
+    fn visit_static_member_expression(
+        &mut self,
+        it: &mut oxc::ast::ast::StaticMemberExpression<'a>,
+    ) {
+        oxc::ast_visit::walk_mut::walk_static_member_expression(self, it);
+
+        let current_name = it.property.name.to_string();
+        if let Some(new_name) = self.mapping.0.get(&*current_name) {
+            let new_name = self.allocator.alloc_str(new_name);
+
+            let current_span = it.property.span;
+            let new_identifier = oxc::ast::AstBuilder {
+                allocator: self.allocator,
+            }
+            .identifier_name(current_span, new_name);
+
+            it.property = new_identifier;
+        }
+    }
+}
 
 /// Run wasmbindgen to generate the glue
 pub(crate) fn wasm_bindgen(
@@ -33,9 +69,6 @@ pub(crate) fn wasm_bindgen(
     utils::run_with_spinner(command, utils::create_spinner("✍️ wasm_bindgen")?)?;
 
     let js_file = config.dist.join(format!("{BINDGEN_OUTPUT_NAME}.js"));
-    if config.profile == options::BuildProfile::Release {
-        minimize_js(&js_file)?;
-    }
 
     Ok((
         config.dist.join(format!("{BINDGEN_OUTPUT_NAME}_bg.wasm")),
@@ -44,7 +77,7 @@ pub(crate) fn wasm_bindgen(
 }
 
 /// Minimize the given js file
-pub(crate) fn minimize_js(js_file: &PathBuf) -> Result<(), anyhow::Error> {
+pub(crate) fn minimize_js(js_file: &PathBuf, mapping: RenameMap) -> Result<(), anyhow::Error> {
     let spinner = utils::create_spinner("🗜️ Minimizing JS")?;
 
     let js_code = fs::read_to_string(js_file)?;
@@ -52,6 +85,12 @@ pub(crate) fn minimize_js(js_file: &PathBuf) -> Result<(), anyhow::Error> {
     let parser = oxc::parser::Parser::new(&allocator, &js_code, oxc::span::SourceType::cjs());
 
     let mut program = parser.parse().program;
+    let mut visitor = RenameVisitor {
+        allocator: &allocator,
+        mapping,
+    };
+    oxc::ast_visit::walk_mut::walk_program(&mut visitor, &mut program);
+
     let minifier = oxc::minifier::Minifier::new(oxc::minifier::MinifierOptions {
         mangle: Some(oxc::minifier::MangleOptions {
             top_level: true,
@@ -69,6 +108,8 @@ pub(crate) fn minimize_js(js_file: &PathBuf) -> Result<(), anyhow::Error> {
         .with_options(oxc::codegen::CodegenOptions {
             minify: true,
             comments: false,
+            annotation_comments: false,
+            legal_comments: oxc::codegen::LegalComment::None,
             ..Default::default()
         })
         .with_scoping(symbols);
@@ -177,7 +218,7 @@ pub(crate) fn search_dir_for_wasm(
 }
 
 /// Optimize the given wasm file
-pub(crate) fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
+pub(crate) fn optimize_wasm(wasm_file: &PathBuf) -> Result<RenameMap, anyhow::Error> {
     let spinner = utils::create_spinner("🔎 Optimize wasm")?;
 
     let mut command = process::Command::new("wasm-opt");
@@ -190,6 +231,8 @@ pub(crate) fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         .arg("--strip-dwarf")
         .arg("--strip-producers")
         .arg("--strip-target-features");
+
+    command.arg("--minify-imports-and-exports-and-modules");
 
     command.args([
         "--converge",
@@ -205,13 +248,52 @@ pub(crate) fn optimize_wasm(wasm_file: &PathBuf) -> Result<(), anyhow::Error> {
         "-Oz",
     ]);
 
-    let result = command.status()?.success();
+    command.stdout(process::Stdio::piped());
+
+    let mut child = command.spawn()?;
+    let stdout = child.stdout.take();
+    let result = child.wait()?.success();
+
+    let mut mapping = HashMap::new();
+
+    if let Some(stdout) = stdout {
+        let stdout = BufReader::new(stdout);
+
+        let mut seen = HashSet::new();
+        'lines_loop: for line in stdout.lines() {
+            let line = line?;
+            if let Some((old, new)) = line.split_once(" => ") {
+                let old = old.trim();
+                let new = new.trim();
+
+                if seen.contains(old) {
+                    break 'lines_loop;
+                }
+
+                // This is not a mistake
+                // The wasm-opt output is initally
+                // __Wasmbindgen_adjaijda => A
+                // ...
+                //
+                // Once the second optimization pass starts its
+                // A => A
+                seen.insert(<Box<str>>::from(new));
+                mapping.insert(old.into(), new.into());
+            }
+        }
+    }
+
+    // HACK: https://github.com/WebAssembly/binaryen/issues/7657
+    // wasm-opt does not report the renaming of the wbg module
+    //
+    // as of writting it is always renamed to "a" due to being the only module
+    mapping.insert("wbg".into(), "a".into());
 
     spinner.finish();
     if !result {
         return Err(anyhow!("Failed to optimize"));
     }
-    Ok(())
+    Ok(RenameMap(mapping))
 }
 
 /// Get the strings from a wasm file
