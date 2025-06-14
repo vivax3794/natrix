@@ -209,12 +209,15 @@ stress_size: install_cli
     @( \
         set -e; \
         UNCOMPRESSED=$(wc -c < dist/code_bg.wasm | tr -d ' '); \
+        JS_FILE=$(wc -c < dist/code.js | tr -d ' '); \
         GZIPPED=$(gzip --stdout --best dist/code_bg.wasm | wc -c | tr -d ' '); \
         BROTLI=$(brotli --stdout --best dist/code_bg.wasm | wc -c | tr -d ' '); \
         \
         printf "Uncompressed : %'d bytes\n" $UNCOMPRESSED; \
         printf "Gzip (-9)    : %'d bytes\n" $GZIPPED; \
         printf "Brotli (-11) : %'d bytes\n" $BROTLI; \
+        printf "\n"; \
+        printf "JS           : %'d bytes\n" $JS_FILE; \
     )
 
 
