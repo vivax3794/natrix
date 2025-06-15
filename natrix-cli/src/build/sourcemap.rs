@@ -4,7 +4,10 @@
 //! Based on: <https://github.com/emscripten-core/emscripten/blob/main/tools/wasm-sourcemap.py>
 //!     (MIT-licensed, © 2018 The Emscripten Authors)
 
+/// The section id for custom wasm sections
 const WASM_CUSTOM_SECTION_ID: u8 = 0;
+
+/// The section name for source maps
 const SOURCEMAP_SECTION_NAME: &str = "sourceMappingURL";
 
 use std::collections::HashMap;
@@ -26,22 +29,49 @@ pub(crate) fn create_sourcemap(wasm_file: &Path) -> anyhow::Result<()> {
     let mut wasm_content = Vec::new();
     wasm_file.read_to_end(&mut wasm_content)?;
 
-    let mut sections = HashMap::new();
-    let mut code_section_offset = 0;
+    let (sections, code_section_offset) = parse_wasm(&wasm_content)?;
+    populate_sourcemap(&mut sourcemap, &sections, code_section_offset)?;
+    inject_sourcemap(sourcemap, wasm_file)?;
 
-    let parser = wasmparser::Parser::new(0);
-    for section in parser.parse_all(&wasm_content) {
-        match section? {
-            wasmparser::Payload::CustomSection(reader) => {
-                sections.insert(reader.name(), reader.data());
-            }
-            wasmparser::Payload::CodeSectionStart { range, .. } => {
-                code_section_offset = range.start as u64;
-            }
-            _ => {}
-        }
-    }
+    Ok(())
+}
 
+/// Inject the sourcemap into the given wasm file
+fn inject_sourcemap(
+    sourcemap: sourcemap::SourceMapBuilder,
+    mut wasm_file: std::fs::File,
+) -> anyhow::Result<()> {
+    let sourcemap = sourcemap.into_sourcemap();
+    let data = sourcemap.to_data_url()?;
+
+    let section_content_length = needed_space_for_u32(SOURCEMAP_SECTION_NAME.len().try_into()?)
+        .saturating_add(SOURCEMAP_SECTION_NAME.len())
+        .saturating_add(needed_space_for_u32(data.len().try_into()?))
+        .saturating_add(data.len());
+    let section_length = (1_usize)
+        .saturating_add(needed_space_for_u32(section_content_length.try_into()?))
+        .saturating_add(section_content_length);
+
+    let mut section = Vec::with_capacity(section_length);
+    section.push(WASM_CUSTOM_SECTION_ID);
+    encode_u32_vlq(section_content_length.try_into()?, &mut section);
+
+    encode_u32_vlq(SOURCEMAP_SECTION_NAME.len().try_into()?, &mut section);
+    section.extend(SOURCEMAP_SECTION_NAME.bytes());
+    encode_u32_vlq(data.len().try_into()?, &mut section);
+    section.extend(data.into_bytes());
+
+    wasm_file.seek(std::io::SeekFrom::End(0))?;
+    wasm_file.write_all(&section)?;
+    Ok(())
+}
+
+/// Parse the debugging sections of the wasm file and use it to populate the sourcemap
+fn populate_sourcemap(
+    sourcemap: &mut sourcemap::SourceMapBuilder,
+    sections: &HashMap<&str, &[u8]>,
+    code_section_offset: u64,
+) -> anyhow::Result<()> {
     let empty: [u8; 0] = [];
     let debug_info = gimli::Dwarf::load(
         |id| -> Result<EndianSlice<'_, LittleEndian>, std::convert::Infallible> {
@@ -51,9 +81,7 @@ pub(crate) fn create_sourcemap(wasm_file: &Path) -> anyhow::Result<()> {
             ))
         },
     )?;
-
     let mut seen_files = HashMap::new();
-
     let mut units = debug_info.units();
     while let Some(unit) = units.next()? {
         let unit = debug_info.unit(unit)?;
@@ -121,34 +149,26 @@ pub(crate) fn create_sourcemap(wasm_file: &Path) -> anyhow::Result<()> {
             }
         }
     }
-
-    let sourcemap = sourcemap.into_sourcemap();
-    let data = sourcemap.to_data_url()?;
-
-    // Based on: <https://github.com/mtolmacs/wasm2map/blob/main/wasm2map/src/lib.rs#L364-L376>
-    let section_content_length = needed_space_for_u32(SOURCEMAP_SECTION_NAME.len().try_into()?)
-        .saturating_add(SOURCEMAP_SECTION_NAME.len())
-        .saturating_add(needed_space_for_u32(data.len().try_into()?))
-        .saturating_add(data.len());
-
-    let section_length = (1_usize)
-        .saturating_add(needed_space_for_u32(section_content_length.try_into()?))
-        .saturating_add(section_content_length);
-
-    let mut section = Vec::with_capacity(section_length);
-
-    section.push(WASM_CUSTOM_SECTION_ID);
-    encode_u32_vlq(section_content_length.try_into()?, &mut section);
-
-    encode_u32_vlq(SOURCEMAP_SECTION_NAME.len().try_into()?, &mut section);
-    section.extend(SOURCEMAP_SECTION_NAME.bytes());
-    encode_u32_vlq(data.len().try_into()?, &mut section);
-    section.extend(data.into_bytes());
-
-    wasm_file.seek(std::io::SeekFrom::End(0))?;
-    wasm_file.write_all(&section)?;
-
     Ok(())
+}
+
+/// Extract all the custom sections from the wasm
+fn parse_wasm(wasm_content: &[u8]) -> Result<(HashMap<&str, &[u8]>, u64), anyhow::Error> {
+    let mut sections = HashMap::new();
+    let mut code_section_offset = 0;
+    let parser = wasmparser::Parser::new(0);
+    for section in parser.parse_all(wasm_content) {
+        match section? {
+            wasmparser::Payload::CustomSection(reader) => {
+                sections.insert(reader.name(), reader.data());
+            }
+            wasmparser::Payload::CodeSectionStart { range, .. } => {
+                code_section_offset = range.start as u64;
+            }
+            _ => {}
+        }
+    }
+    Ok((sections, code_section_offset))
 }
 
 /// Calcualte the size of encoding a u32
@@ -167,7 +187,6 @@ const fn needed_space_for_u32(value: u32) -> usize {
 }
 
 /// Encode a u32 for wasm
-/// Based on: <https://github.com/mtolmacs/wasm2map/blob/main/wasm2map/src/vlq.rs#L28-L36>
 fn encode_u32_vlq(mut value: u32, target: &mut Vec<u8>) {
     while value > 0b0111_1111 {
         let lower_bits = (value & 0b0111_1111) as u8;
