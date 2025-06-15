@@ -1,1 +1,0 @@
-# Inter-Component Communication
