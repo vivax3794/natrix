@@ -971,14 +971,8 @@ cfg_if::cfg_if! {
             /// The nightly feature flag enables a lint to detect this misuse.
             /// See the [Features]() chapther for details on how to set it up (it requires a bit more
             /// setup than just turning on the feature flag).
-            #[expect(
-                clippy::missing_panics_doc,
-                reason = "This happens when we already are in a panic"
-            )]
             #[must_use]
             pub fn borrow_mut(&self) -> Option<DeferredRef<'_, T>> {
-                assert!(!crate::panics::has_panicked());
-
                 let rc = self.inner.upgrade()?;
                 let borrow = DeferredRefInner::try_new(rc, PhantomData, |rc| rc.try_borrow_mut());
 
