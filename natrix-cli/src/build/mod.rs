@@ -9,6 +9,7 @@ use crate::{options, utils};
 
 pub(crate) mod assets;
 mod css;
+pub(crate) mod sourcemap;
 mod wasm_js;
 
 /// The directory to store macro outputs
@@ -44,6 +45,11 @@ pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManife
 
     let wasm_file = cache_bust_file(config, wasm_file)?;
     let js_file = cache_bust_file(config, js_file)?;
+
+    if config.profile == options::BuildProfile::Dev {
+        println!("{}", "🗺️ Generating source map".bright_blue());
+        sourcemap::create_sourcemap(&wasm_file)?;
+    }
 
     let asset_manifest = assets::collect_macro_output(config)?;
 
