@@ -4,7 +4,7 @@
 
 When using the `dev` profile natrix will include both DWARF debugging information and a inline sourcemap.
 
-As of writting firefox does not support DWARF based debugging, and in our experience doesnt support wasm breakpoints (including sourcemap backed ones).
+As of writing firefox does not support DWARF based debugging, and in our experience doesnt support wasm breakpoints (including sourcemap backed ones).
 Hence we recommend you use chromeium for debugging your applications.
 
 > [!TIP]
@@ -12,7 +12,7 @@ Hence we recommend you use chromeium for debugging your applications.
 
 ## Logging
 
-And ofc a debugging section wont be complete without print-debugging. The default features, specifically `console_log`, setup the [`log`](https://crates.io/crates/log) crate to log to the browser console automatically. you might have already seen some of its output if you open the console in a dev build. You can natrually use the `log` crate yourself to log various information for debugging purposes.
+And ofc a debugging section wont be complete without print-debugging. The default features, specifically `console_log`, setup the [`log`](https://crates.io/crates/log) crate to log to the browser console automatically. you might have already seen some of its output if you open the console in a dev build. You can naturally use the `log` crate yourself to log various information for debugging purposes.
 
 > [!IMPORTANT]
-> The defualt project template sets the log level for dev builds to `info`, you can change this in your `Cargo.toml`
+> The default project template sets the log level for dev builds to `info`, you can change this in your `Cargo.toml`

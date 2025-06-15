@@ -171,7 +171,7 @@ fn parse_wasm(wasm_content: &[u8]) -> Result<(HashMap<&str, &[u8]>, u64), anyhow
     Ok((sections, code_section_offset))
 }
 
-/// Calcualte the size of encoding a u32
+/// Calculate the size of encoding a u32
 const fn needed_space_for_u32(value: u32) -> usize {
     if value < (1 << 7) {
         1
