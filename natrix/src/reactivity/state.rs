@@ -890,11 +890,13 @@ cfg_if::cfg_if! {
         use std::cell::RefMut;
 
         /// A wrapper future that checks `has_panicked` before resolving.
+        ///
+        /// If you are using `wasm_bindgen_futures` directly you should wrap your futures in this.
         #[pin_project::pin_project]
-        struct PanicCheckFuture<F> {
+        pub struct PanicCheckFuture<F> {
             /// The future to run
             #[pin]
-            inner: F,
+            pub inner: F,
         }
 
         impl<F: Future> Future for PanicCheckFuture<F> {
