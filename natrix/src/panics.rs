@@ -32,7 +32,7 @@ pub fn set_panic_hook() {
         }
 
         let msg = if cfg!(debug_assertions) {
-            format!("Panic occurred, check browser for traceback.\n{panic_message}")
+            format!("Panic occurred, check console for traceback.\n{panic_message}")
         } else {
             format!("Unknown error occurred, please reload tab.\n{panic_message}")
         };
