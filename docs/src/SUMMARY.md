@@ -18,6 +18,7 @@
 - [Css](css.md)
 - [Assets](assets.md)
 - [Reactivity](reactivity.md)
+- [Debugging](debugging.md)
 - [Testing](testing.md)
 - [CLI and Configuration](cli-and-config.md)
 - [Deployment](deployment.md)
