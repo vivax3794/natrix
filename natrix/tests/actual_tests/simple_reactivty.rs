@@ -1,3 +1,4 @@
+use natrix::format_elements;
 use natrix::prelude::*;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
@@ -22,8 +23,13 @@ impl Component for Counter {
     fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)
-            .text("value: ")
-            .child(|ctx: R<Self>| *ctx.value)
+            // .text("value: ")
+            // .child(|ctx: R<Self>| *ctx.value)
+            .children(format_elements!(
+                |ctx: R<Self>| "value: {}-{}",
+                *ctx.value,
+                *ctx.value + 10
+            ))
             .on::<events::Click>(|ctx: E<Self>, _, _| ctx.increment())
     }
 }
@@ -33,7 +39,7 @@ fn renders_initial() {
     crate::mount_test(Counter { value: 0 });
 
     let button = crate::get(BUTTON_ID);
-    assert_eq!(button.text_content(), Some("value: 0".to_owned()));
+    assert_eq!(button.text_content(), Some("value: 0-10".to_owned()));
 }
 
 #[wasm_bindgen_test]
@@ -41,7 +47,7 @@ fn uses_initial_data() {
     crate::mount_test(Counter { value: 123 });
 
     let button = crate::get(BUTTON_ID);
-    assert_eq!(button.text_content(), Some("value: 123".to_owned()));
+    assert_eq!(button.text_content(), Some("value: 123-133".to_owned()));
 }
 
 #[wasm_bindgen_test]
@@ -51,13 +57,13 @@ fn updates_text() {
     let button = crate::get(BUTTON_ID);
 
     button.click();
-    assert_eq!(button.text_content(), Some("value: 1".to_owned()));
+    assert_eq!(button.text_content(), Some("value: 1-11".to_owned()));
 
     button.click();
-    assert_eq!(button.text_content(), Some("value: 2".to_owned()));
+    assert_eq!(button.text_content(), Some("value: 2-12".to_owned()));
 
     button.click();
-    assert_eq!(button.text_content(), Some("value: 3".to_owned()));
+    assert_eq!(button.text_content(), Some("value: 3-13".to_owned()));
 }
 
 #[derive(Component)]

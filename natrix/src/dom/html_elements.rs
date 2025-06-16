@@ -236,6 +236,27 @@ impl<C: Component, T> HtmlElement<C, T> {
 
         self
     }
+
+    /// Add multiple classes
+    #[inline]
+    pub fn classes<Cls: ToClass<C> + 'static>(
+        mut self,
+        class_list: impl IntoIterator<Item = Cls>,
+    ) -> Self {
+        for class in class_list {
+            self = self.class(class);
+        }
+        self
+    }
+
+    /// Add multiple children
+    #[inline]
+    pub fn children<E: Element<C>>(mut self, elements: impl IntoIterator<Item = E>) -> Self {
+        for element in elements {
+            self = self.child(element);
+        }
+        self
+    }
 }
 
 impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {

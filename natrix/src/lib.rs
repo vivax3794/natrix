@@ -76,7 +76,7 @@ pub mod prelude {
 }
 pub use dom::Element;
 pub use dom::list::List;
-pub use natrix_macros::{Component, asset, data};
+pub use natrix_macros::{Component, asset, data, format_elements};
 pub use reactivity::component::{Component, NoMessages, SubComponent, mount};
 pub use reactivity::state::{RenderCtx, State};
 
@@ -126,6 +126,7 @@ pub mod macro_ref {
     #[cfg(feature = "_internal_collect_css")]
     pub use super::css::CssEmit;
     pub use super::css::stylesheet::StyleSheet;
+    pub use super::dom::element::Element;
     pub use super::reactivity::component::ComponentBase;
     pub use super::reactivity::signal::{Signal, SignalMethods, SignalState};
     pub use super::reactivity::state::{ComponentData, E, Guard, State};

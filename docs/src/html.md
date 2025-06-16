@@ -75,6 +75,54 @@ e::div()
 # }
 ```
 
+## `format_elements`
+You can use the [`format_elements`](format_elements) macro to get `format!` like ergonomics for elements.
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+#
+# #[derive(Component)]
+# struct MyComponent {
+#     pub counter: u8,
+#     pub target: u8,
+# }
+#
+# impl Component for MyComponent {
+#     fn render() -> impl Element<Self> {
+e::h1().children(
+    natrix::format_elements!(|ctx: R<Self>| "Counter is {}, just {} clicks left!", *ctx.counter, *ctx.target - *ctx.counter)
+)
+#     }
+# }
+```
+Which expands to effectively:
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+#
+# #[derive(Component)]
+# struct MyComponent {
+#     pub counter: u8,
+#     pub target: u8,
+# }
+#
+# impl Component for MyComponent {
+#     fn render() -> impl Element<Self> {
+e::h1()
+    .text("Counter is ")
+    .child(|ctx: R<Self>| *ctx.counter)
+    .text(", just ")
+    .child(|ctx: R<Self>| *ctx.target - *ctx.counter)
+    .text(" clicks left!")
+#   }
+# }
+```
+
+I.e this is much more performant than `format!` for multiple reasons:
+* You avoid the format machinery overhead.
+* You get fine-grained reactivty for specific parts of the text.
+
+
 ## Attributes
 
 Attributes are set using the [`.attr`](dom::html_elements::HtmlElement::attr) method. This method takes a key and a value, and sets the attribute on the element.

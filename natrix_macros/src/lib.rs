@@ -3,12 +3,25 @@
 extern crate proc_macro;
 
 mod component_impl;
+mod formatting;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::{fs, io};
 
 use quote::{format_ident, quote};
+
+/// Create a array of elements based on the format string.
+/// The start of the macro is a closure argument list, which should generally be `|ctx: R<Self>|`
+/// or similar.
+///
+/// ```ignore
+/// e::div().children(|ctx: R<Self>|, "progress: {}/{}", *ctx.current, *ctx.max)
+/// ```
+#[proc_macro]
+pub fn format_elements(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    formatting::format_elements(input)
+}
 
 /// Derive the `ComponentBase` trait for a struct, required for implementing `Component`
 ///
