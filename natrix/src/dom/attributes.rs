@@ -6,6 +6,7 @@ use wasm_bindgen::intern;
 
 use super::html_elements::DeferredFunc;
 use crate::error_handling::log_or_panic;
+use crate::prelude::Id;
 use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::{
     ReactiveAttribute,
@@ -445,7 +446,7 @@ define_attribute_enum! {
 
 define_attribute_enum! {
     #[derive(Default, Copy)]
-    enum AudioPreload,
+    enum ContentPreload,
     "preload",
     "https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/audio#preload",
     {
@@ -540,7 +541,7 @@ define_attribute_enum! {
 
 define_attribute_enum! {
     #[derive(Default, Copy)]
-    enum IframeLoading,
+    enum Loading,
     "loading",
     "https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/iframe#loading",
     {
@@ -573,3 +574,303 @@ define_attribute_enum! {
 }
 
 impl_to_attribute_for_vec!(SandboxAllow);
+
+define_attribute_enum! {
+    #[derive(Default, Copy)]
+    enum ImageDecoding,
+    "decoding",
+    "https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/img#decoding",
+    {
+        Sync => "sync",
+        Async => "async",
+        #[default]
+        Auto => "auto"
+    }
+}
+
+define_attribute_enum! {
+    #[derive(Default, Copy)]
+    enum FetchPriority,
+    "fetchprioority",
+    "https://developer.mozilla.org/docs/Web/API/HTMLImageElement/fetchPriority",
+    {
+        High => "high",
+        Low => "low",
+        #[default]
+        Auto => "auto"
+    }
+}
+
+define_attribute_enum! {
+    #[derive(Default, Copy)]
+    enum ListNumberingKind,
+    "type",
+    "https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/ol#type",
+    {
+        LowercaseLetters => "a",
+        UppercaseLetters => "A",
+        LowercaseRoman => "i",
+        UppercaseRoman => "I",
+        #[default]
+        Number => "1"
+    }
+}
+
+impl<C: Component> ToAttribute<C> for Vec<Id> {
+    type AttributeKind = Vec<Id>;
+
+    fn calc_attribute(self, _name: &'static str, _node: &web_sys::Element) -> AttributeResult<C> {
+        let result = self
+            .into_iter()
+            .map(|id| id.0)
+            .collect::<Vec<_>>()
+            .join(" ");
+        AttributeResult::SetIt(Some(Cow::Owned(result)))
+    }
+}
+
+/// Define a stringy enum with a `.render` method
+macro_rules! define_stringy_enum {
+    (
+        enum $name:ident,
+        $doc_link:literal,
+        {
+            $(
+                $variant:ident => $value:literal
+            ),*
+        }
+    ) =>{
+        pastey::paste! {
+            #[doc = "<" $doc_link ">"]
+            #[derive(Clone, PartialEq, Eq, Hash, Copy)]
+            pub enum $name {
+                $(
+                    #[doc = "`" $value "`"]
+                    $variant,
+                )*
+            }
+
+            impl $name {
+                #[inline]
+                fn render(self) -> &'static str {
+                    match self {
+                        $(
+                            Self::$variant => $value,
+                        )*
+                    }
+                }
+            }
+        }
+    };
+}
+
+define_stringy_enum! {
+    enum GroupingIdentifier,
+    "https://developer.mozilla.org/docs/Web/HTML/Reference/Attributes/autocomplete#grouping_identifier",
+    {
+        Shipping => "shipping",
+        Billing => "billing"
+    }
+}
+
+define_stringy_enum! {
+    enum RecipientType,
+    "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/autocomplete#detail_tokens",
+    {
+        Home => "home",
+        Work => "work",
+        Mobile => "mobile",
+        Fax => "fax",
+        Pager => "page"
+    }
+}
+
+define_stringy_enum! {
+    enum ContactKind,
+    "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/autocomplete#detail_tokens",
+    {
+        Telephone => "tel",
+        TelephoneCountryCode => "tel-country-code",
+        TelephoneNation => "tel-nation",
+        TelephoneAreaCode => "tel-area-code",
+        TelephoneLocal => "tel-local",
+        TelephoneExtension => "tel-extension",
+        Email => "email",
+        InstantMessaging => "impp"
+    }
+}
+
+define_stringy_enum! {
+    enum AutocompleteKind,
+    "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/autocomplete#detail_tokens",
+    {
+        Name => "name",
+        HonorificPrefix => "honorific-prefix",
+        GivenName => "given-name",
+        AdditionalName => "additional-name",
+        FamilyName => "family-name",
+        HonorificSuffix => "honorific-suffix",
+        Nickname => "nickname",
+        Username => "username",
+        NewPassword => "new-password",
+        CurrentPassword => "current-password",
+        OneTimeCode => "one-time-code",
+        OrganizationTitle => "organization-title",
+        Organization => "organization",
+        StreetAddress => "street-address",
+        AddressLine1 => "address-line1",
+        AddressLine2 => "address-line2",
+        AddressLine3 => "address-line3",
+        AddressLevel4 => "address-level4",
+        AddressLevel3 => "address-level3",
+        AddressLevel2 => "address-level2",
+        AddressLevel1 => "address-level1",
+        Country => "country",
+        CountryName => "country-name",
+        PostalCode => "postal-code",
+        PaymentName => "cc-name",
+        PaymentGivenName => "cc-given-name",
+        PaymentAdditionalName => "cc-additional-name",
+        PaymentFamilyName => "cc-family-name",
+        PaymentNumber => "cc-number",
+        PaymentExpiration => "cc-exp",
+        PaymentExpirationMonth => "cc-exp-month",
+        PaymentExpirationYear => "cc-exp-year",
+        PaymentSecurityCode => "cc-csc",
+        PaymentKind => "cc-type",
+        TransactionCurrency => "transaction-currency",
+        TransactionAmount => "transaction-amount",
+        Language => "language",
+        Birthday => "bday",
+        BirtdayDay => "bday-day",
+        BirthdayMonth => "bday-month",
+        BirthdayYear => "bday-year",
+        Gender => "sex",
+        Url => "url",
+        Photo => "photo"
+    }
+}
+
+/// <https://developer.mozilla.org/docs/Web/HTML/Reference/Attributes/autocomplete#token_list_tokens>
+pub enum DetailTokenPart {
+    /// A contact field, like `home email`
+    Contact(RecipientType, ContactKind),
+    /// a data field, like `new-password` or `name`
+    Data(AutocompleteKind),
+}
+
+/// <https://developer.mozilla.org/docs/Web/HTML/Reference/Attributes/autocomplete#token_list_tokens>
+pub enum AutoComplete {
+    /// Enable autocomplete
+    On,
+    /// Disable autocomplete
+    Off,
+    /// A specific kind of autocomplete, such as `username`
+    SpecificKind {
+        /// Name of custom group (`section-...`)
+        group_name: Option<Box<str>>,
+        /// Optional grouping into billing or shipping
+        grouping: Option<GroupingIdentifier>,
+        /// Specific data
+        detail: Option<DetailTokenPart>,
+        /// <https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/autocomplete#webauthn>
+        web_auth: bool,
+    },
+}
+
+impl<C: Component> ToAttribute<C> for AutoComplete {
+    type AttributeKind = AutoComplete;
+
+    #[inline]
+    fn calc_attribute(self, _name: &'static str, _node: &web_sys::Element) -> AttributeResult<C> {
+        let result = match self {
+            AutoComplete::On => Cow::Borrowed(intern("on")),
+            AutoComplete::Off => Cow::Borrowed(intern("off")),
+            AutoComplete::SpecificKind {
+                group_name,
+                grouping,
+                detail,
+                web_auth,
+            } => {
+                let mut result = String::new();
+                if let Some(group_name) = group_name {
+                    result.push_str("section-");
+                    result.push_str(&group_name);
+                    result.push(' ');
+                }
+                if let Some(grouping) = grouping {
+                    result.push_str(grouping.render());
+                    result.push(' ');
+                }
+                if let Some(detail) = detail {
+                    match detail {
+                        DetailTokenPart::Contact(recpient, kind) => {
+                            result.push_str(recpient.render());
+                            result.push(' ');
+                            result.push_str(kind.render());
+                        }
+                        DetailTokenPart::Data(kind) => {
+                            result.push_str(kind.render());
+                        }
+                    }
+                    result.push(' ');
+                }
+
+                if web_auth {
+                    result.push_str("webauthn");
+                }
+
+                Cow::Owned(result)
+            }
+        };
+
+        AttributeResult::SetIt(Some(result))
+    }
+}
+
+impl<C: Component> ToAttribute<C> for AutocompleteKind {
+    type AttributeKind = AutoComplete;
+
+    #[inline]
+    fn calc_attribute(self, _name: &'static str, _node: &web_sys::Element) -> AttributeResult<C> {
+        AttributeResult::SetIt(Some(Cow::Borrowed(self.render())))
+    }
+}
+
+define_attribute_enum! {
+    #[derive(Default, Copy)]
+    enum Wrap,
+    "wrap",
+    "https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/textarea#wrap",
+    {
+        Hard => "hard",
+        #[default]
+        Soft => "soft"
+    }
+}
+
+define_attribute_enum! {
+    #[derive(Copy)]
+    enum TableHeadingScope,
+    "scope",
+    "https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/th#scope",
+    {
+        Row => "row",
+        Column => "col",
+        RowGroup => "rowgroup",
+        ColumnGroup => "colgroup"
+    }
+}
+
+define_attribute_enum! {
+    #[derive(Copy)]
+    enum TrackKind,
+    "kind",
+    "https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/track#kind",
+    {
+        Subtitles => "subtitles",
+        Captions => "captions",
+        Chapters => "chapters",
+        Metadata => "metadata"
+    }
+}

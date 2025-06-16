@@ -379,21 +379,22 @@ aria_attrs! {
 
 attr_helpers!(a =>
     download(bool, "download"), href(String, "href"), href_lang(String, "hreflang"),
-    ping(String, "ping"), referrer_policy(attributes::ReferrerPolicy, "referrer_policy"), rel(attributes::Rel, "rel"),
+    ping(String, "ping"), referrer_policy(attributes::ReferrerPolicy, "referrerpolicy"), rel(attributes::Rel, "rel"),
     target(attributes::Target, "target")
 );
-
-/// `<a rel="noopener noreferrer" referrerpolicy="no-referrer">`
-pub fn a_secure<C: Component>() -> HtmlElement<C, TagA> {
-    a().referrer_policy(attributes::ReferrerPolicy::NoReferrer)
-        .rel(vec![attributes::Rel::NoOpener, attributes::Rel::NoReferrer])
-}
 
 impl<C: Component> HtmlElement<C, TagA> {
     /// add `target="_blank"`
     #[inline]
     pub fn open_in_new_tab(self) -> Self {
         self.target(attributes::Target::NewTab)
+    }
+
+    /// add `rel="noopener noreferrer" referrerpolicy="no-referrer"`
+    #[inline]
+    pub fn secure(self) -> Self {
+        self.referrer_policy(attributes::ReferrerPolicy::NoReferrer)
+            .rel(vec![attributes::Rel::NoOpener, attributes::Rel::NoReferrer])
     }
 }
 
@@ -405,8 +406,8 @@ attr_helpers!(area =>
 );
 attr_helpers!(audio =>
     auto_play(bool, "autoplay"), controls(bool, "controls"), controls_list(attributes::ControlsList, "controlslist"),
-    crossorigin(attributes::CrossOrigin, "crossorigin"), disable_remote_playback(bool, "disableremoteplayback"),
-    loop_audio(bool, "loop"), muted(bool, "muted"), preload(attributes::AudioPreload, "preload"), src(String, "src")
+    cross_origin(attributes::CrossOrigin, "crossorigin"), disable_remote_playback(bool, "disableremoteplayback"),
+    loop_audio(bool, "loop"), muted(bool, "muted"), preload(attributes::ContentPreload, "preload"), src(String, "src")
 );
 attr_helpers!(blockquote => cite(String, "cite"));
 attr_helpers!(button =>
@@ -435,21 +436,99 @@ attr_helpers!(form =>
     no_validate(bool, "novalidate"), target(attributes::Target, "target")
 );
 
-// TODO: allow attribute
+// TODO: allow
 attr_helpers!(iframe =>
-    height(attributes::Integer, "height"), loading(attributes::IframeLoading, "loading"),
+    height(attributes::Integer, "height"), loading(attributes::Loading, "loading"),
     name(String, "name"), referrer_policy(attributes::ReferrerPolicy, "referrerpolicy"),
     sandbox(attributes::SandboxAllow, "sandbox"), src(String, "src"), srcdoc(String, "srcdoc"), width(attributes::Integer, "width")
 );
 
-/// `<iframe referrerpolicy="no-referrer" sandbox="" credentialless>`
-pub fn iframe_secure<C: Component>() -> HtmlElement<C, TagIframe> {
-    iframe()
-        .referrer_policy(attributes::ReferrerPolicy::NoReferrer)
-        .sandbox(Vec::<attributes::SandboxAllow>::new())
-        // This is a experimental attribute, so no helper
-        .attr("credentialless", true)
+impl<C: Component> HtmlElement<C, TagIframe> {
+    /// add `referrerpolicy="no-referrer" sandbox="" credentialless`
+    #[inline]
+    pub fn secure(self) -> Self {
+        self.referrer_policy(attributes::ReferrerPolicy::NoReferrer)
+            .sandbox(Vec::<attributes::SandboxAllow>::new())
+            // This is a experimental attribute, so no helper
+            .attr("credentialless", true)
+    }
 }
 
-// TODO: smaking tests pass
-attr_helpers!(img => src(String, "src"));
+// TODO: sizes, srcset
+attr_helpers!(img =>
+    alt(String, "alt"), cross_origin(attributes::CrossOrigin, "crossorigin"), decoding(attributes::ImageDecoding, "decoding"),
+    fetch_priority(attributes::FetchPriority, "fetchpriority"), height(attributes::Integer, "height"), is_map(bool, "ismap"),
+    loading(attributes::Loading, "loading"), referrer_policy(attributes::ReferrerPolicy, "referrerpolicy"),
+    src(String, "src"), width(attributes::Integer, "width"), use_map(String, "usemap")
+);
+
+// TODO: All of input
+
+attr_helpers!(ins => cite(String, "cite")); // TODO: datetime
+attr_helpers!(label => is_for(Id, "for"));
+attr_helpers!(li => value(attributes::Integer, "value"));
+attr_helpers!(map => name(String, "name")); // TODO: name and id need to be identical
+
+attr_helpers!(meter =>
+    value(attributes::Float, "value"),
+    min(attributes::Float, "min"), max(attributes::Float, "max"),
+    high(attributes::Float, "high"), low(attributes::Float, "low"),
+    optimum(attributes::Float, "optimum"),
+    form(Id, "form")
+);
+
+attr_helpers!(object =>
+    data(String, "data"), form(Id, "form"), height(attributes::Integer, "height"),
+    name(String, "name"), object_type(String, "type"), width(attributes::Integer, "width")
+);
+
+attr_helpers!(ol =>
+    reversed(bool, "reversed"), start(attributes::Integer, "start"), numeric_type(attributes::ListNumberingKind, "type")
+);
+
+attr_helpers!(optgroup => disabled(bool, "disabled"), label(String, "label"));
+attr_helpers!(option =>
+    disabled(bool, "disabled"), label(String, "label"),
+    selected(bool, "selected"), value(String, "value")
+);
+attr_helpers!(output => is_for(Vec<Id>, "for"), form(Id, "form"), name(String, "name"));
+attr_helpers!(progress => max(attributes::Float, "max"), values(attributes::Float, "value"));
+attr_helpers!(q => cite(String, "cite"));
+attr_helpers!(select =>
+    auto_complete(attributes::AutoComplete, "autocomplete"), auto_focus(bool, "autofocus"),
+    disabled(bool, "disabled"), form(Id, "form"), multiple(bool, "multiple"),
+    name(String, "name"), required(bool, "required"), size(attributes::Integer, "size")
+);
+
+// TODO: srcset, sizes, media
+attr_helpers!(source =>
+    source_type(String, "type"), src(String, "src"),
+    height(attributes::Integer, "height"), width(attributes::Integer, "width")
+);
+attr_helpers!(textarea =>
+    auto_capitalize(attributes::AutoCapitalize, "autocapitalize"), auto_complete(attributes::AutoComplete, "autocomplete"),
+    auto_correct(attributes::OnOff, "autocorrect"), auto_focus(bool, "autofocus"), columns(attributes::Integer, "cols"),
+    direction_name(String, "dirname"), disabled(bool, "disabled"), form(Id, "form"), max_length(attributes::Integer, "maxlength"),
+    min_length(attributes::Integer, "min_length"), name(String, "name"), placeholder(String, "placeholder"),
+    read_only(bool, "readonly"), required(bool, "required"), rows(attributes::Integer, "rows"),
+    wrap(attributes::Wrap, "wrap")
+);
+
+attr_helpers!(th =>
+    abbreviated(String, "abbr"), column_span(attributes::Integer, "colspan"), headers(Vec<Id>, "headers"),
+    row_span(attributes::Integer, "row_span"), scope(attributes::TableHeadingScope, "scope")
+);
+
+// todo: <time>
+attr_helpers!(track =>
+    default(bool, "default"), kind(attributes::TrackKind, "kind"),
+    label(String, "label"), src(String, "src"), src_language(String, "srclang")
+);
+
+attr_helpers!(audio =>
+    auto_play(bool, "autoplay"), controls(bool, "controls"), controls_list(attributes::ControlsList, "controlslist"),
+    cross_origin(attributes::CrossOrigin, "crossorigin"), disable_picture_in_picture(bool, "disablepictureinpicture"), disable_remote_playback(bool, "disableremoteplayback"),
+    height(attributes::Integer, "height"), loop_video(bool, "loop"), muted(bool, "muted"),
+    plays_inline(bool, "playsinline"), poster(String, "poster"),
+    preload(attributes::ContentPreload, "preload"), src(String, "src"), width(attributes::Integer, "width")
+);
