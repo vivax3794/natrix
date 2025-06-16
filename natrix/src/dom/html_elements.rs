@@ -343,7 +343,7 @@ details, dialog, summary
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes
 global_attrs! {
-    access_key(char, "accesskey"), auto_focus(bool, "auto_focus"), content_editable(attributes::ContentEditable, "content_editable"),
+    access_key(char, "accesskey"), auto_focus(bool, "autofocus"), content_editable(attributes::ContentEditable, "contenteditable"),
     dir(attributes::Direction, "dir"), draggable(attributes::TrueFalse, "draggable"), enter_key_hint(attributes::EnterkeyHint, "enterkeyhint"),
     hidden(bool, "hidden"), id(Id, "id"), inert(bool, "inert"), input_mode(attributes::InputMode, "inputmode"), lang(String, "lang"),
     popover(attributes::PopOver, "popover"), spellcheck(bool, "spellcheck"), tab_index(attributes::Integer, "tabindex"),
@@ -495,7 +495,7 @@ attr_helpers!(output => is_for(Vec<Id>, "for"), form(Id, "form"), name(String, "
 attr_helpers!(progress => max(attributes::Float, "max"), values(attributes::Float, "value"));
 attr_helpers!(q => cite(String, "cite"));
 attr_helpers!(select =>
-    auto_complete(attributes::AutoComplete, "autocomplete"), auto_focus(bool, "autofocus"),
+    auto_complete(attributes::AutoComplete, "autocomplete"),
     disabled(bool, "disabled"), form(Id, "form"), multiple(bool, "multiple"),
     name(String, "name"), required(bool, "required"), size(attributes::Integer, "size")
 );
@@ -506,8 +506,8 @@ attr_helpers!(source =>
     height(attributes::Integer, "height"), width(attributes::Integer, "width")
 );
 attr_helpers!(textarea =>
-    auto_capitalize(attributes::AutoCapitalize, "autocapitalize"), auto_complete(attributes::AutoComplete, "autocomplete"),
-    auto_correct(attributes::OnOff, "autocorrect"), auto_focus(bool, "autofocus"), columns(attributes::Integer, "cols"),
+    auto_complete(attributes::AutoComplete, "autocomplete"),
+    auto_correct(attributes::OnOff, "autocorrect"), columns(attributes::Integer, "cols"),
     direction_name(String, "dirname"), disabled(bool, "disabled"), form(Id, "form"), max_length(attributes::Integer, "maxlength"),
     min_length(attributes::Integer, "min_length"), name(String, "name"), placeholder(String, "placeholder"),
     read_only(bool, "readonly"), required(bool, "required"), rows(attributes::Integer, "rows"),
@@ -525,7 +525,7 @@ attr_helpers!(track =>
     label(String, "label"), src(String, "src"), src_language(String, "srclang")
 );
 
-attr_helpers!(audio =>
+attr_helpers!(video =>
     auto_play(bool, "autoplay"), controls(bool, "controls"), controls_list(attributes::ControlsList, "controlslist"),
     cross_origin(attributes::CrossOrigin, "crossorigin"), disable_picture_in_picture(bool, "disablepictureinpicture"), disable_remote_playback(bool, "disableremoteplayback"),
     height(attributes::Integer, "height"), loop_video(bool, "loop"), muted(bool, "muted"),
