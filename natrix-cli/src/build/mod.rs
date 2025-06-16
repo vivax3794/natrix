@@ -115,7 +115,10 @@ pub(crate) fn generate_html(
         <meta name="viewport" content="width=device-width, initial-scale=1">
     </head>
     <body>
-        <div id="{}">This website requires Javascript and Wasm support.</div>
+        <noscript>
+            <h1 style="color: red">This website requires Javascript and Wasm support.</h1>
+        </noscript>
+        <div id="{}" style="color: orange">Currently loading</div>
         <script type="module">
             import init from "{base_path}/{js_file}";
             init({{module_or_path:"{base_path}/{wasm_file}"}});
