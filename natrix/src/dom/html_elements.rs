@@ -14,6 +14,8 @@
 //! # ;
 //! ```
 
+#[cfg(debug_assertions)]
+use std::collections::HashSet;
 use std::marker::PhantomData;
 
 use smallvec::SmallVec;
@@ -38,6 +40,7 @@ pub(crate) type DeferredFunc<C> = Box<dyn FnOnce(&mut State<C>, &mut RenderingSt
 
 /// A Generic html node with a given name.
 #[must_use = "Web elements are useless if not rendered"]
+#[non_exhaustive]
 pub struct HtmlElement<C: Component, T = ()> {
     /// The name of the tag
     pub element: web_sys::Element,
@@ -45,6 +48,12 @@ pub struct HtmlElement<C: Component, T = ()> {
     pub(crate) deferred: SmallVec<[DeferredFunc<C>; 10]>,
     /// Phantom data
     _phantom: PhantomData<T>,
+    /// Data for error checkign in dev
+    #[cfg(debug_assertions)]
+    seen_attributes: HashSet<&'static str>,
+    /// List of set of reactive attributes.
+    #[cfg(debug_assertions)]
+    reactive_attributes: HashSet<&'static str>,
 }
 
 impl<C: Component, T> HtmlElement<C, T> {
@@ -63,6 +72,10 @@ impl<C: Component, T> HtmlElement<C, T> {
             element: node,
             deferred: SmallVec::new(),
             _phantom: PhantomData,
+            #[cfg(debug_assertions)]
+            seen_attributes: HashSet::new(),
+            #[cfg(debug_assertions)]
+            reactive_attributes: HashSet::new(),
         }
     }
 
@@ -71,6 +84,10 @@ impl<C: Component, T> HtmlElement<C, T> {
         HtmlElement {
             element: self.element,
             deferred: self.deferred,
+            #[cfg(debug_assertions)]
+            seen_attributes: self.seen_attributes,
+            #[cfg(debug_assertions)]
+            reactive_attributes: self.reactive_attributes,
             _phantom: PhantomData,
         }
     }
@@ -200,6 +217,18 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// Add a attribute to the node.
     #[inline]
     pub fn attr(mut self, key: &'static str, value: impl ToAttribute<C>) -> Self {
+        #[cfg(debug_assertions)]
+        {
+            if self.seen_attributes.contains(key) {
+                log::warn!(
+                    "Duplicate `{key}` attribute set on `<{}>` in `{}`",
+                    self.element.tag_name(),
+                    std::any::type_name::<C>()
+                );
+            }
+            self.seen_attributes.insert(key);
+        }
+
         match value.calc_attribute(intern(key), &self.element) {
             AttributeResult::SetIt(res) => {
                 if let Some(res) = res {
@@ -210,6 +239,18 @@ impl<C: Component, T> HtmlElement<C, T> {
                 }
             }
             AttributeResult::IsDynamic(dynamic) => {
+                #[cfg(debug_assertions)]
+                {
+                    if self.reactive_attributes.contains(key) {
+                        log_or_panic!(
+                            "Multiple reactive closures set on attributes `{key}`, this would cause un-deterministic state. (in component {} on a `<{}>` tag)",
+                            std::any::type_name::<C>(),
+                            self.element.tag_name()
+                        );
+                    }
+                    self.reactive_attributes.insert(key);
+                }
+
                 self.deferred.push(Box::new(dynamic));
             }
         }
