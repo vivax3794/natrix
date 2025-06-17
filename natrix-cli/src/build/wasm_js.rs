@@ -8,7 +8,7 @@ use std::{fs, process};
 use super::{BINDGEN_OUTPUT_NAME, MACRO_OUTPUT_DIR};
 use crate::options::BuildProfile;
 use crate::prelude::*;
-use crate::project_gen::FEATURE_RUNTIME_CSS;
+use crate::project_gen::FEATURE_NO_SGG;
 use crate::{options, utils};
 
 /// A renaming map for the wasm-bindgen glue code.
@@ -172,7 +172,7 @@ pub(crate) fn build_wasm(config: &options::BuildConfig) -> Result<PathBuf> {
         command.env("RUSTFLAGS", rustc_flags);
     }
     if !config.ssg {
-        command.args(["--features", FEATURE_RUNTIME_CSS]);
+        command.args(["--features", FEATURE_NO_SGG]);
     }
 
     utils::run_with_spinner(command, utils::create_spinner("⚙️ wasm")?).context("Running cargo")?;

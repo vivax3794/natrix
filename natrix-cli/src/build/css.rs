@@ -9,7 +9,7 @@ use lightningcss::visitor::Visit;
 
 use super::{CSS_OUTPUT_NAME, options, utils, wasm_js};
 use crate::prelude::*;
-use crate::project_gen::FEATURE_EXTRACT_CSS;
+use crate::project_gen::FEATURE_BUNDLE;
 
 /// Collect css from the stdout of a custom bundle build
 pub(crate) fn collect_css(config: &options::BuildConfig, wasm_file: &Path) -> Result<PathBuf> {
@@ -32,7 +32,7 @@ fn extract_css() -> Result<String> {
     let mut command = Command::new("cargo");
     command
         .arg("run")
-        .args(["--features", FEATURE_EXTRACT_CSS])
+        .args(["--features", FEATURE_BUNDLE])
         .args(["--color", "always"]);
 
     utils::run_with_spinner(command, spinner)

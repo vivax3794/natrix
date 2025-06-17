@@ -59,8 +59,8 @@ async_utils = ["async", "dep:futures-channel"]
 test_utils = []
 
 _internal_collect_css = ["dep:inventory"]
-_internal_runtime_css = ["_internal_collect_css"]
-_internal_extract_css = ["_internal_collect_css", "dep:simple_logger"]
+_internal_no_ssg = ["_internal_collect_css"]
+_internal_bundle = ["_internal_collect_css", "dep:simple_logger"]
 
 [dev-dependencies]
 wasm-bindgen-test ="0.3.50"

@@ -20,5 +20,6 @@ tokio = { version = "1.44.1", default-features = false, features = ["rt", "macro
 [features]
 build_test = []
 
-__natrix_internal_extract_css = ["natrix/_internal_extract_css"]
-__natrix_internal_runtime_css = ["natrix/_internal_runtime_css"]
+__natrix_internal_bundle = ["natrix/_internal_bundle"]
+__natrix_internal_no_ssg = ["natrix/_internal_no_ssg"]
+

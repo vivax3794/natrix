@@ -22,7 +22,7 @@ pub struct CssEmit(pub fn() -> String);
 #[cfg(feature = "_internal_collect_css")]
 inventory::collect!(CssEmit);
 
-#[cfg(feature = "_internal_runtime_css")]
+#[cfg(feature = "_internal_no_ssg")]
 #[expect(
     unsafe_code,
     reason = "This is required for inventory to work, it is not included in production builds"
@@ -87,7 +87,7 @@ pub mod prelude {
 pub(crate) fn css_collect() {
     log::info!("Collecting css");
 
-    #[cfg(feature = "_internal_runtime_css")]
+    #[cfg(feature = "_internal_no_ssg")]
     #[expect(
         unsafe_code,
         reason = "This is required for inventory to work on wasm, it is not included in production builds"
@@ -103,15 +103,15 @@ pub(crate) fn css_collect() {
         result.push_str(&(emit.0)());
     }
 
-    #[cfg(feature = "_internal_runtime_css")]
+    #[cfg(feature = "_internal_no_ssg")]
     css_runtime(&result);
 
-    #[cfg(feature = "_internal_extract_css")]
+    #[cfg(feature = "_internal_bundle")]
     css_emit(&result);
 }
 
 /// Inject the css into the dom at runtime
-#[cfg(feature = "_internal_runtime_css")]
+#[cfg(feature = "_internal_no_ssg")]
 #[expect(
     clippy::expect_used,
     reason = "This happens early, and is meant for dev mode only"
@@ -135,7 +135,7 @@ fn css_runtime(css_string: &str) {
 /// # Design
 /// Why not just `println!` in `do_css_collect`? because we might refactor this to use something a
 /// bit more structured later (json, files, whatever)
-#[cfg(feature = "_internal_extract_css")]
+#[cfg(feature = "_internal_bundle")]
 fn css_emit(css_string: &str) {
     log::debug!("Emitting css to bundler");
     println!("{css_string}");

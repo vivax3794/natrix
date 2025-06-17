@@ -322,7 +322,7 @@ pub fn mount<C: Component>(component: C) {
             crate::error_handling::log_or_panic!("Failed to create logger: {err}");
         }
     }
-    #[cfg(feature = "_internal_extract_css")]
+    #[cfg(feature = "_internal_bundle")]
     if let Err(err) = simple_logger::init_with_level(log::Level::Trace) {
         eprintln!("Failed to setup logger {err}");
     }
@@ -330,8 +330,8 @@ pub fn mount<C: Component>(component: C) {
     #[cfg(feature = "_internal_collect_css")]
     crate::css::css_collect();
 
-    if cfg!(feature = "_internal_extract_css") {
-        log::info!("Css extract mode, aboring mount.");
+    if cfg!(feature = "_internal_bundle") {
+        log::info!("bundle mode, aboring mount.");
         return;
     }
 
