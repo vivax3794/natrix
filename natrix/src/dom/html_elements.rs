@@ -45,7 +45,7 @@ pub struct HtmlElement<C: Component, T = ()> {
     /// The name of the tag
     pub element: web_sys::Element,
     /// The deferred actions
-    pub(crate) deferred: SmallVec<[DeferredFunc<C>; 10]>,
+    pub(crate) deferred: SmallVec<[DeferredFunc<C>; 2]>,
     /// Phantom data
     _phantom: PhantomData<T>,
     /// Data for error checkign in dev
