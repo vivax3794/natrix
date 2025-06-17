@@ -8,8 +8,39 @@ use crate::dom::element::{ElementRenderResult, MaybeStaticElement, generate_fall
 use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::get_document;
 use crate::reactivity::component::Component;
-use crate::reactivity::signal::{ReactiveHook, RenderingState, UpdateResult};
 use crate::reactivity::state::{HookKey, KeepAlive, RenderCtx, State};
+
+/// State passed to rendering callbacks
+pub(crate) struct RenderingState<'s> {
+    /// Push objects to this array to keep them alive as long as the parent context is valid.
+    pub(crate) keep_alive: &'s mut Vec<KeepAlive>,
+    /// The hooks that are a child of this
+    pub(crate) hooks: &'s mut Vec<HookKey>,
+    /// The parent render context, can be used to register it as a dependency of yourself
+    pub(crate) parent_dep: HookKey,
+}
+
+/// All reactive hooks will implement this trait to allow them to be stored as `dyn` objects.
+pub(crate) trait ReactiveHook<C: Component> {
+    /// Recalculate the hook and apply its update.
+    ///
+    /// Hooks should recall `ctx.reg_dep` with the you parameter to re-register any potential
+    /// dependencies as the update method uses `.drain(..)` on dependencies (this is also to ensure
+    /// reactive state that is only accessed in some conditions is recorded).
+    fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) -> UpdateResult;
+    /// Return the list of hooks that should be dropped
+    fn drop_us(self: Box<Self>) -> Vec<HookKey>;
+}
+
+/// The result of update
+pub(crate) enum UpdateResult {
+    /// Do nothing extra
+    Nothing,
+    /// Drop the given hooks
+    DropHooks(Vec<HookKey>),
+    /// Run this hook after this one
+    RunHook(HookKey),
+}
 
 /// A noop hook used to fill the `Rc<RefCell<...>>` while the initial render pass runs so that that
 /// a real hook can be swapped in once initialized
@@ -62,8 +93,8 @@ impl<C: Component> ReactiveNode<C> {
         element.render(ctx, &mut state)
     }
 
-    /// Create a new `ReactiveNode` registering the initial dependencies and returning both the `Rc`
-    /// reference to it and the initial node (Which should be inserted in the dom)
+    /// Create a new `ReactiveNode` registering the initial dependencies and returning both the
+    /// `HookKey` for it and the initial node (Which should be inserted in the dom)
     pub(crate) fn create_initial(
         callback: Box<dyn Fn(&mut RenderCtx<C>) -> MaybeStaticElement<C>>,
         ctx: &mut State<C>,
@@ -203,7 +234,7 @@ impl<C: Component, K: ReactiveValue> ReactiveHook<C> for SimpleReactive<C, K> {
 
 impl<C: Component, K: ReactiveValue + 'static> SimpleReactive<C, K> {
     /// Creates a new simple reactive hook, applying the initial transformation.
-    /// Returns a Rc of the hook
+    /// Returns a hookkey of the hook
     pub(crate) fn init_new(
         callback: Box<dyn Fn(&mut RenderCtx<C>, &web_sys::Element) -> SimpleReactiveResult<C, K>>,
         node: web_sys::Element,

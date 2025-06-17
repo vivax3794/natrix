@@ -3,18 +3,7 @@
 use std::cell::Cell;
 use std::ops::{Deref, DerefMut};
 
-use crate::reactivity::component::Component;
-use crate::reactivity::state::{HookKey, KeepAlive, State};
-
-/// State passed to rendering callbacks
-pub(crate) struct RenderingState<'s> {
-    /// Push objects to this array to keep them alive as long as the parent context is valid.
-    pub(crate) keep_alive: &'s mut Vec<KeepAlive>,
-    /// The hooks that are a child of this
-    pub(crate) hooks: &'s mut Vec<HookKey>,
-    /// The parent render context, can be used to register it as a dependency of yourself
-    pub(crate) parent_dep: HookKey,
-}
+use crate::reactivity::state::HookKey;
 
 /// A signal tracks reads and writes to a value, as well as dependencies.
 pub struct Signal<T> {
@@ -60,8 +49,6 @@ impl<T> Signal<T> {
     }
 
     /// Pop this signal's state and clear the read and written flags.
-    ///
-    /// This is `pub` only for use in macro generated `ComponentData` implementations.
     #[doc(hidden)]
     pub fn pop_state(&mut self) -> SignalState {
         let result = SignalState {
@@ -73,8 +60,6 @@ impl<T> Signal<T> {
     }
 
     /// Set this signal's state..
-    ///
-    /// This is `pub` only for use in macro generated `ComponentData` implementations.
     #[doc(hidden)]
     pub fn set_state(&mut self, state: SignalState) {
         self.written = state.written;
@@ -90,17 +75,20 @@ impl<T> Signal<T> {
 ///
 /// Performance: This approach leads to cleaner-- less macro heavy --code, but does have a
 /// performance hit via vtable and vector allocation overhead.
+#[doc(hidden)]
 pub trait SignalMethods {
     /// Clear the `read` and `written` flags.
     fn clear(&mut self);
     /// Adds the given dependency to the hashset if the `read` flag is set.
     fn register_dep(&mut self, dep: HookKey);
-    /// Return a mutable reference to the dependencies to facilitate efficient cleanup and
-    /// deduplication in the `State struct`
+    /// Clear out the hooks and return a iterator over them.
     ///
     /// We are doing the cleaning in the `State` struct because it lets us deduplicate the changed
     /// hooks in `.update` without looping over the vec twice.
-    fn deps(&mut self) -> std::vec::Drain<'_, HookKey>;
+    ///
+    /// (This is a concrete type instead of `impl Iterator...` because this trait needs to be
+    /// object safe.)
+    fn drain_dependencies(&mut self) -> std::vec::Drain<'_, HookKey>;
     /// Return the value of the `written` field
     fn changed(&self) -> bool;
 }
@@ -113,10 +101,6 @@ impl<T> SignalMethods for Signal<T> {
 
     fn register_dep(&mut self, dep: HookKey) {
         if self.read.get() {
-            if cfg!(debug_assertions) {
-                // log_or_panic_assert!(!self.deps.contains(&dep), "Duplicate hook in signal");
-            }
-
             self.deps.push(dep);
         }
     }
@@ -125,7 +109,7 @@ impl<T> SignalMethods for Signal<T> {
         self.written
     }
 
-    fn deps(&mut self) -> std::vec::Drain<'_, HookKey> {
+    fn drain_dependencies(&mut self) -> std::vec::Drain<'_, HookKey> {
         self.deps.drain(..)
     }
 }
@@ -145,28 +129,6 @@ impl<T> DerefMut for Signal<T> {
         self.written = true;
         &mut self.data
     }
-}
-
-/// All reactive hooks will implement this trait to allow them to be stored as `dyn` objects.
-pub(crate) trait ReactiveHook<C: Component> {
-    /// Recalculate the hook and apply its update.
-    ///
-    /// Hooks should recall `ctx.reg_dep` with the you parameter to re-register any potential
-    /// dependencies as the update method uses `.drain(..)` on dependencies (this is also to ensure
-    /// reactive state that is only accessed in some conditions is recorded).
-    fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) -> UpdateResult;
-    /// Return the list of hooks that should be dropped
-    fn drop_us(self: Box<Self>) -> Vec<HookKey>;
-}
-
-/// The result of pre-update
-pub(crate) enum UpdateResult {
-    /// Do nothing extra
-    Nothing,
-    /// Drop the given hooks
-    DropHooks(Vec<HookKey>),
-    /// Run this hook after this one
-    RunHook(HookKey),
 }
 
 #[cfg(test)]

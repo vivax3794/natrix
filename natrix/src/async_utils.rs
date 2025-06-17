@@ -208,9 +208,7 @@ mod tests {
                 let _inner = DropGuard::new(|| {
                     counter.set(counter.get() + 10);
                 });
-                // inner guard drops here (inside outer callback)
             });
-            // outer drops here
         }
 
         assert_eq!(counter.get(), 11); // 1 + 10

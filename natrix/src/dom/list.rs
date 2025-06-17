@@ -5,8 +5,7 @@ use std::cmp::Ordering;
 use crate::dom::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
 use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::reactivity::component::Component;
-use crate::reactivity::render_callbacks::DummyHook;
-use crate::reactivity::signal::{ReactiveHook, RenderingState, UpdateResult};
+use crate::reactivity::render_callbacks::{DummyHook, ReactiveHook, RenderingState, UpdateResult};
 use crate::reactivity::state::{HookKey, KeepAlive, R as Ra, RenderCtx, State};
 
 /// List lets you efficiently render a list of items

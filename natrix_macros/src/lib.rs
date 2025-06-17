@@ -78,7 +78,7 @@ static FIRST_USE_IN_CRATE: AtomicBool = AtomicBool::new(true);
 /// Counter to generate unique file names
 static FILE_COUNTER: AtomicU32 = AtomicU32::new(0);
 
-/// Emit the css to the target directory
+/// Emit a file to the target directory
 fn emit_file(
     content: impl AsRef<[u8]>,
     extension: &str,
@@ -119,7 +119,7 @@ fn emit_file(
 }
 
 /// Inform the bundling system to include the given asset
-/// Will return the url needed to fetch said asset at runtime.
+/// Will return the url needed to fetch said asset at runtime (including the past path if set).
 ///
 /// ```ignore
 /// e::img()

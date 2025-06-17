@@ -10,7 +10,7 @@ use crate::prelude::*;
 /// Describes the translation from asset paths to wanted url
 #[derive(Default)]
 pub(crate) struct AssetManifest {
-    /// The actual mapping
+    /// A mapping from runtime url to source path
     pub(crate) mapping: HashMap<String, PathBuf>,
 }
 
@@ -35,7 +35,7 @@ pub(crate) fn collect_macro_output(config: &options::BuildConfig) -> Result<Asse
     Ok(manifest)
 }
 
-/// Copy asset manifest to dist
+/// Copy asset manifest to dist folder
 pub(crate) fn copy_assets_to_dist(
     config: &options::BuildConfig,
     manifest: &AssetManifest,

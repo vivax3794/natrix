@@ -9,7 +9,7 @@ use crate::reactivity::state::RenderCtx;
 
 /// The result of applying a class
 pub(crate) enum ClassResult<C: Component> {
-    /// The class was applied immedtialy, along with its value
+    /// The class should be applied immedtialy
     SetIt(Option<Cow<'static, str>>),
     /// The class needs access to state
     Dynamic(DeferredFunc<C>),

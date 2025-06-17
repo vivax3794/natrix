@@ -23,6 +23,7 @@ pub(crate) fn create_spinner(msg: &str) -> Result<ProgressBar> {
 }
 
 /// Run the given command displaying the given spinner below it
+/// And displaying the last line of stderr.
 #[expect(
     clippy::needless_pass_by_value,
     reason = "The spinner isnt usable after this"
@@ -64,11 +65,6 @@ pub(crate) fn run_with_spinner(
         println!("{full_output}");
         Err(anyhow!("Command exited with non zero status"))
     }
-}
-
-/// Convert a path to a `&str` in a lossy way
-pub(crate) fn path_str(path: &Path) -> Cow<'_, str> {
-    path.as_os_str().to_string_lossy()
 }
 
 /// Find if the specified feature is enabled for natrix

@@ -48,7 +48,6 @@ pub(crate) fn component_derive_implementation(item: ItemStruct) -> TokenStream {
     let data_name = create_data_struct_name(&name);
     let signal_state_name = format_ident!("_{name}SignalState");
 
-    // Handle generics
     let generics = {
         let mut generics = item.generics;
         for type_ in generics.type_params_mut() {

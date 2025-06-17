@@ -11,7 +11,7 @@ use super::{CSS_OUTPUT_NAME, options, utils, wasm_js};
 use crate::prelude::*;
 use crate::project_gen::FEATURE_EXTRACT_CSS;
 
-/// Collect css from the macro files
+/// Collect css from the stdout of a custom bundle build
 pub(crate) fn collect_css(config: &options::BuildConfig, wasm_file: &Path) -> Result<PathBuf> {
     let mut css_content = extract_css()?;
 

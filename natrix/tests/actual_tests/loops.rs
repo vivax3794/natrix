@@ -63,7 +63,7 @@ impl Component for ManualLoop {
     }
 }
 
-// These tests also demostate, by not refetching the elements, that the untouched elements are
+// These tests also demonstrate, by not refetching the elements, that the untouched elements are
 // not rendered again.
 
 #[wasm_bindgen_test]

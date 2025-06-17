@@ -5,8 +5,7 @@ use std::borrow::Cow;
 use super::HtmlElement;
 use crate::error_handling::log_or_panic;
 use crate::reactivity::component::Component;
-use crate::reactivity::render_callbacks::ReactiveNode;
-use crate::reactivity::signal::RenderingState;
+use crate::reactivity::render_callbacks::{ReactiveNode, RenderingState};
 use crate::reactivity::state::{RenderCtx, State};
 use crate::type_macros;
 
@@ -35,13 +34,13 @@ impl ElementRenderResult {
     }
 }
 
-/// A element that doesnt depend on any state
+/// The result of a `.render` call.
 pub enum MaybeStaticElement<C: Component> {
     /// A already statically rendered element.
     Static(ElementRenderResult),
     /// A html element
     Html(HtmlElement<C>),
-    /// A element that needs to be rendered.
+    /// A element that needs access to state to be rendered.
     Dynamic(Box<dyn DynElement<C>>),
 }
 
@@ -70,7 +69,8 @@ impl<C: Component> MaybeStaticElement<C> {
     }
 }
 
-/// Convert a element into a `MaybeStaticElement`.
+/// A element is anything that can be rendered in the dom.
+/// This is ofc `HtmlElement`, but also strings, numerics, and even closures.
 pub trait Element<C: Component>: 'static {
     /// Convert the element into a `MaybeStaticElement`.
     fn render(self) -> MaybeStaticElement<C>;
@@ -124,10 +124,10 @@ macro_rules! string_element {
         }
     };
 }
-type_macros::strings_cow!(string_element);
+type_macros::strings!(string_element);
 
-/// Generate a implementation of `Element` for a specific integer type.
-macro_rules! int_element {
+/// Generate a implementation of `Element` for a specific numeric type.
+macro_rules! numeric_element {
     ($T:ident, $fmt:ident, $_name:ident) => {
         impl<C: Component> Element<C> for $T {
             #[inline]
@@ -140,7 +140,7 @@ macro_rules! int_element {
         }
     };
 }
-type_macros::numerics!(int_element);
+type_macros::numerics!(numeric_element);
 
 /// Attempt to create a comment node.
 /// If this fails (wrongly) convert the error to a comment node.

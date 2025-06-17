@@ -7,7 +7,7 @@ use crate::prelude::*;
 
 /// Flag for extracting css
 pub const FEATURE_EXTRACT_CSS: &str = "__natrix_internal_extract_css";
-///
+
 /// Flag for runtime css
 pub const FEATURE_RUNTIME_CSS: &str = "__natrix_internal_runtime_css";
 
@@ -16,21 +16,49 @@ pub(crate) fn generate_project(name: &str, stable: bool) -> std::result::Result<
     let root = PathBuf::from(name);
     fs::create_dir_all(&root)?;
 
+    let src = root.join("src");
+    fs::create_dir_all(&src)?;
+
     let nightly = !stable;
 
-    // we assume the library version is the same as the cli version
-    // This means that even if the cli isnt modified it should publish new versions along with the
-    // library
-    let natrix_version = env!("CARGO_PKG_VERSION");
+    generate_cargo_toml(name, &root, nightly)?;
+    generate_main_rs(&src, name, nightly)?;
+    generate_toolchain_toml(&root, nightly)?;
 
+    let gitignore = "
+target
+dist
+    "
+    .trim();
+    fs::write(root.join(".gitignore"), gitignore)?;
+
+    std::process::Command::new("git")
+        .args(["init", "--initial-branch=main"])
+        .current_dir(&root)
+        .status()?;
+
+    println!(
+        "✨ {} {}",
+        "Project created".bright_green(),
+        root.display().cyan()
+    );
+    println!(
+        "{}",
+        "Run `natrix dev` to start the dev server".bright_blue()
+    );
+
+    Ok(())
+}
+
+/// Generate the `cargo.toml`
+fn generate_cargo_toml(name: &str, root: &Path, nightly: bool) -> Result<(), anyhow::Error> {
+    let natrix_version = env!("CARGO_PKG_VERSION");
     let mut natrix_table = format!(r#"version = "{natrix_version}""#);
     if let Ok(path) = std::env::var("NATRIX_PATH") {
         natrix_table = format!(r#"{natrix_table}, path = "{path}""#);
     }
     let natrix_test_table = format!(r#"natrix = {{{natrix_table}, features=["test_utils"]}}"#);
-
     let mut features = vec!["default_app"];
-
     if nightly {
         features.push("nightly");
     }
@@ -40,10 +68,8 @@ pub(crate) fn generate_project(name: &str, stable: bool) -> std::result::Result<
         .collect::<Vec<_>>()
         .join(",");
     natrix_table = format!(r"{natrix_table}, features = [{features}]");
-
     let natrix_decl = format!("natrix = {{ {natrix_table} }}");
     let natrix_decl = natrix_decl.trim();
-
     let cargo_toml = format!(
         r#"
 [package]
@@ -75,36 +101,11 @@ strip = "symbols"
         "#
     );
     fs::write(root.join("Cargo.toml"), cargo_toml)?;
-
-    let gitignore = "
-target
-dist
-    "
-    .trim();
-    fs::write(root.join(".gitignore"), gitignore)?;
-
-    generate_main_rs(&root, name, nightly)?;
-
-    std::process::Command::new("git")
-        .args(["init", "--initial-branch=main"])
-        .current_dir(&root)
-        .status()?;
-
-    println!(
-        "✨ {} {}",
-        "Project created".bright_green(),
-        root.display().cyan()
-    );
-    println!(
-        "{}",
-        "Run `natrix dev` to start the dev server".bright_blue()
-    );
-
     Ok(())
 }
 
 /// Generate the main.rs file for a new project
-fn generate_main_rs(root: &Path, name: &str, nightly: bool) -> Result<(), anyhow::Error> {
+fn generate_main_rs(src: &Path, name: &str, nightly: bool) -> Result<(), anyhow::Error> {
     let nightly_lints = if nightly {
         "
 // This is a nightly only feature to warn you when you are passing certain types across a
@@ -172,18 +173,19 @@ mod tests {{
 }}
 "#
     );
-    let src = root.join("src");
-    fs::create_dir_all(&src)?;
     fs::write(src.join("main.rs"), main_rs)?;
 
-    let channel = if nightly { "nightly" } else { "stable" };
+    Ok(())
+}
 
+/// Generate the `rust-toolchain.toml`
+fn generate_toolchain_toml(root: &Path, nightly: bool) -> Result<(), anyhow::Error> {
+    let channel = if nightly { "nightly" } else { "stable" };
     let components = if nightly {
         r#"components = ["rust-src"]"#
     } else {
         ""
     };
-
     let toolchain_toml = format!(
         r#"
 [toolchain]
@@ -193,6 +195,5 @@ targets = ["wasm32-unknown-unknown"]
         "#
     );
     fs::write(root.join("rust-toolchain.toml"), toolchain_toml)?;
-
     Ok(())
 }

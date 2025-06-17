@@ -1,7 +1,7 @@
 //! Macros for implementing a trait on specific kinds of types.
 
 /// Call the given macro with every string type, but converted to a `Cow`
-macro_rules! strings_cow {
+macro_rules! strings {
     ($macro:ident) => {
         $macro!(&'static str, |this| ::std::borrow::Cow::Borrowed(this));
         $macro!(::std::string::String, |this| ::std::borrow::Cow::Owned(
@@ -20,7 +20,8 @@ macro_rules! strings_cow {
     };
 }
 
-/// Call the given macro with every numeric type
+/// Call the given macro with every numeric type, the formatting crate to use, and whether its a
+/// integer or float.
 macro_rules! numerics {
     ($macro:ident) => {
         $macro!(u8, itoa, Integer);
@@ -40,4 +41,4 @@ macro_rules! numerics {
     };
 }
 
-pub(crate) use {numerics, strings_cow};
+pub(crate) use {numerics, strings};

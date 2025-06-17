@@ -18,7 +18,8 @@ pub fn has_panicked() -> bool {
     result
 }
 
-/// Set the panic hook to mark that a panic has happened
+/// Setup the natrix panic, this is needed for `has_panicked` to work.
+/// And to avoid UB on wasm.
 pub fn set_panic_hook() {
     std::panic::set_hook(Box::new(move |info| {
         let already_panicked = PANIC_HAPPENED.fetch_or(true, std::sync::atomic::Ordering::Relaxed);
@@ -42,7 +43,7 @@ pub fn set_panic_hook() {
     }));
 }
 
-/// Returns if a panic has happened
+/// return from the function if a panic has happened
 macro_rules! return_if_panic {
     ($val:expr) => {
         if $crate::panics::has_panicked() {

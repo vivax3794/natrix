@@ -18,9 +18,9 @@ use crate::type_macros;
 
 /// The result of apply attribute
 pub(crate) enum AttributeResult<C: Component> {
-    /// The attribute was set
+    /// The attribute should be set
     SetIt(Option<Cow<'static, str>>),
-    /// The attribute was dynamic
+    /// The attribute requires state
     IsDynamic(DeferredFunc<C>),
 }
 
@@ -33,10 +33,7 @@ pub trait ToAttribute<C: Component>: 'static {
     /// The kind of attribute output this is
     type AttributeKind;
 
-    /// Modify the given node to have the attribute set
-    ///
-    /// We use this apply system instead of returning the value as some types will also need to
-    /// conditionally remove the attribute
+    /// Return the attribute value, or a deferred function.
     fn calc_attribute(self, name: &'static str, node: &web_sys::Element) -> AttributeResult<C>;
 }
 
@@ -64,7 +61,7 @@ macro_rules! attribute_string {
     };
 }
 
-type_macros::strings_cow!(attribute_string);
+type_macros::strings!(attribute_string);
 
 impl<C: Component> ToAttribute<C> for char {
     type AttributeKind = char;
@@ -75,8 +72,8 @@ impl<C: Component> ToAttribute<C> for char {
     }
 }
 
-/// generate `ToAttribute` for a int using itoa
-macro_rules! attribute_int {
+/// generate `ToAttribute` for a numeric
+macro_rules! attribute_numeric {
     ($t:ident, $fmt:ident, $name:ident) => {
         impl<C: Component> ToAttribute<C> for $t {
             type AttributeKind = $name;
@@ -96,7 +93,7 @@ macro_rules! attribute_int {
     };
 }
 
-type_macros::numerics!(attribute_int);
+type_macros::numerics!(attribute_numeric);
 
 impl<C: Component> ToAttribute<C> for bool {
     type AttributeKind = bool;

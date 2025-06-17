@@ -4,12 +4,6 @@
 //! Based on: <https://github.com/emscripten-core/emscripten/blob/main/tools/wasm-sourcemap.py>
 //!     (MIT-licensed, © 2018 The Emscripten Authors)
 
-/// The section id for custom wasm sections
-const WASM_CUSTOM_SECTION_ID: u8 = 0;
-
-/// The section name for source maps
-const SOURCEMAP_SECTION_NAME: &str = "sourceMappingURL";
-
 use std::collections::HashMap;
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
@@ -17,8 +11,16 @@ use std::path::{Path, PathBuf};
 use anyhow::anyhow;
 use gimli::{EndianSlice, LittleEndian};
 
+use crate::prelude::*;
+
+/// The section id for custom wasm sections
+const WASM_CUSTOM_SECTION_ID: u8 = 0;
+
+/// The section name for source maps
+const SOURCEMAP_SECTION_NAME: &str = "sourceMappingURL";
+
 /// Create and embed a source map in the given wasm file.
-pub(crate) fn create_sourcemap(wasm_file: &Path) -> anyhow::Result<()> {
+pub(crate) fn create_sourcemap(wasm_file: &Path) -> Result<()> {
     let mut sourcemap = sourcemap::SourceMapBuilder::new(Some(&wasm_file.display().to_string()));
 
     let mut wasm_file = std::fs::OpenOptions::new()
@@ -40,7 +42,7 @@ pub(crate) fn create_sourcemap(wasm_file: &Path) -> anyhow::Result<()> {
 fn inject_sourcemap(
     sourcemap: sourcemap::SourceMapBuilder,
     mut wasm_file: std::fs::File,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     let sourcemap = sourcemap.into_sourcemap();
     let data = sourcemap.to_data_url()?;
 
@@ -71,7 +73,7 @@ fn populate_sourcemap(
     sourcemap: &mut sourcemap::SourceMapBuilder,
     sections: &HashMap<&str, &[u8]>,
     code_section_offset: u64,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     let empty: [u8; 0] = [];
     let debug_info = gimli::Dwarf::load(
         |id| -> Result<EndianSlice<'_, LittleEndian>, std::convert::Infallible> {

@@ -40,18 +40,6 @@ The `dev` command starts a local development server with live reloading.
 natrix dev
 ```
 
-The dev server:
-- Watches your files for changes
-- Automatically rebuilds your app when changes are detected
-- Serves your app on a local port (defaults to 8000)
-- Sets up WebSocket-based live reloading
-
-#### Options
-
-- `--port`, `-p`: Set a specific port for the dev server (default: auto-selects starting from 8000)
-- `--profile`: Choose the build profile (`dev` or `release`, default: `dev`)
-- `--invalidate-cache`: Force asset cache invalidation
-
 ### Building for Production
 
 When you're ready to deploy your app, use the `build` command to create an optimized production build.
@@ -59,19 +47,6 @@ When you're ready to deploy your app, use the `build` command to create an optim
 ```bash
 natrix build
 ```
-
-This creates a `dist` folder with everything needed to deploy your application, including:
-- Optimized WebAssembly code
-- Minified JavaScript
-- Bundled and optimized CSS
-- HTML entry point
-- All assets referenced by your application
-
-#### Build Options
-
-- `--dist`, `-d`: Specify the output directory (default: `./dist`)
-- `--profile`: Choose the build profile (`dev` or `release`, default: `release`)
-- `--invalidate-cache`: Force asset cache invalidation 
 
 ## Configuration
 
@@ -112,7 +87,7 @@ This configures all asset URLs to be prefixed with the specified path.
 
 ### SSG 
 By default natrix extracts metadata from your application, importantly for this to work your application must call [`mount`](reactivity::component::mount), and should not access any browser apis before or after it. 
-If your application does not use `mount` (or [`setup_runtime`](setup_runtime)) you should set this option to `false`.
+If your application does not use `mount` you should set this option to `false`.
 
 This will force css to be injected at runtime instead, and more importantly will not attempt to build and call your binary during bundling.
 ```toml

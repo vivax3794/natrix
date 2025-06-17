@@ -1,4 +1,4 @@
-//! Sets nightly cfg and emits panic warnings
+//! Sets nightly cfg
 
 /// On nightly rust emit `cfg(nightly)`
 #[rustversion::nightly]

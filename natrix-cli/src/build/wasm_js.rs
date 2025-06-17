@@ -19,7 +19,7 @@ pub(crate) struct RenameMap(HashMap<Box<str>, Box<str>>);
 struct RenameVisitor<'a> {
     /// The alloactor to use
     allocator: &'a oxc::allocator::Allocator,
-    /// The mapping in question
+    /// The resulting mapping.
     mapping: RenameMap,
 }
 
@@ -53,7 +53,7 @@ pub(crate) fn wasm_bindgen(
     let mut command = process::Command::new("wasm-bindgen");
     command
         .arg(wasm_file)
-        .args(["--out-dir", &utils::path_str(&config.dist)])
+        .args(["--out-dir", &config.dist.to_string_lossy()])
         .args(["--target", "web"])
         .args(["--out-name", BINDGEN_OUTPUT_NAME])
         .arg("--no-typescript")
@@ -180,7 +180,7 @@ pub(crate) fn build_wasm(config: &options::BuildConfig) -> Result<PathBuf> {
     find_wasm(config).context("Finding wasm file")
 }
 
-/// Return the path to the first wasm file in the folder
+/// Return the path to the first wasm file in the target folder
 pub(crate) fn find_wasm(config: &options::BuildConfig) -> Result<PathBuf> {
     let target = utils::find_target()?;
     let name = utils::get_project_name()?;
@@ -311,6 +311,9 @@ pub(crate) fn get_wasm_strings(wasm_file: &Path) -> Result<Vec<String>> {
                         strings.push(string.to_string());
                     } else {
                         // Clean out problematic bytes
+                        //
+                        // Natrix generated class and id names are always ASCII
+                        // So this is generally safe.
                         let cleaned = bytes
                             .iter()
                             .filter(|&&x| x.is_ascii())

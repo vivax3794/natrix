@@ -32,7 +32,7 @@ use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::get_document;
 use crate::prelude::Id;
 use crate::reactivity::component::Component;
-use crate::reactivity::signal::RenderingState;
+use crate::reactivity::render_callbacks::RenderingState;
 use crate::reactivity::state::{EventToken, State};
 
 /// A deferred function to do something once state is available
@@ -42,13 +42,13 @@ pub(crate) type DeferredFunc<C> = Box<dyn FnOnce(&mut State<C>, &mut RenderingSt
 #[must_use = "Web elements are useless if not rendered"]
 #[non_exhaustive]
 pub struct HtmlElement<C: Component, T = ()> {
-    /// The name of the tag
+    /// Dom element
     pub element: web_sys::Element,
     /// The deferred actions
     pub(crate) deferred: SmallVec<[DeferredFunc<C>; 2]>,
     /// Phantom data
     _phantom: PhantomData<T>,
-    /// Data for error checkign in dev
+    /// List of attributes that are already set.
     #[cfg(debug_assertions)]
     seen_attributes: HashSet<&'static str>,
     /// List of set of reactive attributes.
@@ -79,7 +79,10 @@ impl<C: Component, T> HtmlElement<C, T> {
         }
     }
 
-    /// Replace the tag type marker with `()` to allow returning different types of elements
+    /// Replace the tag type marker with `()` to allow returning different types of elements.
+    /// This should mainly be used when you want to call additional builder methods on the generic
+    /// builder.
+    /// If you want to return different element types from a closure you can use `.render` instead.
     pub fn generic(self) -> HtmlElement<C, ()> {
         HtmlElement {
             element: self.element,
@@ -214,7 +217,7 @@ impl<C: Component, T> HtmlElement<C, T> {
         self.child(text)
     }
 
-    /// Add a attribute to the node.
+    /// Set a attribute on the node.
     #[inline]
     pub fn attr(mut self, key: &'static str, value: impl ToAttribute<C>) -> Self {
         #[cfg(debug_assertions)]
@@ -290,7 +293,7 @@ impl<C: Component, T> HtmlElement<C, T> {
         self
     }
 
-    /// Add multiple children
+    /// Add multiple children, this is most commonly used with the `format_elements!` macro
     #[inline]
     pub fn children<E: Element<C>>(mut self, elements: impl IntoIterator<Item = E>) -> Self {
         for element in elements {

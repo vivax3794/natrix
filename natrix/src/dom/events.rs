@@ -1,11 +1,11 @@
-//! What kind of event to give to the handlers
+//! Implementation of event traits as well as a helper trait for event handlers.
 
 use wasm_bindgen::JsCast;
 
 use crate::reactivity::state::{EventToken, State};
 
 /// Trait for converting a struct to needed event info.
-pub(crate) trait Event {
+pub trait Event {
     /// The js event the handler gets
     type JsEvent: JsCast;
     /// The actual name
@@ -24,7 +24,7 @@ pub(crate) trait Event {
 /// }
 /// ```
 pub trait EventHandler<C, E: Event> {
-    /// Return a boxed version of the function in this event
+    /// Return self, but constrained to the expected typez
     fn func(self) -> impl Fn(&mut State<C>, EventToken, E::JsEvent) + 'static;
 }
 impl<C, E: Event, F: Fn(&mut State<C>, EventToken, E::JsEvent) + 'static> EventHandler<C, E> for F {
@@ -33,7 +33,7 @@ impl<C, E: Event, F: Fn(&mut State<C>, EventToken, E::JsEvent) + 'static> EventH
     }
 }
 
-/// Implement `Event`
+/// Implement and define a `Event`
 macro_rules! impl_event {
     ($ty:ident => $name:literal, $handler:ident) => {
         #[doc = $name]

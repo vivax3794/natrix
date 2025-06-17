@@ -45,7 +45,7 @@ pub fn mount_test<C: Component>(component: C) {
     CURRENT_COMP.with(|cell| cell.set(Box::new(result)));
 }
 
-/// Setup `MOUNT_POINt` as a valid mount location
+/// Setup `MOUNT_POINT` as a valid mount location
 ///
 /// # Panics
 /// if the js is in a invalid state.

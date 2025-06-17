@@ -23,8 +23,6 @@ impl Component for Counter {
     fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)
-            // .text("value: ")
-            // .child(|ctx: R<Self>| *ctx.value)
             .children(format_elements!(
                 |ctx: R<Self>| "value: {}-{}",
                 *ctx.value,

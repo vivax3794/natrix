@@ -1,12 +1,10 @@
-//! Utility traits and structs
+//! Various internal error handling mechanisms
 
 /// Cold path hint, causes compiler to better optimize unlikely error paths.
 #[cold]
 pub(crate) fn cold_path() {}
 
 /// Panic on `Err` value in debug mode.
-///
-/// See `debug_panic` for usage philosophy.
 macro_rules! log_or_panic_result {
     ($expr:expr, $($msg:expr),*) => {
         let res = $expr;
@@ -19,7 +17,7 @@ macro_rules! log_or_panic_result {
     };
 }
 
-/// Version of stdlib `debug_assert` that uses `debug_panic` in order to get logging.
+/// Version of stdlib `debug_assert` that uses `log_or_panic` in order to get logging.
 macro_rules! log_or_panic_assert {
     ($check:expr, $($msg:expr),*) => {
         if !$check {
@@ -69,7 +67,6 @@ macro_rules! log_or_panic {
     };
 }
 
-/// Log a error to the console
 pub(crate) use {log_or_panic, log_or_panic_assert, log_or_panic_result};
 
 #[cfg(test)]
@@ -88,7 +85,6 @@ mod tests {
         should_panic(expected = "This won't panic in release")
     )]
     fn test_debug_panic() {
-        // Should not panic in release mode
         log_or_panic!("This won't panic in release");
     }
 }

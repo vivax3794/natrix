@@ -228,13 +228,13 @@ pub struct NthArgument {
 }
 
 impl NthArgument {
-    /// The even version
+    /// Every event numbered element
     pub const EVEN: Self = NthArgument {
         step: 2,
         offset: 0,
         selector: None,
     };
-    /// The odd version
+    /// Every odd numbered element
     pub const ODD: Self = NthArgument {
         step: 2,
         offset: 1,

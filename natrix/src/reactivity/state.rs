@@ -11,8 +11,8 @@ use smallvec::SmallVec;
 
 use crate::error_handling::log_or_panic;
 use crate::reactivity::component::Component;
-use crate::reactivity::render_callbacks::DummyHook;
-use crate::reactivity::signal::{ReactiveHook, RenderingState, SignalMethods, UpdateResult};
+use crate::reactivity::render_callbacks::{DummyHook, ReactiveHook, RenderingState, UpdateResult};
+use crate::reactivity::signal::SignalMethods;
 
 /// Trait automatically implemented on reactive structs by the derive macro.
 ///
@@ -50,7 +50,6 @@ pub trait ComponentData: Sized + 'static {
     fn set_signals(&mut self, state: Self::SignalState);
 }
 
-/// Alias for `Box<dyn SmallAny>`
 /// for keeping specific objects alive in memory such as `Closure` and `Rc`
 pub(crate) type KeepAlive = Box<dyn Any>;
 
@@ -135,7 +134,7 @@ impl<C: Component> EagerMessageSender<C> {
     }
 
     /// Send multiple messages at once.
-    /// This method avoids the overhead of multiple `RefCell` checks a reactive updates.
+    /// This method avoids the overhead of multiple `RefCell` checks and reactive updates.
     pub(crate) fn send_batched(
         &self,
         messages: impl IntoIterator<Item = InternalMessage<C>>,
@@ -167,7 +166,7 @@ impl<C: Component> EagerMessageSender<C> {
     }
 }
 
-/// A temporary item for the `BinaryHeap` in `update`
+/// Store some data but use `O` for its `Ord` implementation
 struct OrderAssociatedData<T, O> {
     /// The data in question
     data: T,
@@ -204,7 +203,7 @@ pub struct State<T: Component> {
     hooks: SlotMap<HookKey, (Box<dyn ReactiveHook<T>>, u64)>,
     /// The next value to use in the insertion order map
     next_insertion_order_value: u64,
-    /// deferred, messages
+    /// Messages gotten while we were borrowed
     deferred_messages: Rc<DeferredMessageQueue<T>>,
     /// Emitting to the parent
     to_parent_emit: Option<EmitMessageSender<T::EmitMessage>>,
@@ -226,11 +225,11 @@ impl<T: Component> DerefMut for State<T> {
     }
 }
 
-/// A type alias for `State<C::Data>`, should be preferred in closure argument hints.
-/// such as `|ctx: S<Self>| ...`
+/// A type alias for `&mut State<C>`, should be preferred in closure argument hints.
+/// such as `|ctx: E<Self>| ...`
 pub type E<'c, C> = &'c mut State<C>;
 
-/// A type alias for `RenderCtx<C::Data>`, should be preferred in closure argument hints.
+/// A type alias for `&mut RenderCtx<C>`, should be preferred in closure argument hints.
 /// such as `|ctx: R<Self>| ...`
 pub type R<'a, 'c, C> = &'a mut RenderCtx<'c, C>;
 
@@ -253,7 +252,11 @@ impl<T: Component> State<T> {
     pub(crate) fn finalize(self) -> Rc<RefCell<Self>> {
         let this = Rc::new(RefCell::new(self));
 
-        this.borrow_mut().this = Rc::downgrade(&this);
+        if let Ok(mut borrow) = this.try_borrow_mut() {
+            borrow.this = Rc::downgrade(&this);
+        } else {
+            log_or_panic!("State (somehow) already borrowed in `finalize");
+        }
 
         this
     }
@@ -292,6 +295,8 @@ impl<T: Component> State<T> {
             // We create a new vec with the same size because thats likely the capacity that will
             // be needed in the future as well.
             let mut new_vec = SmallVec::with_capacity(queue.len());
+            // We do this instead of a drain because handling a message can lead to us receiving
+            // more deferred messages.
             std::mem::swap(&mut new_vec, &mut *queue);
             new_vec
         } else {
@@ -304,7 +309,7 @@ impl<T: Component> State<T> {
             self.handle_message(message);
         }
 
-        // Ensure any messages queued because of the above handling are well handled
+        // Ensure any messages queued because of the above handling are handled as well
         self.drain_message_queue();
     }
 
@@ -341,7 +346,7 @@ impl<T: Component> State<T> {
         }
     }
 
-    /// Insert a hook and keep track of insertion order
+    /// Insert a hook
     pub(crate) fn insert_hook(&mut self, hook: Box<dyn ReactiveHook<T>>) -> HookKey {
         let key = self.hooks.insert((hook, self.next_insertion_order_value));
         self.next_insertion_order_value =
@@ -370,7 +375,8 @@ impl<T: Component> State<T> {
 
     /// Remove the hook from the slotmap, runs the function on it, then puts it back.
     ///
-    /// This is to allow mut access to both the hook and self
+    /// This is to allow mut access to both the hook and self, which is required by most hooks.
+    /// (and yes hooks also mutable access the slotmap while running)
     fn run_with_hook_and_self<F, R>(&mut self, hook: HookKey, func: F) -> Option<R>
     where
         F: FnOnce(&mut Self, &mut Box<dyn ReactiveHook<T>>) -> R,
@@ -396,7 +402,7 @@ impl<T: Component> State<T> {
         let mut hooks = BinaryHeap::new();
         for signal in self.data.signals_mut() {
             if signal.changed() {
-                for dep in signal.deps() {
+                for dep in signal.drain_dependencies() {
                     let dep_insertion_order = self.hooks.get(dep).map(|x| x.1).unwrap_or_default();
                     hooks.push(OrderAssociatedData {
                         data: dep,
@@ -964,10 +970,8 @@ cfg_if::cfg_if! {
             /// framework will regularly borrow the state on any registered event handler trigger, for
             /// example a user clicking a button.
             ///
-            /// Keeping this type across an `.await` point or otherwise leading control to the event
-            /// loop while the borrow is active could also lead to reactivity failrues and desyncs, and
-            /// should be considered UB (not ub as in compile ub, but as in this framework makes no
-            /// guarantees about what state the reactivity system will be in)
+            /// Keeping this type across an `.await` point or otherwise yielding control to the event
+            /// loop while the borrow is active could also lead to reactivity failrues and desyncs.
             ///
             /// ## Nightly
             /// The nightly feature flag enables a lint to detect this misuse.

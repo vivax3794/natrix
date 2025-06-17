@@ -1,7 +1,6 @@
 //! Component traits
 
 use std::cell::RefCell;
-use std::ops::ControlFlow;
 use std::rc::Rc;
 
 use crate::dom::element::{
@@ -13,7 +12,7 @@ use crate::dom::element::{
 };
 use crate::error_handling::log_or_panic;
 use crate::get_document;
-use crate::reactivity::signal::RenderingState;
+use crate::reactivity::render_callbacks::RenderingState;
 use crate::reactivity::state::{
     ComponentData,
     E,
@@ -33,19 +32,10 @@ use crate::reactivity::state::{
 )]
 pub trait ComponentBase: Sized + 'static {
     /// The reactive version of this struct.
-    /// Should be used for most locations where a "Component" is expected.
     type Data: ComponentData;
 
     /// Convert this struct into its reactive variant.
     fn into_data(self) -> Self::Data;
-
-    /// Convert this to its reactive variant and wrap it in the component state struct.
-    fn into_state(self) -> Rc<RefCell<State<Self>>>
-    where
-        Self: Component,
-    {
-        State::new(self.into_data())
-    }
 }
 
 /// A type that has no possible values.
@@ -227,7 +217,7 @@ impl<C: Component> Sender<C> {
     pub fn send(&self, msg: C::ReceiveMessage, _token: EventToken) {
         let result = self.0.send(super::state::InternalMessage::FromParent(msg));
         if result.is_none() {
-            log::warn!("Sending message to unmounted componen");
+            log::warn!("Sending message to unmounted component");
         }
     }
 }
@@ -325,7 +315,23 @@ pub struct RenderResult<C: Component> {
     reason = "This will never happen if `natrix build` is used, and also happens early in the app lifecycle"
 )]
 pub fn mount<C: Component>(component: C) {
-    if let ControlFlow::Break(()) = crate::setup_runtime() {
+    crate::panics::set_panic_hook();
+    #[cfg(feature = "console_log")]
+    if cfg!(target_arch = "wasm32") {
+        if let Err(err) = console_log::init_with_level(log::Level::Trace) {
+            crate::error_handling::log_or_panic!("Failed to create logger: {err}");
+        }
+    }
+    #[cfg(feature = "_internal_extract_css")]
+    if let Err(err) = simple_logger::init_with_level(log::Level::Trace) {
+        eprintln!("Failed to setup logger {err}");
+    }
+    log::info!("Logging initialized");
+    #[cfg(feature = "_internal_collect_css")]
+    crate::css::css_collect();
+
+    if cfg!(feature = "_internal_extract_css") {
+        log::info!("Css extract mode, aboring mount.");
         return;
     }
 
@@ -358,7 +364,7 @@ pub fn render_component<C: Component>(
         "Mounting root component {} at #{target_id}",
         std::any::type_name::<C>()
     );
-    let data = component.into_state();
+    let data = State::new(component.into_data());
     let element = C::render();
 
     let mut borrow_data = data.borrow_mut();
