@@ -29,6 +29,31 @@ Natrix _only_ makes the following guarantees about when a callback will be calle
 Thats, natrix does not make any guarantees about the order of sibling callbacks.
 Natrix guarantees around how often a value is called is... complex because of features such as `.watch`, in general the reactive features below should be mainly treated as very strong hints to the framework, and optimizations might cause various use cases to result in more or less calls.
 
+## Returning different kinds of elements.
+Sometimes two branches returns different kinds of elements, this can be solved using `Result`, or by pre-rendering them using [`.render`](dom::element::Element::render). Which produces the internal result of a element render (which itself implements `Element` for this exact purpose)
+
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+# #[derive(Component)]
+# struct HelloWorld {
+#     counter: u8,
+# }
+# impl Component for HelloWorld {
+#     fn render() -> impl Element<Self> {
+e::div()
+    .child(|ctx: R<Self>| {
+        if *ctx.counter > 10 {
+            e::h1().text("Such big").render()
+        } else {
+            "Oh no such small".render()
+        }
+    })
+#      }
+# }
+
+```
+
 ## `.watch`
 
 Now imagine you only access part of a field.
