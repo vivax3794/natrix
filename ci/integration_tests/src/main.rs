@@ -78,6 +78,7 @@ mod driver_tests {
 
         let mut caps = DesiredCapabilities::chrome();
         caps.set_headless().unwrap();
+        caps.set_no_sandbox().unwrap();
 
         let driver = WebDriver::new("http://localhost:9999", caps)
             .await

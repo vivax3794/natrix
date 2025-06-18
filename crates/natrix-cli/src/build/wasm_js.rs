@@ -291,7 +291,9 @@ pub(crate) fn optimize_wasm(wasm_file: &PathBuf) -> Result<RenameMap, anyhow::Er
 
     spinner.finish();
     if !result {
-        return Err(anyhow!("Failed to optimize"));
+        return Err(anyhow!(
+            "Failed to optimize\nYou might have a outdated wasm-opt version installed\nwe test against v123"
+        ));
     }
     Ok(RenameMap(mapping))
 }

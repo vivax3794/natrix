@@ -32,10 +32,14 @@ dist
     .trim();
     fs::write(root.join(".gitignore"), gitignore)?;
 
-    std::process::Command::new("git")
+    let result = std::process::Command::new("git")
         .args(["init", "--initial-branch=main"])
         .current_dir(&root)
-        .status()?;
+        .status();
+    if let Err(err) = result {
+        println!("{}", "Failed to init git repo".red().bold());
+        println!("{}", err.red().bold());
+    }
 
     println!(
         "✨ {} {}",

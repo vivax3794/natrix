@@ -1,0 +1,44 @@
+VERSION 0.8
+IMPORT ./../ AS base 
+IMPORT github.com/earthly/lib/rust:3.0.3 AS rust
+
+book-base:
+    FROM base+rust --toolchain=nightly
+    RUN rustup component add rust-analyzer
+    DO rust+CARGO --args="install mdbookkit --features rustdoc-link"
+    COPY (base+install-tool/tool --tool=mdbook) /bin/mdbook
+    COPY (base+install-tool/tool --tool=mdbook-callouts) /bin/mdbook-callouts
+
+    COPY --keep-ts base+workspace-src/src .
+
+build-book:
+    FROM +book-base
+
+    DO rust+SET_CACHE_MOUNTS_ENV
+    RUN --mount=$EARTHLY_RUST_TARGET_CACHE \
+        cd ./docs && mdbook build
+    SAVE ARTIFACT ./docs/book AS LOCAL ./book
+
+check-links:
+    FROM +book-base
+    DO rust+SET_CACHE_MOUNTS_ENV
+    RUN --mount=$EARTHLY_RUST_TARGET_CACHE \
+        cd ./docs && mdbook build 2>&1 | tee logs.txt
+    RUN ! grep warning ./docs/logs.txt
+
+test-examples:
+    FROM +book-base
+
+    DO rust+SET_CACHE_MOUNTS_ENV --target_cache_suffix=book
+    RUN --mount=$EARTHLY_RUST_TARGET_CACHE \
+        cd ./docs && mdbook build
+    RUN --mount=$EARTHLY_RUST_TARGET_CACHE rm -r target/debug/deps/*natrix* | true
+    RUN --mount=$EARTHLY_RUST_TARGET_CACHE rm -r target/debug/deps/*wasm_bindgen_test* | true
+    RUN --mount=$EARTHLY_RUST_TARGET_CACHE cargo build -p natrix --all-features --tests
+    RUN --mount=$EARTHLY_RUST_TARGET_CACHE \
+        cd ./docs && mdbook test -L ../target/debug/deps
+
+all:
+    BUILD +check-links
+    BUILD +test-examples
+    

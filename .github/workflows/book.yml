@@ -10,34 +10,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      EARTHLY_TOKEN: ${{ secrets.EARTHLY_TOKEN }}
+      FORCE_COLOR: 1
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up rust nighly
-        run: rustup override set nightly
-      
-      - name: Install rust-analyzer
-        run: rustup component add rust-analyzer
-
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@v1.12.3
-
-      - name: Install just
-        run: cargo binstall -y just
-
-      - name: Install mdBook
-        run: just book_deps
-
-      - name: Build the mdBook
-        run: cd docs && mdbook build
-
-      - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: earthly/actions/setup-earthly@v1
+        with:
+          version: v0.8.13
+      - uses: actions/checkout@v3
+      - name: install earthly
+      - name: Docker Login
+        run: docker login --username "$DOCKERHUB_USERNAME" --password "$DOCKERHUB_TOKEN"
+      - name: Run build
+        run: earthly --org vivax3794 --sat natrix --ci --github-annotations ./docs+build-book
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: ./docs/book
-
 
   deploy:
     environment:
