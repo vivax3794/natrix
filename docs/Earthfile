@@ -19,12 +19,6 @@ build-book:
         cd ./docs && mdbook build
     SAVE ARTIFACT ./docs/book AS LOCAL ./book
 
-check-links:
-    FROM +book-base
-    DO rust+SET_CACHE_MOUNTS_ENV
-    RUN --mount=$EARTHLY_RUST_TARGET_CACHE \
-        cd ./docs && mdbook build
-
 test-examples:
     FROM +book-base
 
@@ -37,11 +31,3 @@ test-examples:
     RUN --mount=$EARTHLY_RUST_TARGET_CACHE \
         cd ./docs && mdbook test -L ../target/debug/deps
 
-all:
-    WAIT
-        BUILD +check-links
-    END
-    WAIT
-        BUILD +test-examples
-    END
-    

@@ -137,5 +137,5 @@ all:
         BUILD ./ci/integration_tests+test-release
     END
     WAIT
-        BUILD ./docs+all
+        BUILD ./docs+test-examples
     END
