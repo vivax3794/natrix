@@ -38,6 +38,10 @@ test-examples:
         cd ./docs && mdbook test -L ../target/debug/deps
 
 all:
-    BUILD +check-links
-    BUILD +test-examples
+    WAIT
+        BUILD +check-links
+    END
+    WAIT
+        BUILD +test-examples
+    END
     

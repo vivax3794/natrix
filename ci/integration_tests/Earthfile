@@ -61,8 +61,3 @@ test-production:
         chromedriver --port=9999 --user-data-dir=/tmp/chrome & \
         cd ./ci/integration_tests && cargo nextest run -j 1 --features build_test; \
     }
-
-all:
-    BUILD +test-dev
-    BUILD +test-release
-    BUILD +test-production

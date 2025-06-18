@@ -120,11 +120,22 @@ run-core:
     BUILD ./crates/natrix+test-web --toolchain=nightly
 
 all:
-    BUILD ./crates+all
-    BUILD ./docs+all
-    BUILD ./ci/integration_tests+all
-    BUILD +fmt
-    BUILD +typos
-    BUILD +unused-dependencies
-    BUILD +outdated-dependencies
-    BUILD +check-docs
+    WAIT
+        BUILD ./crates+all
+        BUILD +fmt
+        BUILD +typos
+        BUILD +unused-dependencies
+        BUILD +outdated-dependencies
+        BUILD +check-docs
+        BUILD ./ci/integration_tests+test-production
+    END
+
+    WAIT
+        BUILD ./ci/integration_tests+test-dev
+    END
+    WAIT
+        BUILD ./ci/integration_tests+test-release
+    END
+    WAIT
+        BUILD ./docs+all
+    END
