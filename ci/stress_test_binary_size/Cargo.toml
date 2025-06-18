@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-natrix = { path="../natrix", features = ["nightly"] }
+natrix = { path="../../crates/natrix", features = ["nightly"] }
 log = {version = "*", features=["release_max_level_off"]}
 
 [package.metadata.natrix]

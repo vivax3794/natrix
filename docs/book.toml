@@ -13,7 +13,7 @@ runnable = false
 
 [preprocessor.callouts]
 [preprocessor.rustdoc-link]
-manifest-dir = "../natrix"
+manifest-dir = "../crates/natrix"
 after = ["links"]
 cargo-features = ["all"]
 cache-dir = "../target/doc-cache"

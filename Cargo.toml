@@ -1,13 +1,14 @@
 [workspace]
 resolver = "2"
 members = [
-    "natrix_shared",
-    "natrix_macros",
-    "natrix",
-    "natrix-cli",
-    "integration_tests",
-    "integration_tests_dependency",
-    "stress_test_binary_size", "benchmark",
+    "crates/natrix_shared",
+    "crates/natrix_macros",
+    "crates/natrix",
+    "crates/natrix-cli",
+    "ci/integration_tests",
+    "ci/integration_tests_dependency",
+    "ci/stress_test_binary_size",
+    "ci/benchmark",
 ]
 
 [profile.release]

@@ -9,7 +9,7 @@ base_path = "/dist"
 cache_bust = "none"
 
 [dependencies]
-natrix = {path = "../natrix", features = ["nightly", "default_app"]}
+natrix = {path = "../../crates/natrix", features = ["nightly", "default_app"]}
 integration_tests_dependency = {path = "../integration_tests_dependency"}
 log = {version = "0.4", features = ["max_level_trace"]}
 

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-natrix = { path="../natrix", features = ["nightly", "test_utils"] }
+natrix = { path="../../crates/natrix", features = ["nightly", "test_utils"] }
 log = {version = "0.4", features = ["release_max_level_off"]}
 wasm_bench_runtime = "*"
 

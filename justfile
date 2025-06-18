@@ -22,7 +22,7 @@ insta:
     cargo insta test --review --package natrix --unreferenced delete --test-runner nextest --all-features
 
 # Run tests that are dependent on the web
-[working-directory: './natrix']
+[working-directory: './crates/natrix']
 test_web:
     rustup run stable wasm-pack test --headless --chrome --features test_utils
     rustup run nightly wasm-pack test --headless --chrome --all-features
@@ -41,8 +41,8 @@ check_deps:
     cargo update
     cargo outdated -R --workspace --exit-code 1
     cargo hack udeps --each-feature --ignore-private --all-targets
-    cd natrix && cargo deny check all --exclude-dev
-    cd natrix-cli && cargo deny check all --exclude-dev --hide-inclusion-graph
+    cd crates/natrix && cargo deny check all --exclude-dev
+    cd crates/natrix-cli && cargo deny check all --exclude-dev --hide-inclusion-graph
 
 # Check the documentation for all packages
 # And for typos in the docs
@@ -59,7 +59,7 @@ check_book:
 
 # Run the integration tests
 # These will spawn the `natrix dev` server and run the tests against it
-[working-directory: "./integration_tests"]
+[working-directory: "./ci/integration_tests"]
 integration_tests_dev: install_cli
     #!/usr/bin/bash
     set -e
@@ -90,7 +90,7 @@ integration_tests_dev: install_cli
     natrix_pid=$!
     cargo nextest run -j 1
 
-[working-directory: "./integration_tests"]
+[working-directory: "./ci/integration_tests"]
 integration_tests_build: install_cli
     #!/usr/bin/bash
     set -e
@@ -119,18 +119,18 @@ integration_tests_build: install_cli
 # These will use `natrix new` to create a new project and then build it
 [working-directory: "/tmp"]
 project_gen_test: install_cli
-    NATRIX_PATH="{{justfile_directory()}}/natrix" natrix new test_project --stable
+    NATRIX_PATH="{{justfile_directory()}}/crates/natrix" natrix new test_project --stable
     cd test_project && rustup run stable natrix build
     cd test_project && rustup run stable wasm-pack test --headless --chrome
 
-    NATRIX_PATH="{{justfile_directory()}}/natrix" natrix new test_project
+    NATRIX_PATH="{{justfile_directory()}}/crates/natrix" natrix new test_project
     cd test_project && rustup run nightly natrix build
     cd test_project && rustup run nightly wasm-pack test --headless --chrome
 
 # Install the CLI for use in tests
 # This installs it in debug mode and should *not* be used for actually installing
 install_cli:
-    cargo install --path natrix-cli --profile dev
+    cargo install --path crates/natrix-cli --profile dev
 
 # Open the guide book with a auto reloading server
 [working-directory: './docs']
@@ -194,7 +194,7 @@ gh_action:
     act -P ubuntu-latest=catthehacker/ubuntu:full-latest -W .github/workflows/run_tests.yml
 
 
-[working-directory: './stress_test_binary_size']
+[working-directory: './ci/stress_test_binary_size']
 stress_size: install_cli
     @echo
     @echo "--- Checking initial size (if file exists)..."
@@ -221,7 +221,7 @@ stress_size: install_cli
     )
 
 
-[working-directory: './benchmark']
+[working-directory: './ci/benchmark']
 bench: install_cli
     #!/usr/bin/bash
     set -e

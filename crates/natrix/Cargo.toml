@@ -9,7 +9,7 @@ repository = "https://github.com/vivax3794/natrix"
 keywords = ["frontend", "framework", "web", "wasm"]
 categories = ["gui", "wasm", "web-programming"]
 
-readme = "../README.md"
+readme = "../../README.md"
 exclude = ["tests"]
 
 [lints]
