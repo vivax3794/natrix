@@ -27,7 +27,7 @@ jobs:
         run: docker login --username "$DOCKERHUB_USERNAME" --password "$DOCKERHUB_TOKEN"
       - name: Run build
         run: |
-          earthly config buildkit_max_parallelism 1
+          earthly config global.buildkit_max_parallelism 1
           earthly --ci --github-annotations ./docs+build-book
 
       - uses: actions/upload-pages-artifact@v3
