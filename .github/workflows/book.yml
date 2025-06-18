@@ -17,14 +17,16 @@ jobs:
       FORCE_COLOR: 1
 
     steps:
-      - uses: earthly/actions/setup-earthly@v1
+      - uses: earthly/actions-setup@v1
         with:
-          version: v0.8.13
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          version: v0.8.15
+          use-cache: true
       - uses: actions/checkout@v3
       - name: Docker Login
         run: docker login --username "$DOCKERHUB_USERNAME" --password "$DOCKERHUB_TOKEN"
       - name: Run build
-        run: earthly --org vivax3794 --sat natrix --ci --github-annotations ./docs+build-book
+        run: earthly --ci --github-annotations ./docs+build-book
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./docs/book
