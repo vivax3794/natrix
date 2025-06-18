@@ -40,7 +40,7 @@ jobs:
 
       
       - name: Prune earthly cache
-        run: earthly prune --size 20GB
+        run: earthly prune --size 40GB
       - name: Save Earthly Cache Volume
         uses: BYK/docker-volume-cache-action/save@main
         with:
