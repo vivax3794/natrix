@@ -34,4 +34,4 @@ jobs:
              --buildkit-flags="--cache-to type=gha,mode=max --cache-from type=gha" \ 
             +all
         env:
-          BUILDKIT_HOST: ${{ steps.buildx.outputs.driver-opts }
+          BUILDKIT_HOST: ${{ steps.buildx.outputs.driver-opts }}
