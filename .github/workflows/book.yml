@@ -21,7 +21,6 @@ jobs:
         with:
           version: v0.8.13
       - uses: actions/checkout@v3
-      - name: install earthly
       - name: Docker Login
         run: docker login --username "$DOCKERHUB_USERNAME" --password "$DOCKERHUB_TOKEN"
       - name: Run build
