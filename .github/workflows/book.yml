@@ -26,7 +26,10 @@ jobs:
       - name: Docker Login
         run: docker login --username "$DOCKERHUB_USERNAME" --password "$DOCKERHUB_TOKEN"
       - name: Run build
-        run: earthly --ci --github-annotations ./docs+build-book
+        run: |
+          earthly config buildkit_max_parallelism 1
+          earthly --ci --github-annotations ./docs+build-book
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./docs/book
