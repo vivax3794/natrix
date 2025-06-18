@@ -23,12 +23,26 @@ jobs:
       - uses: actions/checkout@v4
       - name: Docker Login
         run: docker login --username "$DOCKERHUB_USERNAME" --password "$DOCKERHUB_TOKEN"
-      - name: Set up Docker Buildx for GHA Cache
-        id: buildx
-        uses: docker/setup-buildx-action@v3
+
+      - name: Restore Earthly Cache Volume
+        id: restore-earthly-cache
+        uses: BYK/docker-volume-cache-action/restore@main
+        with:
+          volumes: earthly-cache
+          key: v1-earthly-cache-${{ runner.os }}-${{ hashFiles('**/Earthfile') }}
+          restore-keys: |
+            v1-earthly-cache-${{ runner.os }}-
+
       - name: Run checks
         run: |
           earthly config global.buildkit_max_parallelism 1
-          earthly --ci --github-annotations --buildkit-flags="--cache-to type=gha,mode=max --cache-from type=gha" +all
-        env:
-          BUILDKIT_HOST: ${{ steps.buildx.outputs.driver-opts }}
+          earthly --ci --github-annotations +all
+
+      
+      - name: Prune earthly cache
+        run: earthly prune --size 10GB
+      - name: Save Earthly Cache Volume
+        uses: BYK/docker-volume-cache-action/save@main
+        with:
+          key: ${{ steps.restore-earthly-cache.outputs.cache-primary-key }}
+          volumes: earthly-cache

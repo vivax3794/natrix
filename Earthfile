@@ -128,6 +128,7 @@ all:
         BUILD +outdated-dependencies
         BUILD +check-docs
         BUILD ./ci/integration_tests+test-production
+        BUILD ./docs+book-base
     END
 
     WAIT
