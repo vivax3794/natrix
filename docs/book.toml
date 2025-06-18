@@ -17,3 +17,4 @@ manifest-dir = "../crates/natrix"
 after = ["links"]
 cargo-features = ["all"]
 cache-dir = "../target/doc-cache"
+fail-on-warnings = "always"

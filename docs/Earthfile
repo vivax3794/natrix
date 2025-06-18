@@ -23,8 +23,7 @@ check-links:
     FROM +book-base
     DO rust+SET_CACHE_MOUNTS_ENV
     RUN --mount=$EARTHLY_RUST_TARGET_CACHE \
-        cd ./docs && mdbook build 2>&1 | tee logs.txt
-    RUN ! grep warning ./docs/logs.txt
+        cd ./docs && mdbook build
 
 test-examples:
     FROM +book-base
