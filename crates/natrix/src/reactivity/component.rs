@@ -307,7 +307,8 @@ pub struct RenderResult<C: Component> {
 /// IMPORTANT: This is the intended entry point for `natrix-cli` build applications, and the natrix
 /// cli build system expects this to be called. And you should not attempt to access browser ap
 ///
-/// **WARNING:** This method implicitly leaks the memory of the root component
+/// This method implicitly leaks the memory of the root component
+///
 /// # Panics
 /// If the mount point is not found, which should never happen if using `natrix build`
 #[expect(
@@ -341,7 +342,7 @@ pub fn mount<C: Component>(component: C) {
 /// Mounts the component at the target id
 /// Replacing the element with the component
 ///
-/// **WARNING:** This method implicitly leaks the memory of the root component
+/// This method implicitly leaks the memory of the root component
 ///
 /// # Errors
 /// If target mount point is not found.

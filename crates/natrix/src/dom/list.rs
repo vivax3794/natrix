@@ -8,6 +8,9 @@ use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::{DummyHook, ReactiveHook, RenderingState, UpdateResult};
 use crate::reactivity::state::{HookKey, KeepAlive, R as Ra, RenderCtx, State};
 
+// PERF: Make List keyes
+// REFACTOR: Revist this entire thing, feels like theres a cleaner api in here somehwere.
+
 /// List lets you efficiently render a list of items
 /// It takes a function that returns a vector of items and a render function
 pub struct List<F, R, C, I, E> {

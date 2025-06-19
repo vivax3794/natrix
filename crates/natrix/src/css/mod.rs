@@ -1,9 +1,12 @@
 //! Create css styles
 
-// DESIGN NOTE:
+// NOTE:
 // This module does not generally need to be efficient, it just needs to be ergonomic.
 // The code in this module is intended to be used at bundling time, and hence will not be included
 // in production applications.
+
+// TODO: Implmenet all of css
+// TODO: Allow composing css rules similar to css-modules `composes`
 
 pub mod property;
 pub mod selectors;

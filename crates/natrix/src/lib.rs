@@ -6,7 +6,6 @@
 #![cfg_attr(not(feature = "_internal_no_ssg"), forbid(unsafe_code))]
 
 pub mod async_utils;
-
 pub mod css;
 pub mod dom;
 mod error_handling;

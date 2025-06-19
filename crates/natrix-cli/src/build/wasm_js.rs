@@ -11,6 +11,9 @@ use crate::prelude::*;
 use crate::project_gen::FEATURE_NO_SGG;
 use crate::{options, utils};
 
+// PERF: Instead of passing files around see if we are able to use pipes to keep stuff in memory
+// Might be hard with `optimize_wasm` due to us also needing to read the rename map from stdout.
+
 /// A renaming map for the wasm-bindgen glue code.
 #[derive(Debug)]
 pub(crate) struct RenameMap(HashMap<Box<str>, Box<str>>);
@@ -30,6 +33,8 @@ impl<'a> oxc::ast_visit::VisitMut<'a> for RenameVisitor<'a> {
     ) {
         oxc::ast_visit::walk_mut::walk_static_member_expression(self, it);
 
+        // HACK: This is assuming the names of the exported/imported functions are only used for
+        // said exports and imports, which as of writting seems to be the case.
         let current_name = it.property.name.to_string();
         if let Some(new_name) = self.mapping.0.get(&*current_name) {
             let new_name = self.allocator.alloc_str(new_name);
@@ -285,7 +290,6 @@ pub(crate) fn optimize_wasm(wasm_file: &PathBuf) -> Result<RenameMap, anyhow::Er
 
     // HACK: https://github.com/WebAssembly/binaryen/issues/7657
     // wasm-opt does not report the renaming of the wbg module
-    //
     // as of writing it is always renamed to "a" due to being the only module
     mapping.insert("wbg".into(), "a".into());
 
@@ -299,7 +303,9 @@ pub(crate) fn optimize_wasm(wasm_file: &PathBuf) -> Result<RenameMap, anyhow::Er
 }
 
 /// Get the strings from a wasm file
+// PERF: Reuse the same file read and parsing from `sourcemap.rs`
 pub(crate) fn get_wasm_strings(wasm_file: &Path) -> Result<Vec<String>> {
+    // PERF: `wasmparser` supports streaming data
     let wasm_bytes = fs::read(wasm_file)?;
     let mut strings = Vec::new();
 

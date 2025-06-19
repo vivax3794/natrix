@@ -127,6 +127,8 @@ fn spawn_websocket(port: u16, reload_signal: mpsc::Receiver<()>) {
 }
 
 /// Find a free port
+// PERF: Instead of trying to open the port in a loop, if the `preferred` isnt found attempt to ask
+// the os for a free one directly isntead (I think thats possible?)
 pub(crate) fn get_free_port(mut preferred: u16) -> Result<u16> {
     loop {
         if TcpListener::bind(("127.0.0.1", preferred)).is_ok() {

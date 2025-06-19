@@ -4,6 +4,9 @@ use std::ops::Deref;
 
 use crate::error_handling::log_or_panic_assert;
 
+// MAYBE: Make selector generic over target elements allowing us to constrain properties that are
+// allowd on them.
+
 /// A list of selectors (`,`)
 #[derive(Debug)]
 pub struct SelectorList(pub Vec<FinalizedSelector>);
@@ -448,6 +451,8 @@ impl From<Id> for &'static str {
 /// # use natrix::prelude::*;
 /// const MY_ID: Id = natrix::id!();
 /// ```
+// MAYBE: Runtime unique ids as well?
+// Might be useful for certain usecases
 #[macro_export]
 macro_rules! id {
     () => {

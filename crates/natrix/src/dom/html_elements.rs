@@ -180,6 +180,7 @@ impl<C: Component, T> HtmlElement<C, T> {
     ///     })
     /// # }}
     /// ```
+    // TODO: Enforce certain elements cant have child elements.
     #[inline]
     pub fn child<E: Element<C> + 'static>(mut self, child: E) -> Self {
         let node = match child.render() {
@@ -386,9 +387,11 @@ macro_rules! aria_attrs {
     };
 }
 
-// POLICY:
+// NOTE:
 // "sane defaults" should not be the defaults for element constructors.
-// and should instead be implemented via extra method, such as `a_secure`
+// and should instead be implemented via extra methods, such as `.secure`
+
+// MAYBE: Implement aliases for html tags. such as `heading1` >= `h1`.
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Element
 elements! {
@@ -405,6 +408,13 @@ caption, col, colgroup, table, tbody, td, tfoot, th, thead, tr,
 button, datalist, fieldset, form, input, label, legend, meter, optgroup, option, output, progress, select, textarea,
 details, dialog, summary
 }
+
+// TEST: Somehow verify that all these attribute names are accurate.
+// MAYBE: Implement aliases for attributes, such as `relation` => `rel`.
+// NOTE: To be clear, we do curretnly rename attributes, such as `auto_focus` => `autofocus`,
+// But for the "well-known" attributes we arent expanding abbrivations, because if we are being
+// honest people know what `rel` is, they might even be confussed by `relation`.
+// But stuff like `encoding_type` is much better than `enctype`
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes
 global_attrs! {
@@ -527,7 +537,7 @@ attr_helpers!(img =>
     src(String, "src"), width(attributes::Integer, "width"), use_map(String, "usemap")
 );
 
-// TODO: All of input
+// TODO: All of input, we want to sepcial case it.
 
 attr_helpers!(ins => cite(String, "cite")); // TODO: datetime
 attr_helpers!(label => is_for(Id, "for"));

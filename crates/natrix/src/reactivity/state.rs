@@ -1,5 +1,9 @@
 //! Types for handling the component state
 
+// TODO: Reacting to reactive changes
+// NOTE: This we removed as a feature because being able to emit messages during the update cycle
+// led to inconsisten code.
+
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::BinaryHeap;
@@ -395,6 +399,10 @@ impl<T: Component> State<T> {
 
     /// Loop over signals and update any depdant hooks for changed signals
     /// This also drains the deferred message queue
+    // FIXME: Currently there is a memory leak if a signal is not modified for many cycles, while
+    // also being part of a reactive hook wich is triggering.
+    // For example if have `|ctx: R<Self>| *ctx.foo + *ctx.bar`, and `foo` is modifed 100 times
+    // without `bar` being modifed `bar`s depedency list will have 100 items in it.
     pub(crate) fn update(&mut self) {
         log::debug!("Performing update cycle for {}", std::any::type_name::<T>());
         self.drain_message_queue();
@@ -404,6 +412,7 @@ impl<T: Component> State<T> {
             if signal.changed() {
                 for dep in signal.drain_dependencies() {
                     let dep_insertion_order = self.hooks.get(dep).map(|x| x.1).unwrap_or_default();
+                    // PERF: This does not deduplicate the hooks.
                     hooks.push(OrderAssociatedData {
                         data: dep,
                         ordering: std::cmp::Reverse(dep_insertion_order),

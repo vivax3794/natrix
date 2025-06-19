@@ -5,6 +5,11 @@ use std::ops::{Deref, DerefMut};
 
 use crate::reactivity::state::HookKey;
 
+// TODO: Make the transformation of component structs into per-field signals a more generic
+// process, and allow nesting signals in a smart way. for example you can annotate your `Book`
+// struct with some macro, and when you use `Book` as a field of your component you actually get
+// reactivity on the level of the books fields and not the whole book struct.
+
 /// A signal tracks reads and writes to a value, as well as dependencies.
 pub struct Signal<T> {
     /// The data to be tracked.
@@ -19,6 +24,8 @@ pub struct Signal<T> {
     /// Actually calling said dependencies is the responsibility of the `State` struct.
     /// Dependencies are also lazily removed by the `State` struct, and hence might contain stale
     /// pointers.
+    // PERF: Is there a more efficent version than a `Vec` for storing append and full-drain only
+    // collection? I cant really imagine how one would optimize it, but worth keeping an eye out.
     deps: Vec<HookKey>,
 }
 

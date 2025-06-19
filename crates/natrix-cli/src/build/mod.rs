@@ -1,5 +1,9 @@
 //! Build a natrix project
 
+// MAYBE: Allow selecting target browser version
+// All we can really do is polyfill css, and error if wasm isnt supported.
+// But like we cant easially polyfill html attributes, html tags, etc, since thats all runtime.
+
 use std::fs;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -20,6 +24,7 @@ const BINDGEN_OUTPUT_NAME: &str = "code";
 const CSS_OUTPUT_NAME: &str = "styles.css";
 
 /// Build a project
+// TODO: Verify natrix version matches cli expected
 pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManifest> {
     println!("🧹 {}", "Cleaning dist".bright_black(),);
     let _ = fs::remove_dir_all(&config.dist);
@@ -73,6 +78,7 @@ pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManife
 }
 
 /// Generate the html file to be used
+// TODO: Allow users to customize html file contents.
 pub(crate) fn generate_html(
     config: &options::BuildConfig,
     wasm_file: &Path,

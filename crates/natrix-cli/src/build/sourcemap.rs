@@ -29,6 +29,7 @@ pub(crate) fn create_sourcemap(wasm_file: &Path) -> Result<()> {
         .truncate(false)
         .open(wasm_file)?;
     let mut wasm_content = Vec::new();
+    // PERF: `wasmparser` supports streaming the wasm content
     wasm_file.read_to_end(&mut wasm_content)?;
 
     let (sections, code_section_offset) = parse_wasm(&wasm_content)?;
