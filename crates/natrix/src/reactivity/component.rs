@@ -12,16 +12,9 @@ use crate::dom::element::{
 };
 use crate::error_handling::log_or_panic;
 use crate::get_document;
+use crate::reactivity::KeepAlive;
 use crate::reactivity::render_callbacks::RenderingState;
-use crate::reactivity::state::{
-    ComponentData,
-    E,
-    EagerMessageSender,
-    EventToken,
-    HookKey,
-    KeepAlive,
-    State,
-};
+use crate::reactivity::state::{ComponentData, E, EventToken, HookKey, State, messages};
 
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
 /// associating a component with its reactive state as well as converting to a struct to its
@@ -203,7 +196,7 @@ impl<I: Component> SubComponent<I, ()> {
 
 /// Allows sending messages to the component
 #[must_use]
-pub struct Sender<C: Component>(EagerMessageSender<C>);
+pub struct Sender<C: Component>(messages::EagerMessageSender<C>);
 
 impl<C: Component> Clone for Sender<C> {
     fn clone(&self) -> Self {
@@ -215,7 +208,7 @@ impl<C: Component> Sender<C> {
     /// Send a message to the component
     #[inline]
     pub fn send(&self, msg: C::ReceiveMessage, _token: EventToken) {
-        let result = self.0.send(super::state::InternalMessage::FromParent(msg));
+        let result = self.0.send(messages::InternalMessage::FromParent(msg));
         if result.is_none() {
             log::warn!("Sending message to unmounted component");
         }
@@ -231,7 +224,7 @@ impl<I: Component, Handler> SubComponent<I, Handler> {
             Sender(eager)
         } else {
             log_or_panic!("State already borrowed during construction");
-            Sender(EagerMessageSender::create_closed_fallback())
+            Sender(messages::EagerMessageSender::create_closed_fallback())
         }
     }
 }

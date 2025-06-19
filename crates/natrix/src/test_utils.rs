@@ -9,8 +9,8 @@ use web_sys::HtmlElement;
 
 use crate::get_document;
 use crate::prelude::Component;
+use crate::reactivity::KeepAlive;
 use crate::reactivity::component::render_component;
-use crate::reactivity::state::KeepAlive;
 
 /// The parent of the testing env
 const MOUNT_PARENT: &str = "__TESTING_PARENT";

@@ -24,7 +24,7 @@ pub struct Signal<T> {
     /// Actually calling said dependencies is the responsibility of the `State` struct.
     /// Dependencies are also lazily removed by the `State` struct, and hence might contain stale
     /// pointers.
-    // PERF: Is there a more efficent version than a `Vec` for storing append and full-drain only
+    // PERF: Is there a more efficient version than a `Vec` for storing append and full-drain only
     // collection? I cant really imagine how one would optimize it, but worth keeping an eye out.
     deps: Vec<HookKey>,
 }

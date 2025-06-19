@@ -411,9 +411,9 @@ details, dialog, summary
 
 // TEST: Somehow verify that all these attribute names are accurate.
 // MAYBE: Implement aliases for attributes, such as `relation` => `rel`.
-// NOTE: To be clear, we do curretnly rename attributes, such as `auto_focus` => `autofocus`,
+// NOTE: To be clear, we do currently rename attributes, such as `auto_focus` => `autofocus`,
 // But for the "well-known" attributes we arent expanding abbrivations, because if we are being
-// honest people know what `rel` is, they might even be confussed by `relation`.
+// honest people know what `rel` is, they might even be confused by `relation`.
 // But stuff like `encoding_type` is much better than `enctype`
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes
@@ -537,7 +537,7 @@ attr_helpers!(img =>
     src(String, "src"), width(attributes::Integer, "width"), use_map(String, "usemap")
 );
 
-// TODO: All of input, we want to sepcial case it.
+// TODO: All of input, we want to special case it.
 
 attr_helpers!(ins => cite(String, "cite")); // TODO: datetime
 attr_helpers!(label => is_for(Id, "for"));

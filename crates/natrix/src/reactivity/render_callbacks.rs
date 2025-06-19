@@ -7,8 +7,9 @@ use wasm_bindgen::JsCast;
 use crate::dom::element::{ElementRenderResult, MaybeStaticElement, generate_fallback_node};
 use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::get_document;
+use crate::reactivity::KeepAlive;
 use crate::reactivity::component::Component;
-use crate::reactivity::state::{HookKey, KeepAlive, RenderCtx, State};
+use crate::reactivity::state::{HookKey, RenderCtx, State};
 
 /// State passed to rendering callbacks
 pub(crate) struct RenderingState<'s> {
@@ -44,6 +45,10 @@ pub(crate) enum UpdateResult {
 
 /// A noop hook used to fill the `Rc<RefCell<...>>` while the initial render pass runs so that that
 /// a real hook can be swapped in once initialized
+// PERF: Can we make the hook api not need this? its hard because to get a hook key you need to
+// insert something, and `insert_with_key` wont work as we might mutate the slotmap during hook
+// construction. I suppose we could store `Option` in the slotmap, but that becomes annoying again
+// on retrieval.
 pub(crate) struct DummyHook;
 impl<C: Component> ReactiveHook<C> for DummyHook {
     fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) -> UpdateResult {
@@ -99,7 +104,7 @@ impl<C: Component> ReactiveNode<C> {
         callback: Box<dyn Fn(&mut RenderCtx<C>) -> MaybeStaticElement<C>>,
         ctx: &mut State<C>,
     ) -> (HookKey, web_sys::Node) {
-        let me = ctx.insert_hook(Box::new(DummyHook));
+        let me = ctx.hooks.insert_dummy();
 
         let Some(dummy_node) = get_document().body() else {
             log_or_panic!("Document body not found");
@@ -115,7 +120,7 @@ impl<C: Component> ReactiveNode<C> {
         };
         let node = this.render(ctx, me).into_node();
         this.target_node = node.clone();
-        ctx.set_hook(me, Box::new(this));
+        ctx.hooks.set_hook(me, Box::new(this));
 
         (me, node)
     }
@@ -240,7 +245,7 @@ impl<C: Component, K: ReactiveValue + 'static> SimpleReactive<C, K> {
         node: web_sys::Element,
         ctx: &mut State<C>,
     ) -> HookKey {
-        let me = ctx.insert_hook(Box::new(DummyHook));
+        let me = ctx.hooks.insert_dummy();
 
         let mut this = Self {
             callback,
@@ -251,7 +256,7 @@ impl<C: Component, K: ReactiveValue + 'static> SimpleReactive<C, K> {
         };
         this.update(ctx, me);
 
-        ctx.set_hook(me, Box::new(this));
+        ctx.hooks.set_hook(me, Box::new(this));
 
         me
     }

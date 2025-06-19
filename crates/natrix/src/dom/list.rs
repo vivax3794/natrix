@@ -4,12 +4,13 @@ use std::cmp::Ordering;
 
 use crate::dom::element::{DynElement, Element, ElementRenderResult, MaybeStaticElement};
 use crate::error_handling::{log_or_panic, log_or_panic_result};
+use crate::reactivity::KeepAlive;
 use crate::reactivity::component::Component;
-use crate::reactivity::render_callbacks::{DummyHook, ReactiveHook, RenderingState, UpdateResult};
-use crate::reactivity::state::{HookKey, KeepAlive, R as Ra, RenderCtx, State};
+use crate::reactivity::render_callbacks::{ReactiveHook, RenderingState, UpdateResult};
+use crate::reactivity::state::{HookKey, R as Ra, RenderCtx, State};
 
 // PERF: Make List keyes
-// REFACTOR: Revist this entire thing, feels like theres a cleaner api in here somehwere.
+// REFACTOR: Revisit this entire thing, feels like theres a cleaner api in here somewhere.
 
 /// List lets you efficiently render a list of items
 /// It takes a function that returns a vector of items and a render function
@@ -242,9 +243,9 @@ where
             start_marker: start_marker.clone().into(),
         };
 
-        let you = ctx.insert_hook(Box::new(DummyHook));
+        let you = ctx.hooks.insert_dummy();
         state.update(ctx, you);
-        ctx.set_hook(you, Box::new(state));
+        ctx.hooks.set_hook(you, Box::new(state));
         render_state.hooks.push(you);
 
         ElementRenderResult::Node(fragment.into())

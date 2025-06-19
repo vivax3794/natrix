@@ -34,7 +34,7 @@ impl<'a> oxc::ast_visit::VisitMut<'a> for RenameVisitor<'a> {
         oxc::ast_visit::walk_mut::walk_static_member_expression(self, it);
 
         // HACK: This is assuming the names of the exported/imported functions are only used for
-        // said exports and imports, which as of writting seems to be the case.
+        // said exports and imports, which as of writing seems to be the case.
         let current_name = it.property.name.to_string();
         if let Some(new_name) = self.mapping.0.get(&*current_name) {
             let new_name = self.allocator.alloc_str(new_name);

@@ -5,7 +5,7 @@ use std::ops::Deref;
 use crate::error_handling::log_or_panic_assert;
 
 // MAYBE: Make selector generic over target elements allowing us to constrain properties that are
-// allowd on them.
+// allowed on them.
 
 /// A list of selectors (`,`)
 #[derive(Debug)]

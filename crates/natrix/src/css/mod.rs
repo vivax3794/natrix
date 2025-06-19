@@ -5,7 +5,7 @@
 // The code in this module is intended to be used at bundling time, and hence will not be included
 // in production applications.
 
-// TODO: Implmenet all of css
+// TODO: Implement all of css
 // TODO: Allow composing css rules similar to css-modules `composes`
 
 pub mod property;
