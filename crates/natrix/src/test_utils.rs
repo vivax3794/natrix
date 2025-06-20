@@ -23,19 +23,41 @@ thread_local! {
 }
 
 /// Has a logger be initlized?
-#[cfg(feature = "console_log")]
 static LOGGER_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// A simple  `log` logger that just prints to `console.log` for all levels.
+// HACK: This is used for two reasons.
+// 1. the `console_log` crate color coding just adds noise in the wasm_bindgen_test capture (it
+//    literally prints out the css)
+// 2. This outputs everything to just `.log` for a reason, as wasm_bindgen_test splits logs per
+//    level (for some reason)
+struct SimpleLogger;
+
+impl log::Log for SimpleLogger {
+    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+        true
+    }
+
+    fn flush(&self) {}
+    fn log(&self, record: &log::Record) {
+        let message = format!(
+            "{}({}): {}",
+            record.level(),
+            record.module_path().unwrap_or_default(),
+            record.args()
+        );
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&message));
+    }
+}
 
 /// Mount a component at the test location (creating/resetting it if needed)
 /// # Panics
 /// If the js is in a invalid state or the element is not found
 pub fn mount_test<C: Component>(component: C) {
-    #[cfg(feature = "console_log")]
-    {
-        let was_logger_active = LOGGER_ACTIVE.fetch_or(true, std::sync::atomic::Ordering::Relaxed);
-        if !was_logger_active {
-            console_log::init_with_level(log::Level::Trace).expect("Failed to setup logging");
-        }
+    let was_logger_active = LOGGER_ACTIVE.fetch_or(true, std::sync::atomic::Ordering::Relaxed);
+    if !was_logger_active {
+        log::set_logger(&SimpleLogger).expect("Failed to set logger");
+        log::set_max_level(log::LevelFilter::Trace);
     }
 
     setup();

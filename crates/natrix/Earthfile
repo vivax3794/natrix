@@ -25,7 +25,7 @@ test-web:
 
     DO rust+SET_CACHE_MOUNTS_ENV
     RUN --mount=$EARTHLY_RUST_TARGET_CACHE \
-        cd ./crates/natrix && wasm-pack test --headless --chrome --features test_utils \
+        cd ./crates/natrix && wasm-pack test --headless --chrome --features test_utils --features console_log \
         $(if [ "$toolchain" = "nightly" ]; then echo "--all-features"; fi)
 
 check:
