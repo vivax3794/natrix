@@ -99,7 +99,7 @@ fn natrix_version() -> Result<semver::VersionReq> {
         .dependencies
         .iter()
         .find(|x| x.name == "natrix")
-        .ok_or(anyhow!("Natrix now found in dependecies"))?;
+        .ok_or(anyhow!("Natrix now found in dependencies"))?;
 
     Ok(natrix.req.clone())
 }
