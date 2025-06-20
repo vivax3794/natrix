@@ -59,6 +59,7 @@ impl NatrixConfig {
 
 /// Natrix CLI
 #[derive(Parser)]
+#[clap(version, about, author)]
 pub(crate) enum Cli {
     /// Create a new project
     New {
