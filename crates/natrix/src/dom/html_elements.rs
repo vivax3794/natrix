@@ -38,6 +38,18 @@ use crate::reactivity::state::{EventToken, State};
 /// A deferred function to do something once state is available
 pub(crate) type DeferredFunc<C> = Box<dyn FnOnce(&mut State<C>, &mut RenderingState)>;
 
+/// Indicates the given element is allowed to children
+/// This will catch errors such as:
+/// ```compile_fail
+/// # use natrix::prelude::*;
+/// # let _: e::HtmlElement<(), _> =
+/// e::br().child(e::h1().text("huh"))
+/// # ;
+/// ```
+pub trait CanHaveChild {}
+
+impl CanHaveChild for () {}
+
 /// A Generic html node with a given name.
 #[must_use = "Web elements are useless if not rendered"]
 #[non_exhaustive]
@@ -180,9 +192,11 @@ impl<C: Component, T> HtmlElement<C, T> {
     ///     })
     /// # }}
     /// ```
-    // TODO: Enforce certain elements cant have child elements.
     #[inline]
-    pub fn child<E: Element<C> + 'static>(mut self, child: E) -> Self {
+    pub fn child<E: Element<C> + 'static>(mut self, child: E) -> Self
+    where
+        T: CanHaveChild,
+    {
         let node = match child.render() {
             MaybeStaticElement::Static(result) => result.into_node(),
             MaybeStaticElement::Html(html) => {
@@ -214,7 +228,10 @@ impl<C: Component, T> HtmlElement<C, T> {
 
     /// This is a simple alias for `child`
     #[inline]
-    pub fn text<E: Element<C> + 'static>(self, text: E) -> Self {
+    pub fn text<E: Element<C> + 'static>(self, text: E) -> Self
+    where
+        T: CanHaveChild,
+    {
         self.child(text)
     }
 
@@ -296,7 +313,10 @@ impl<C: Component, T> HtmlElement<C, T> {
 
     /// Add multiple children, this is most commonly used with the `format_elements!` macro
     #[inline]
-    pub fn children<E: Element<C>>(mut self, elements: impl IntoIterator<Item = E>) -> Self {
+    pub fn children<E: Element<C>>(mut self, elements: impl IntoIterator<Item = E>) -> Self
+    where
+        T: CanHaveChild,
+    {
         for element in elements {
             self = self.child(element);
         }
@@ -331,6 +351,17 @@ macro_rules! elements {
                 pub fn $name<C: Component>() -> HtmlElement<C, [< Tag $name:camel >]> {
                     HtmlElement::new(stringify!($name))
                 }
+            }
+        )*
+    };
+}
+
+/// Mark that the list of elements can have children
+macro_rules! can_have_children {
+    ($($tag:ident),*) => {
+        $(
+            pastey::paste! {
+                impl CanHaveChild for [< Tag $tag:camel >] {}
             }
         )*
     };
@@ -395,18 +426,35 @@ macro_rules! aria_attrs {
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Element
 elements! {
-h1, h2, h3, h4, h5, h6,
-address, article, aside, footer, header, hgroup, main, nav, section, search,
-blockquote, dd, div, dl, dt, figcaption, figure, hr, li, menu, ol, p, pre, ul,
-a, abbr, b, bdi, bdo, br, cite, code, data, dfn, em, i, kbd, mark, q, rp, rt, ruby, s, samp, small, span, strong, sub, sup, time, u, var, wbr,
-area, audio, img, map, track, video,
-embed, fencedframe, iframe, object, picture, source,
-svg, math,
-canvas, script,
-del, ins,
-caption, col, colgroup, table, tbody, td, tfoot, th, thead, tr,
-button, datalist, fieldset, form, input, label, legend, meter, optgroup, option, output, progress, select, textarea,
-details, dialog, summary
+    h1, h2, h3, h4, h5, h6,
+    address, article, aside, footer, header, hgroup, main, nav, section, search,
+    blockquote, dd, div, dl, dt, figcaption, figure, hr, li, menu, ol, p, pre, ul,
+    a, abbr, b, bdi, bdo, br, cite, code, data, dfn, em, i, kbd, mark, q, rp, rt, ruby, s, samp, small, span, strong, sub, sup, time, u, var, wbr,
+    area, audio, img, map, track, video,
+    embed, fencedframe, iframe, object, picture, source,
+    svg, math,
+    canvas, script,
+    del, ins,
+    caption, col, colgroup, table, tbody, td, tfoot, th, thead, tr,
+    button, datalist, fieldset, form, input, label, legend, meter, optgroup, option, output, progress, select, textarea,
+    details, dialog, summary
+}
+
+// https://developer.mozilla.org/en-US/docs/Glossary/Void_element
+// NOTE: We cant have negative trait bounds, so we list out all the elements instead.
+can_have_children! {
+    h1, h2, h3, h4, h5, h6,
+    address, article, aside, footer, header, hgroup, main, nav, section, search,
+    blockquote, dd, div, dl, dt, figcaption, figure, li, menu, ol, p, pre, ul,
+    a, abbr, b, bdi, bdo, cite, code, data, dfn, em, i, kbd, mark, q, rp, rt, ruby, s, samp, small, span, strong, sub, sup, time, u, var,
+    audio, map, video,
+    fencedframe, iframe, object, picture,
+    svg, math,
+    canvas, script,
+    del, ins,
+    caption, colgroup, table, tbody, td, tfoot, th, thead, tr,
+    button, datalist, fieldset, form, label, legend, meter, optgroup, option, output, progress, select, textarea,
+    details, dialog, summary
 }
 
 // TEST: Somehow verify that all these attribute names are accurate.
