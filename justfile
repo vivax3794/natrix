@@ -17,9 +17,11 @@ core:
 all:
     earthly +all
 
+install_cli:
+    cargo install --path ./crates/natrix-cli
 
 [working-directory: './ci/stress_test_binary_size']
-stress_size: 
+stress_size: install_cli
     @echo
     @echo "--- Checking initial size (if file exists)..."
     @wc -c dist/code_bg.wasm || echo "No initial file."
@@ -46,7 +48,7 @@ stress_size:
 
 
 [working-directory: './ci/benchmark']
-bench: 
+bench: install_cli
     #!/usr/bin/bash
     set -e
     cleanup() {
