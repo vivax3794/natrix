@@ -56,8 +56,6 @@ dist
 
 /// Generate the `cargo.toml`
 fn generate_cargo_toml(name: &str, root: &Path, nightly: bool) -> Result<(), anyhow::Error> {
-    // FIXME: Using the cli version for natrix is brittle and locks us into having to always match
-    // up their versions.
     let natrix_version = env!("CARGO_PKG_VERSION");
     let mut natrix_table = format!(r#"version = "{natrix_version}""#);
     if let Ok(path) = std::env::var("NATRIX_PATH") {

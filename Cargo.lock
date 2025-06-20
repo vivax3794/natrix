@@ -1443,6 +1443,7 @@ dependencies = [
  "owo-colors",
  "oxc",
  "rustc_version",
+ "semver",
  "serde",
  "serde_json",
  "sourcemap",

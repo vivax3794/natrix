@@ -24,8 +24,14 @@ const BINDGEN_OUTPUT_NAME: &str = "code";
 const CSS_OUTPUT_NAME: &str = "styles.css";
 
 /// Build a project
-// TODO: Verify natrix version matches cli expected
 pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManifest> {
+    if !utils::is_natrix_version_matching()? {
+        println!(
+            "{}",
+            "Cli version does not match natrix version.".red().bold()
+        );
+    }
+
     println!("🧹 {}", "Cleaning dist".bright_black(),);
     let _ = fs::remove_dir_all(&config.dist);
 

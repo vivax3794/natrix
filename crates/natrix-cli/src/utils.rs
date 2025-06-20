@@ -90,6 +90,28 @@ pub(crate) fn is_feature_enabled(feature: &str, is_default: bool) -> Result<bool
     })
 }
 
+/// Get the natrix version in use
+fn natrix_version() -> Result<semver::VersionReq> {
+    let metadata = cargo_metadata::MetadataCommand::new().no_deps().exec()?;
+    let packages = metadata.workspace_default_packages();
+    let package = packages.first().ok_or(anyhow!("No package found"))?;
+    let natrix = package
+        .dependencies
+        .iter()
+        .find(|x| x.name == "natrix")
+        .ok_or(anyhow!("Natrix now found in dependecies"))?;
+
+    Ok(natrix.req.clone())
+}
+
+/// Does the natrix version match the cli version?
+pub(crate) fn is_natrix_version_matching() -> Result<bool> {
+    let natrix_version = natrix_version()?;
+    let cli_version = semver::Version::parse(env!("CARGO_PKG_VERSION"))?;
+
+    Ok(natrix_version.matches(&cli_version))
+}
+
 /// Find the natrix target folder
 pub(crate) fn find_target_natrix(mode: options::BuildProfile) -> Result<PathBuf> {
     let target = find_target()?;
