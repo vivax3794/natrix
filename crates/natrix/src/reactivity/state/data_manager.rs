@@ -174,13 +174,9 @@ impl<T: Component> State<T> {
 
     /// Loop over signals and update any depdant hooks for changed signals
     /// This also drains the deferred message queue
-    // FIXME: Currently there is a memory leak if a signal is not modified for many cycles, while
-    // also being part of a reactive hook which is triggering.
-    // For example if have `|ctx: R<Self>| *ctx.foo + *ctx.bar`, and `foo` is modified 100 times
-    // without `bar` being modified `bar`s dependency list will have 100 items in it.
     pub(crate) fn update(&mut self) {
-        log::trace!("Performing update cycle for {}", std::any::type_name::<T>());
         self.drain_message_queue();
+        log::trace!("Performing update cycle for {}", std::any::type_name::<T>());
 
         let dep_lists: Vec<_> = self
             .data

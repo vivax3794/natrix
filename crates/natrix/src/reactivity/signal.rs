@@ -3,6 +3,8 @@
 use std::cell::Cell;
 use std::ops::{Deref, DerefMut};
 
+use indexmap::IndexSet;
+
 use crate::reactivity::state::HookKey;
 
 // TODO: Make the transformation of component structs into per-field signals a more generic
@@ -24,9 +26,7 @@ pub struct Signal<T> {
     /// Actually calling said dependencies is the responsibility of the `State` struct.
     /// Dependencies are also lazily removed by the `State` struct, and hence might contain stale
     /// pointers.
-    // PERF: Is there a more efficient version than a `Vec` for storing append and full-drain only
-    // collection? I cant really imagine how one would optimize it, but worth keeping an eye out.
-    deps: Vec<HookKey>,
+    deps: IndexSet<HookKey>,
 }
 
 /// The `written` and `read` flags of a signal extracted
@@ -51,7 +51,7 @@ impl<T> Signal<T> {
             data,
             written: false,
             read: Cell::new(false),
-            deps: Vec::new(),
+            deps: IndexSet::new(),
         }
     }
 
@@ -108,7 +108,7 @@ impl<T> SignalMethods for Signal<T> {
 
     fn register_dep(&mut self, dep: HookKey) {
         if self.read.get() {
-            self.deps.push(dep);
+            self.deps.insert(dep);
         }
     }
 
@@ -117,9 +117,7 @@ impl<T> SignalMethods for Signal<T> {
     }
 
     fn drain_dependencies(&mut self) -> Vec<HookKey> {
-        let mut result = Vec::with_capacity(self.deps.len());
-        std::mem::swap(&mut self.deps, &mut result);
-        result
+        self.deps.drain(..).collect()
     }
 }
 

@@ -1403,6 +1403,7 @@ dependencies = [
  "const-sha1",
  "const_base",
  "futures-channel",
+ "indexmap",
  "insta",
  "inventory",
  "itoa",
