@@ -273,3 +273,62 @@ fn guard_non_copy() {
     let text = crate::get(TEXT);
     assert_eq!(text.text_content(), Some("hello".to_owned()));
 }
+
+// NOTE: This tests for a re-ordering bug in the reactive runtime, where the internal ordering of
+// signal dependencies generally covered up that the update cycle was reading hooks in the wrong
+// order.
+// This test is specically setup to have the first read hook be in the wrong order.
+// Cruically the order of the fields in this definition is crucial for triggering the bug
+#[derive(Component)]
+struct ReactiveOrderingEdgeCaseRegression {
+    trigger: u8,
+    guarded_value: Option<u8>,
+}
+
+impl Component for ReactiveOrderingEdgeCaseRegression {
+    type EmitMessage = NoMessages;
+    type ReceiveMessage = NoMessages;
+
+    fn render() -> impl Element<Self> {
+        e::div().child(
+            e::button()
+                .id(BUTTON)
+                .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    *ctx.trigger += 1;
+                    if ctx.guarded_value.is_some() {
+                        *ctx.guarded_value = None;
+                    } else {
+                        *ctx.guarded_value = Some(0);
+                    }
+                })
+                .child(|ctx: R<Self>| {
+                    if let Some(guard) = guard_option!(@owned|ctx| (*ctx.guarded_value).clone()) {
+                        Some(e::div().id(TEXT).text(move |ctx: R<Self>| {
+                            format!("{}-{}", *ctx.trigger, ctx.get_owned(&guard))
+                        }))
+                    } else {
+                        None
+                    }
+                }),
+        )
+    }
+}
+
+#[wasm_bindgen_test]
+fn reactive_ordering_edge_case_regression() {
+    crate::mount_test(ReactiveOrderingEdgeCaseRegression {
+        trigger: 0,
+        guarded_value: None,
+    });
+
+    let button = crate::get(BUTTON);
+
+    button.click();
+    let text = crate::get(TEXT);
+    assert_eq!(text.text_content(), Some("1-0".to_string()));
+
+    button.click();
+    button.click();
+    let text = crate::get(TEXT);
+    assert_eq!(text.text_content(), Some("3-0".to_string()));
+}

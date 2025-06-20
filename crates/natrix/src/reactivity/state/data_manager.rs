@@ -1,13 +1,18 @@
 //! Manger of the update cycle and signals.
 
+use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
+use slotmap::SecondaryMap;
+
 use super::{HookKey, State};
+use crate::error_handling::log_or_panic;
 use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::UpdateResult;
 use crate::reactivity::signal::SignalMethods;
 
 /// Store some data but use `O` for its `Ord` implementation
+#[derive(Debug)]
 struct OrderAssociatedData<T, O> {
     /// The data in question
     data: T,
@@ -30,6 +35,89 @@ impl<T, O: PartialOrd> PartialOrd for OrderAssociatedData<T, O> {
 impl<T, O: Ord> Ord for OrderAssociatedData<T, O> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.ordering.cmp(&other.ordering)
+    }
+}
+
+/// The queue processor of the queue
+struct HookQueue {
+    /// All changed vectors
+    vectors: Vec<std::vec::IntoIter<HookKey>>,
+    /// The queue of the next item in each vector
+    queue: BinaryHeap<OrderAssociatedData<(HookKey, usize), Reverse<u64>>>,
+    /// A temporary next item
+    next_item: Option<HookKey>,
+}
+
+/// Iterate over `iter` until it finds a key in `insertion_orders`
+fn get_next_valid(
+    insertion_orders: &SecondaryMap<HookKey, u64>,
+    iter: &mut std::vec::IntoIter<HookKey>,
+) -> Option<(HookKey, u64)> {
+    for hook in iter.by_ref() {
+        if let Some(&order) = insertion_orders.get(hook) {
+            return Some((hook, order));
+        }
+    }
+    None
+}
+
+impl HookQueue {
+    /// Create a new queue
+    fn new(
+        insertion_orders: &SecondaryMap<HookKey, u64>,
+        mut vectors: Vec<std::vec::IntoIter<HookKey>>,
+    ) -> Self {
+        let mut queue = BinaryHeap::with_capacity(vectors.len());
+
+        let first_items = vectors
+            .iter_mut()
+            .enumerate()
+            .filter_map(|(index, vector)| {
+                let (hook, ordering) = get_next_valid(insertion_orders, vector)?;
+                Some(OrderAssociatedData {
+                    data: (hook, index),
+                    ordering: Reverse(ordering),
+                })
+            });
+        queue.extend(first_items);
+
+        Self {
+            vectors,
+            queue,
+            next_item: None,
+        }
+    }
+
+    /// Push a item to be popped next
+    fn push_next(&mut self, key: HookKey) {
+        if self.next_item.is_some() {
+            log_or_panic!("`push_next` called while `next_item` already has item");
+        }
+
+        self.next_item = Some(key);
+    }
+
+    /// Pop the next item
+    fn pop(&mut self, insertion_orders: &SecondaryMap<HookKey, u64>) -> Option<HookKey> {
+        if let Some(next) = self.next_item.take() {
+            return Some(next);
+        }
+
+        log::trace!("current queue: {:?}", self.queue);
+        let (hook, source_index) = self.queue.pop()?.data;
+
+        // NOTE: We know the `source_index` is valid, but I dont think there is a nice way in rust
+        // to enforce that invariant (maybe something fancy with marker lifetimes)
+        // Hopefully rust optimizes out the bounds check?
+        if let Some(vector) = self.vectors.get_mut(source_index) {
+            if let Some((hook, ordering)) = get_next_valid(insertion_orders, vector) {
+                self.queue.push(OrderAssociatedData {
+                    data: (hook, source_index),
+                    ordering: Reverse(ordering),
+                });
+            }
+        }
+        Some(hook)
     }
 }
 
@@ -91,33 +179,26 @@ impl<T: Component> State<T> {
     // For example if have `|ctx: R<Self>| *ctx.foo + *ctx.bar`, and `foo` is modified 100 times
     // without `bar` being modified `bar`s dependency list will have 100 items in it.
     pub(crate) fn update(&mut self) {
-        log::debug!("Performing update cycle for {}", std::any::type_name::<T>());
+        log::trace!("Performing update cycle for {}", std::any::type_name::<T>());
         self.drain_message_queue();
 
-        let mut hooks = BinaryHeap::new();
-        for signal in self.data.signals_mut() {
-            if signal.changed() {
-                for dep in signal.drain_dependencies() {
-                    if let Some(dep_insertion_order) = self.hooks.insertion_order(dep) {
-                        // PERF: This does not deduplicate the hooks.
-                        hooks.push(OrderAssociatedData {
-                            data: dep,
-                            ordering: std::cmp::Reverse(dep_insertion_order),
-                        });
-                    }
-                }
-            }
-        }
+        let dep_lists: Vec<_> = self
+            .data
+            .signals_mut()
+            .into_iter()
+            .filter(|signal| signal.changed())
+            .map(|signal| signal.drain_dependencies().into_iter())
+            .collect();
 
-        log::trace!("{} hooks updating", hooks.len());
-        while let Some(OrderAssociatedData { data: hook_key, .. }) = hooks.pop() {
+        log::trace!("{} signals changed", dep_lists.len());
+        let mut hook_queue = HookQueue::new(&self.hooks.insertion_order, dep_lists);
+
+        while let Some(hook_key) = hook_queue.pop(&self.hooks.insertion_order) {
+            log::trace!("Updating hook {hook_key:?}");
             self.run_with_hook_and_self(hook_key, |ctx, hook| match hook.update(ctx, hook_key) {
                 UpdateResult::Nothing => {}
                 UpdateResult::RunHook(dep) => {
-                    hooks.push(OrderAssociatedData {
-                        data: dep,
-                        ordering: std::cmp::Reverse(u64::MIN), // This item should be the next item
-                    });
+                    hook_queue.push_next(dep);
                 }
                 UpdateResult::DropHooks(deps) => {
                     for dep in deps {

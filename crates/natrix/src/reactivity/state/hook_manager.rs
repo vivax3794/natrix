@@ -14,7 +14,7 @@ pub(crate) struct HookStore<T: Component> {
     /// The hooks themself
     hooks: SlotMap<HookKey, Box<dyn ReactiveHook<T>>>,
     /// The insertion order
-    insertion_order: SecondaryMap<HookKey, u64>,
+    pub(super) insertion_order: SecondaryMap<HookKey, u64>,
     /// The next key in the insertion order
     next_insertion_order: u64,
 }
@@ -53,11 +53,6 @@ impl<T: Component> HookStore<T> {
     /// insert a deummy and return the key
     pub(crate) fn insert_dummy(&mut self) -> HookKey {
         self.insert_hook(Box::new(crate::reactivity::render_callbacks::DummyHook))
-    }
-
-    /// Get the insertion order of the given key
-    pub(super) fn insertion_order(&self, key: HookKey) -> Option<u64> {
-        self.insertion_order.get(key).copied()
     }
 
     /// Drop all children of the hook

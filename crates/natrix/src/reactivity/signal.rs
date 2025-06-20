@@ -95,7 +95,7 @@ pub trait SignalMethods {
     ///
     /// (This is a concrete type instead of `impl Iterator...` because this trait needs to be
     /// object safe.)
-    fn drain_dependencies(&mut self) -> std::vec::Drain<'_, HookKey>;
+    fn drain_dependencies(&mut self) -> Vec<HookKey>;
     /// Return the value of the `written` field
     fn changed(&self) -> bool;
 }
@@ -116,8 +116,10 @@ impl<T> SignalMethods for Signal<T> {
         self.written
     }
 
-    fn drain_dependencies(&mut self) -> std::vec::Drain<'_, HookKey> {
-        self.deps.drain(..)
+    fn drain_dependencies(&mut self) -> Vec<HookKey> {
+        let mut result = Vec::with_capacity(self.deps.len());
+        std::mem::swap(&mut self.deps, &mut result);
+        result
     }
 }
 

@@ -56,7 +56,7 @@ console_log = ["dep:console_log"]
 async = ["dep:pin-project", "dep:wasm-bindgen-futures", "dep:ouroboros"]
 async_utils = ["async", "dep:futures-channel"]
 
-test_utils = []
+test_utils = ["web-sys/console"]
 
 _internal_collect_css = ["dep:inventory"]
 _internal_no_ssg = ["_internal_collect_css"]
