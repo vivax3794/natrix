@@ -13,7 +13,6 @@ jobs:
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-      EARTHLY_TOKEN: ${{ secrets.EARTHLY_TOKEN }}
       FORCE_COLOR: 1
 
     steps:
@@ -24,29 +23,12 @@ jobs:
           use-cache: true
       - uses: actions/checkout@v4
 
-      - name: Restore Earthly Cache Volume
-        id: restore-earthly-cache
-        uses: BYK/docker-volume-cache-action/restore@main
-        with:
-          volumes: earthly-cache
-          key: v1-earthly-cache-${{ runner.os }}-${{ hashFiles('**/Earthfile') }}
-          restore-keys: |
-            v1-earthly-cache-${{ runner.os }}-
-
       - name: Docker Login
         run: docker login --username "$DOCKERHUB_USERNAME" --password "$DOCKERHUB_TOKEN"
       - name: Run build
         run: |
           earthly config global.buildkit_max_parallelism 1
           earthly --ci --github-annotations ./docs+build-book
-
-      - name: Prune earthly cache
-        run: earthly prune --size 40GB
-      - name: Save Earthly Cache Volume
-        uses: BYK/docker-volume-cache-action/save@main
-        with:
-          key: ${{ steps.restore-earthly-cache.outputs.cache-primary-key }}
-          volumes: earthly-cache
 
       - uses: actions/upload-pages-artifact@v3
         with:
