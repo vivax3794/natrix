@@ -80,9 +80,7 @@ static FILE_COUNTER: AtomicU32 = AtomicU32::new(0);
 
 /// Emit a file to the target directory
 fn emit_file(
-    // REFACTOR: Make file emission always emit a specific enum kind
-    content: impl AsRef<[u8]>,
-    extension: &str,
+    content: natrix_shared::macros::MacroEmisson,
     settings: &natrix_shared::macros::Settings,
 ) {
     let first_use = FIRST_USE_IN_CRATE.fetch_and(false, Ordering::AcqRel);
@@ -110,13 +108,23 @@ fn emit_file(
     }
 
     let name = FILE_COUNTER.fetch_add(1, Ordering::AcqRel);
-    let output_file = output_directory.join(format!("{name}.{extension}"));
+    let output_file = output_directory.join(format!("{name}.natrix"));
+
+    #[expect(
+        clippy::expect_used,
+        reason = "We dont have any of the types that could cause errors"
+    )]
+    let encoded = natrix_shared::macros::bincode::encode_to_vec(
+        content,
+        natrix_shared::macros::bincode_config(),
+    )
+    .expect("Failed to encode asset information");
 
     #[expect(
         clippy::expect_used,
         reason = "We should have write permission to target/"
     )]
-    fs::write(output_file, content).expect("Failed to write output file.");
+    fs::write(output_file, encoded).expect("Failed to write output file.");
 }
 
 /// Inform the bundling system to include the given asset
@@ -151,6 +159,16 @@ pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
         return quote!(compile_error!(#err)).into();
     }
 
+    let Ok(settings) = std::env::var(natrix_shared::MACRO_SETTINGS) else {
+        // NOTE:
+        // This is not a hard error because running without the bundler is a expected situation
+        // (cargo check, ides, etc)
+        // But all those situations are also situations where a accurate path is not required as
+        // its no runtime (building a natrix application with just `cargo build` is not supported)
+        // so we return this path that if it ends up in runtime should hopefully be helpful.
+        return quote!("/warn_no_bundler/this_expansion_was_not_via_the_natrix_bundler/as_such_a_proper_path_cant_be_given").into();
+    };
+
     let mut hasher = DefaultHasher::default();
 
     // TODO: Make assets respect cache bustin setting
@@ -173,16 +191,6 @@ pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
         hash_base64
     };
 
-    let Ok(settings) = std::env::var(natrix_shared::MACRO_SETTINGS) else {
-        // This is not a hard error because running without the bundler is a expected situation
-        // (cargo check, ides, etc)
-        //
-        // But all those situations are also situations where a accurate path is not required as
-        // its no runtime (building a natrix application with just `cargo build` is not supported)
-        // so we return this path that if it ends up in runtime should hopefully be helpful.
-        return quote!("/warn_no_bundler/this_expansion_was_not_via_the_natrix_bundler/as_such_a_proper_path_cant_be_given").into();
-    };
-
     #[expect(clippy::expect_used, reason = "We should have a valid base64 string")]
     let settings = data_encoding::BASE64_NOPAD
         .decode(settings.as_bytes())
@@ -199,21 +207,11 @@ pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let url = format!("{}/{target}", settings.base_path);
 
     let result = quote!(#url).into();
-    let asset = natrix_shared::macros::Asset {
+    let asset = natrix_shared::macros::MacroEmisson::Asset {
         path: file_path,
         emitted_path: target,
     };
 
-    #[expect(
-        clippy::expect_used,
-        reason = "We dont have any of the types that could cause errors"
-    )]
-    let asset_encoded = natrix_shared::macros::bincode::encode_to_vec(
-        asset,
-        natrix_shared::macros::bincode_config(),
-    )
-    .expect("Failed to encode asset information");
-
-    emit_file(asset_encoded, "asset", &settings);
+    emit_file(asset, &settings);
     result
 }

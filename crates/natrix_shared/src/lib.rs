@@ -12,12 +12,17 @@ pub mod macros {
     pub use bincode;
 
     /// The asset format
+    // IMPORTANT: Macro assumes encoding this cant fail
+    // <https://docs.rs/bincode/latest/bincode/error/enum.EncodeError.html>
     #[derive(bincode::Decode, bincode::Encode)]
-    pub struct Asset {
-        /// The file path to the asset
-        pub path: std::path::PathBuf,
-        /// The emitted name for the asset
-        pub emitted_path: String,
+    pub enum MacroEmisson {
+        /// An asset that needs bundling
+        Asset {
+            /// The file path to the asset
+            path: std::path::PathBuf,
+            /// The emitted name for the asset
+            emitted_path: String,
+        },
     }
 
     /// The settings for the macros

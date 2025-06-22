@@ -23,11 +23,7 @@ pub(crate) fn collect_macro_output(config: &options::BuildConfig) -> Result<Asse
     let mut asset_files = Vec::new();
 
     for file in get_macro_output_files(config)? {
-        let extension = file.extension().map(|ext| ext.to_string_lossy());
-        match extension.as_ref().map(AsRef::as_ref) {
-            Some("asset") => asset_files.push(file),
-            _ => return Err(anyhow!("Invalid file extension found in macro output")),
-        }
+        asset_files.push(file);
     }
 
     let manifest = collect_asset_manifest(asset_files)?;
@@ -64,12 +60,12 @@ pub(crate) fn collect_asset_manifest(asset_files: Vec<PathBuf>) -> Result<AssetM
     let mut mapping = HashMap::with_capacity(asset_files.len());
     for file in asset_files {
         let mut file_reader = fs::File::open(file)?;
-        let asset: natrix_shared::macros::Asset =
+        let natrix_shared::macros::MacroEmisson::Asset { path, emitted_path } =
             natrix_shared::macros::bincode::decode_from_std_read(
                 &mut file_reader,
                 natrix_shared::macros::bincode_config(),
             )?;
-        mapping.insert(asset.emitted_path, asset.path);
+        mapping.insert(emitted_path, path);
     }
 
     spinner.finish();
