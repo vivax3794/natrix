@@ -15,6 +15,7 @@ pub(crate) mod assets;
 mod css;
 pub(crate) mod sourcemap;
 mod wasm_js;
+mod wasm_parser;
 
 /// The directory to store macro outputs
 const MACRO_OUTPUT_DIR: &str = "macro";
@@ -57,15 +58,28 @@ pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManife
     let wasm_file = cache_bust_file(config, wasm_file)?;
     let js_file = cache_bust_file(config, js_file)?;
 
+    // Parse wasm file once for both sourcemap and CSS optimization
+    let wasm_parse_result = if config.profile == options::BuildProfile::Dev || config.ssg {
+        Some(wasm_parser::parse_wasm_file(&wasm_file)?)
+    } else {
+        None
+    };
+
     if config.profile == options::BuildProfile::Dev {
         println!("{}", "🗺️ Generating source map".bright_blue());
-        sourcemap::create_sourcemap(&wasm_file)?;
+        let parse_result = wasm_parse_result
+            .as_ref()
+            .ok_or_else(|| anyhow!("Wasm parse result missing for sourcemap generation"))?;
+        sourcemap::create_sourcemap(&wasm_file, parse_result)?;
     }
 
     let asset_manifest = assets::collect_macro_output(config)?;
 
     let css_file = if config.ssg {
-        let css_file = css::collect_css(config, &wasm_file)?;
+        let parse_result = wasm_parse_result
+            .as_ref()
+            .ok_or_else(|| anyhow!("Wasm parse result missing for CSS optimization"))?;
+        let css_file = css::collect_css(config, parse_result)?;
         let css_file = cache_bust_file(config, css_file)?;
         Some(css_file)
     } else {

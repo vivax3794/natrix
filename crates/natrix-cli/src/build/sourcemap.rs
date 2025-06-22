@@ -5,7 +5,7 @@
 //!     (MIT-licensed, © 2018 The Emscripten Authors)
 
 use std::collections::HashMap;
-use std::io::{Read, Seek, Write};
+use std::io::{Seek, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::anyhow;
@@ -20,20 +20,26 @@ const WASM_CUSTOM_SECTION_ID: u8 = 0;
 const SOURCEMAP_SECTION_NAME: &str = "sourceMappingURL";
 
 /// Create and embed a source map in the given wasm file.
-pub(crate) fn create_sourcemap(wasm_file: &Path) -> Result<()> {
+pub(crate) fn create_sourcemap(
+    wasm_file: &Path,
+    parse_result: &super::wasm_parser::WasmParseResult,
+) -> Result<()> {
     let mut sourcemap = sourcemap::SourceMapBuilder::new(Some(&wasm_file.display().to_string()));
 
-    let mut wasm_file = std::fs::OpenOptions::new()
+    let wasm_file = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
         .truncate(false)
         .open(wasm_file)?;
-    let mut wasm_content = Vec::new();
-    // PERF: `wasmparser` supports streaming the wasm content
-    wasm_file.read_to_end(&mut wasm_content)?;
 
-    let (sections, code_section_offset) = parse_wasm(&wasm_content)?;
-    populate_sourcemap(&mut sourcemap, &sections, code_section_offset)?;
+    // Convert parse result to the format expected by populate_sourcemap
+    let sections: HashMap<&str, &[u8]> = parse_result
+        .custom_sections
+        .iter()
+        .map(|(k, v)| (k.as_str(), v.as_slice()))
+        .collect();
+
+    populate_sourcemap(&mut sourcemap, &sections, parse_result.code_section_offset)?;
     inject_sourcemap(sourcemap, wasm_file)?;
 
     Ok(())
@@ -153,25 +159,6 @@ fn populate_sourcemap(
         }
     }
     Ok(())
-}
-
-/// Extract all the custom sections from the wasm
-fn parse_wasm(wasm_content: &[u8]) -> Result<(HashMap<&str, &[u8]>, u64), anyhow::Error> {
-    let mut sections = HashMap::new();
-    let mut code_section_offset = 0;
-    let parser = wasmparser::Parser::new(0);
-    for section in parser.parse_all(wasm_content) {
-        match section? {
-            wasmparser::Payload::CustomSection(reader) => {
-                sections.insert(reader.name(), reader.data());
-            }
-            wasmparser::Payload::CodeSectionStart { range, .. } => {
-                code_section_offset = range.start as u64;
-            }
-            _ => {}
-        }
-    }
-    Ok((sections, code_section_offset))
 }
 
 /// Calculate the size of encoding a u32

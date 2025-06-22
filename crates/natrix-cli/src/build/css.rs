@@ -2,21 +2,24 @@
 
 use std::collections::HashSet;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 
 use lightningcss::visitor::Visit;
 
-use super::{CSS_OUTPUT_NAME, options, utils, wasm_js};
+use super::{CSS_OUTPUT_NAME, options, utils};
 use crate::prelude::*;
 use crate::project_gen::FEATURE_BUNDLE;
 
 /// Collect css from the stdout of a custom bundle build
-pub(crate) fn collect_css(config: &options::BuildConfig, wasm_file: &Path) -> Result<PathBuf> {
+pub(crate) fn collect_css(
+    config: &options::BuildConfig,
+    parse_result: &super::wasm_parser::WasmParseResult,
+) -> Result<PathBuf> {
     let mut css_content = extract_css()?;
 
     if config.profile == options::BuildProfile::Release {
-        css_content = optimize_css(&css_content, wasm_file)?;
+        css_content = optimize_css(&css_content, parse_result)?;
     }
 
     let output_path = config.dist.join(CSS_OUTPUT_NAME);
@@ -39,7 +42,10 @@ fn extract_css() -> Result<String> {
 }
 
 /// Optimize the given css string
-fn optimize_css(css_content: &str, wasm_file: &Path) -> Result<String> {
+fn optimize_css(
+    css_content: &str,
+    parse_result: &super::wasm_parser::WasmParseResult,
+) -> Result<String> {
     let mut styles = lightningcss::stylesheet::StyleSheet::parse(
         css_content,
         lightningcss::stylesheet::ParserOptions {
@@ -53,7 +59,7 @@ fn optimize_css(css_content: &str, wasm_file: &Path) -> Result<String> {
     )
     .map_err(|err| anyhow!("Failed to parse css {err}"))?;
 
-    let wasm_strings = wasm_js::get_wasm_strings(wasm_file)?;
+    let wasm_strings = &parse_result.data_strings;
     let mut unused_symbols = get_symbols(&mut styles);
     // `wasm_strings` is a vec of data sections, so we need to check if the symbol is in any of
     // them as wasm optimizes multiple string literals to the same section
