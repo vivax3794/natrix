@@ -31,6 +31,7 @@ impl<T: Component> HookStore<T> {
     }
 
     /// Insert a hook
+    /// INVARIANT: Hooks must call `.insert_hook` in the relative order they are required to be updated and invalidated.
     pub(crate) fn insert_hook(&mut self, hook: Option<Box<dyn ReactiveHook<T>>>) -> HookKey {
         let key = self.hooks.insert(hook);
         self.insertion_order.insert(key, self.next_insertion_order);
@@ -54,6 +55,7 @@ impl<T: Component> HookStore<T> {
     }
 
     /// insert a deummy and return the key
+    /// INVARIANT: Hooks must call `.reserve_key` in the relative order they are required to be updated and invalidated.
     pub(crate) fn reserve_key(&mut self) -> HookKey {
         self.insert_hook(None)
     }
