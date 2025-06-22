@@ -47,22 +47,6 @@ pub(crate) enum UpdateResult {
     RunHook(HookKey),
 }
 
-/// A noop hook used to fill the `Rc<RefCell<...>>` while the initial render pass runs so that that
-/// a real hook can be swapped in once initialized
-// PERF: Can we make the hook api not need this? its hard because to get a hook key you need to
-// insert something, and `insert_with_key` wont work as we might mutate the slotmap during hook
-// construction. I suppose we could store `Option` in the slotmap, but that becomes annoying again
-// on retrieval.
-pub(crate) struct DummyHook;
-impl<C: Component> ReactiveHook<C> for DummyHook {
-    fn update(&mut self, _ctx: &mut State<C>, _you: HookKey) -> UpdateResult {
-        UpdateResult::Nothing
-    }
-    fn drop_us(self: Box<Self>) -> Vec<HookKey> {
-        Vec::new()
-    }
-}
-
 /// Reactive hook for swapping out a entire dom node.
 pub(crate) struct ReactiveNode<C: Component> {
     /// The callback to produce nodes
@@ -108,7 +92,7 @@ impl<C: Component> ReactiveNode<C> {
         callback: Box<dyn Fn(&mut RenderCtx<C>) -> MaybeStaticElement<C>>,
         ctx: &mut State<C>,
     ) -> (HookKey, web_sys::Node) {
-        let me = ctx.hooks.insert_dummy();
+        let me = ctx.hooks.reserve_key();
 
         let Some(dummy_node) = get_document().body() else {
             log_or_panic!("Document body not found");
@@ -249,7 +233,7 @@ impl<C: Component, K: ReactiveValue + 'static> SimpleReactive<C, K> {
         node: web_sys::Element,
         ctx: &mut State<C>,
     ) -> HookKey {
-        let me = ctx.hooks.insert_dummy();
+        let me = ctx.hooks.reserve_key();
 
         let mut this = Self {
             callback,

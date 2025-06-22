@@ -88,7 +88,7 @@ impl<C: Component> RenderCtx<'_, C> {
             last_value: result.clone(),
             dep: self.render_state.parent_dep,
         };
-        let me = self.ctx.hooks.insert_hook(Box::new(hook));
+        let me = self.ctx.hooks.insert_hook(Some(Box::new(hook)));
         self.ctx.reg_dep(me);
         self.render_state.hooks.push(me);
 

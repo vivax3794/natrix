@@ -11,6 +11,7 @@ use crate::reactivity::state::{HookKey, R as Ra, RenderCtx, State};
 
 // PERF: Make List keyes
 // REFACTOR: Revisit this entire thing, feels like theres a cleaner api in here somewhere.
+// When we have sub signal constructs we prolly want a Vec one.
 
 /// List lets you efficiently render a list of items
 /// It takes a function that returns a vector of items and a render function
@@ -243,7 +244,7 @@ where
             start_marker: start_marker.clone().into(),
         };
 
-        let you = ctx.hooks.insert_dummy();
+        let you = ctx.hooks.reserve_key();
         state.update(ctx, you);
         ctx.hooks.set_hook(you, Box::new(state));
         render_state.hooks.push(you);

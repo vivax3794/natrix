@@ -12,7 +12,8 @@ new_key_type! { pub(crate) struct HookKey; }
 /// A manager for storing hooks
 pub(crate) struct HookStore<T: Component> {
     /// The hooks themself
-    hooks: SlotMap<HookKey, Box<dyn ReactiveHook<T>>>,
+    /// NOTE: The `None` case is for yet to be initialized hooks, *not* for removed hooks.
+    hooks: SlotMap<HookKey, Option<Box<dyn ReactiveHook<T>>>>,
     /// The insertion order
     pub(super) insertion_order: SecondaryMap<HookKey, u64>,
     /// The next key in the insertion order
@@ -30,7 +31,7 @@ impl<T: Component> HookStore<T> {
     }
 
     /// Insert a hook
-    pub(crate) fn insert_hook(&mut self, hook: Box<dyn ReactiveHook<T>>) -> HookKey {
+    pub(crate) fn insert_hook(&mut self, hook: Option<Box<dyn ReactiveHook<T>>>) -> HookKey {
         let key = self.hooks.insert(hook);
         self.insertion_order.insert(key, self.next_insertion_order);
 
@@ -46,18 +47,25 @@ impl<T: Component> HookStore<T> {
     /// Update the value for a hook
     pub(crate) fn set_hook(&mut self, key: HookKey, hook: Box<dyn ReactiveHook<T>>) {
         if let Some(slot) = self.hooks.get_mut(key) {
-            *slot = hook;
+            *slot = Some(hook);
+        } else {
+            log_or_panic!("Attempted to update missing key {key:?}");
         }
     }
 
     /// insert a deummy and return the key
-    pub(crate) fn insert_dummy(&mut self) -> HookKey {
-        self.insert_hook(Box::new(crate::reactivity::render_callbacks::DummyHook))
+    pub(crate) fn reserve_key(&mut self) -> HookKey {
+        self.insert_hook(None)
     }
 
     /// Drop all children of the hook
-    pub(super) fn drop_hook(&mut self, hook: HookKey) {
-        if let Some(hook) = self.hooks.remove(hook) {
+    pub(super) fn drop_hook(&mut self, hook_key: HookKey) {
+        if let Some(hook) = self.hooks.remove(hook_key) {
+            let Some(hook) = hook else {
+                log_or_panic!("Attempted to drop `None` (uninitlized) hook, {hook_key:?}");
+                return;
+            };
+
             let mut hooks = hook.drop_us();
             for hook in hooks.drain(..) {
                 self.drop_hook(hook);
@@ -71,19 +79,18 @@ impl<T: Component> State<T> {
     ///
     /// This is to allow mut access to both the hook and self, which is required by most hooks.
     /// (and yes hooks also mutable access the slotmap while running)
-    pub(super) fn run_with_hook_and_self<F, R>(&mut self, hook: HookKey, func: F) -> Option<R>
+    pub(super) fn run_with_hook_and_self<F, R>(&mut self, hook_key: HookKey, func: F) -> Option<R>
     where
         F: FnOnce(&mut Self, &mut Box<dyn ReactiveHook<T>>) -> R,
     {
-        let slot_ref = self.hooks.hooks.get_mut(hook)?;
-        let mut temp_hook: Box<dyn ReactiveHook<T>> =
-            Box::new(crate::reactivity::render_callbacks::DummyHook);
-        std::mem::swap(slot_ref, &mut temp_hook);
+        let slot_ref = self.hooks.hooks.get_mut(hook_key)?;
+        let Some(mut hook) = slot_ref.take() else {
+            log_or_panic!("Attempted to run `None` (Uninitialized) hook, {hook_key:?}");
+            return None;
+        };
 
-        let res = func(self, &mut temp_hook);
-
-        let slot_ref = self.hooks.hooks.get_mut(hook)?;
-        *slot_ref = temp_hook;
+        let res = func(self, &mut hook);
+        self.hooks.set_hook(hook_key, hook);
 
         Some(res)
     }
