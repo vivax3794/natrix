@@ -521,7 +521,7 @@ impl<C: Component> HtmlElement<C, TagA> {
     }
 }
 
-// TODO: type safe coords
+// SPEC: type safe coords
 attr_helpers!(area =>
     alt(String, "alt"), coords(String, "coords"), download(bool, "download"),
     href(String, "href"), ping(String, "ping"), referrer_policy(attributes::ReferrerPolicy, "referrerpolicy"),
@@ -546,8 +546,8 @@ attr_helpers!(col => span(attributes::Integer, "span"));
 attr_helpers!(colgroup => span(attributes::Integer, "span"));
 attr_helpers!(data => value(String, "data"));
 attr_helpers!(del => cite(String, "cite")); // TODO: datetime
-attr_helpers!(details => open(bool, "open"), name(String, "name")); // TODO: Enforce `unique_str`
-attr_helpers!(dialog => open(bool, "open")); // TODO: deny tabindex
+attr_helpers!(details => open(bool, "open"), name(String, "name")); // SPEC: Enforce `unique_str`
+attr_helpers!(dialog => open(bool, "open")); // SPEC: deny tabindex
 attr_helpers!(embed =>
     height(attributes::Integer, "height"), width(attributes::Integer, "width"),
     src(String, "src"), mime_type(String, "type")
@@ -590,7 +590,7 @@ attr_helpers!(img =>
 attr_helpers!(ins => cite(String, "cite")); // TODO: datetime
 attr_helpers!(label => is_for(Id, "for"));
 attr_helpers!(li => value(attributes::Integer, "value"));
-attr_helpers!(map => name(String, "name")); // TODO: name and id need to be identical
+attr_helpers!(map => name(String, "name")); // SPEC: name and id need to be identical
 
 attr_helpers!(meter =>
     value(attributes::Float, "value"),

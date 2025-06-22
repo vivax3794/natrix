@@ -187,7 +187,7 @@ impl<T: Component> State<T> {
     }
 
     /// Register a dependency for all read signals
-    ///  INVARIANT: Hooks must call `.reg_dep` in the relative order they are required to be updated and invalidated.
+    /// INVARIANT: Hooks must call `.reg_dep` in the relative order they are required to be updated and invalidated.
     pub(crate) fn reg_dep(&mut self, dep: HookKey) {
         for signal in self.data.signals_mut() {
             signal.register_dep(dep);

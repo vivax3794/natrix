@@ -133,6 +133,9 @@ impl CompoundSelector {
 
 /// A simple selector
 // MAYBE: Data selector
+// SPEC: The `Tag*` types do *not* implement `IntoSimpleSelector`, because they can
+// only be at the start of a compund selector, but the lower level api still allows
+// `BTN.and(SimpleSlector::Tag(...))`, unsure wether we should bother changing this.
 #[derive(Debug, Clone)]
 pub enum SimpleSelector {
     /// A css tag
@@ -334,10 +337,11 @@ macro_rules! define_pseudo_class_nested {
     };
 }
 
-// BUG: incorrectly permits pseudo-elements;
+// SPEC: can not contain pseudo-elements;
 define_pseudo_class_nested!(
-    // TODO: `Has` support complex selectors with a leading combinator, e.g. `:has(+ h1)`
+    // SPEC: `has` can not be nested inside another `has`
     Has(S): Has(list) => format!("has({})", list.into_list().into_css()), "has";
+    HasWithCombinator(Combinator, S): HasWithCombinator(combinator, list) => format!("has({}{})", combinator.into_css(), list.into_list().into_css()), "has";
     Is(S): Is(list) => format!("is({})", list.into_list().into_css()), "is";
     Not(S): Not(list) => format!("not({})", list.into_list().into_css()), "not";
     Where(S): Where(list) => format!("where({})", list.into_list().into_css()), "where";
@@ -732,6 +736,10 @@ mod tests {
         assert_valid_and_snapsot!(BTN.and(PseudoClass::Hover));
         assert_valid_and_snapsot!(TagDiv.descendant(PseudoClass::Hover));
         assert_valid_and_snapsot!(TagDiv.and(PseudoClassNested::Has(BTN)));
+        assert_valid_and_snapsot!(TagDiv.and(PseudoClassNested::HasWithCombinator(
+            Combinator::DirectChild,
+            BTN
+        )));
         assert_valid_and_snapsot!(TagDiv.and(PseudoClassNested::Has(selector_list![BTN, TagDiv])));
         assert_valid_and_snapsot!(TagDiv.and(PseudoClass::NthChild(NthArgument::new(2, 3))));
         assert_valid_and_snapsot!(

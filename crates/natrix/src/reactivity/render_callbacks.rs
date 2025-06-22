@@ -62,7 +62,7 @@ pub(crate) struct ReactiveNode<C: Component> {
 impl<C: Component> ReactiveNode<C> {
     /// Render this hook and simply return the node
     ///
-    /// IMPORTANT: This function works with the assumption what it returns will be put in its
+    /// INVARIANT: This function works with the assumption what it returns will be put in its
     /// `target_node` field. This function is split out to facilitate `Self::create_initial`
     fn render(&mut self, ctx: &mut State<C>, you: HookKey) -> ElementRenderResult {
         ctx.clear();
