@@ -40,6 +40,10 @@ pub(crate) enum UpdateResult {
     /// Drop the given hooks
     DropHooks(Vec<HookKey>),
     /// Run this hook after this one
+    /// INVARIANT: This can only be returned if the only reason you are running is because said
+    /// hook could also be run (i.e you are acting as a pre-hook check, such as with `.watch`).
+    /// As this hook is ran instantly if this is used to run a hook before a parent may have
+    /// invalidated it, that might lead to panics if said hook uses features such as Guards.
     RunHook(HookKey),
 }
 

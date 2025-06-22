@@ -123,6 +123,9 @@ impl Component for HelloWorld {
 # }
 ```
 
+> [!IMPORTANT]
+> causing a re-entry into the natrix code via js, from within a event handler, for example calling `.click()` on a button with a natrix handler while already having access to a `ctx`, especially if on the same component, will cause state desyncs (and panics on debug mode).
+
 ## Defining methods
 
 ### Construction

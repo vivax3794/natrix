@@ -98,6 +98,7 @@ impl HookQueue {
     }
 
     /// Pop the next item
+    // PERF: This is not deduplicating hooks
     fn pop(&mut self, insertion_orders: &SecondaryMap<HookKey, u64>) -> Option<HookKey> {
         if let Some(next) = self.next_item.take() {
             return Some(next);
@@ -171,6 +172,7 @@ impl<T: Component> State<T> {
     }
 
     /// Register a dependency for all read signals
+    ///  INVARIANT: Hooks must call `.reg_dep` in the relative order they are required to be updated and invalidated.
     pub(crate) fn reg_dep(&mut self, dep: HookKey) {
         for signal in self.data.signals_mut() {
             signal.register_dep(dep);
@@ -179,6 +181,9 @@ impl<T: Component> State<T> {
 
     /// Loop over signals and update any depdant hooks for changed signals
     /// This also drains the deferred message queue
+    /// INVARIANT: `.clear` and `.update` should always come in pairs around user code, and you
+    /// should never yield control to js between them, as other state mutation code will (should)
+    /// call `.clear` in the middle of your operation if you do.
     pub(crate) fn update(&mut self) {
         self.drain_message_queue();
         log::trace!("Performing update cycle for {}", std::any::type_name::<T>());
