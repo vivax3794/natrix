@@ -56,7 +56,6 @@ install-wasm-opt:
 
     SAVE ARTIFACT /tmp/binaryen-version_${BINARYEN_VERSION}/bin/wasm-opt wasm-opt
 
-# BUG: In CI this isnt using a github token, and is hitting ratelimits.
 install-tool-base:
     FROM +rust --toolchain=stable
 
@@ -69,8 +68,9 @@ install-tool-base:
 install-tool:
     ARG --required tool
     ARG name=$tool
+
     FROM +install-tool-base
-    RUN cargo binstall $tool --install-path ./result
+    RUN --secret GITHUB_TOKEN cargo binstall $tool --install-path ./result
     SAVE ARTIFACT result/$name tool
 
 workspace-src:

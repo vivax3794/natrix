@@ -25,6 +25,8 @@ jobs:
         run: docker login --username "$DOCKERHUB_USERNAME" --password "$DOCKERHUB_TOKEN"
 
       - name: Run checks
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           earthly config global.buildkit_max_parallelism 1
           earthly --ci --github-annotations +all
