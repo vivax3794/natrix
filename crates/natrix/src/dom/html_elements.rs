@@ -335,8 +335,8 @@ impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
 /// function.
 macro_rules! elements {
     ($($name:ident),*) => {
-        $(
-            pastey::paste! {
+        pastey::paste! {
+            $(
                 #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/" $name ">"]
                 pub struct [< Tag $name:camel >];
 
@@ -351,44 +351,44 @@ macro_rules! elements {
                 pub fn $name<C: Component>() -> HtmlElement<C, [< Tag $name:camel >]> {
                     HtmlElement::new(stringify!($name))
                 }
-            }
-        )*
+            )*
+        }
     };
 }
 
 /// Mark that the list of elements can have children
 macro_rules! can_have_children {
     ($($tag:ident),*) => {
-        $(
-            pastey::paste! {
+        pastey::paste! {
+            $(
                 impl CanHaveChild for [< Tag $tag:camel >] {}
-            }
-        )*
+            )*
+        }
     };
 }
 
 /// A macro to define `attr` helpers for the the various elements
 macro_rules! attr_helpers {
     ($tag:ident => $($attr:ident($kind:path, $attr_name:literal)),+) => {
-            pastey::paste! {
-                impl<C: Component> HtmlElement<C, [< Tag $tag:camel >]> {
-                    $(
-                        #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/" $tag "##" $attr_name ">"]
-                        #[inline]
-                        pub fn $attr(self, value: impl ToAttribute<C, AttributeKind = $kind>) -> Self {
-                            self.attr($attr_name, value)
-                           }
-                    )+
-                }
+        pastey::paste! {
+            impl<C: Component> HtmlElement<C, [< Tag $tag:camel >]> {
+                $(
+                    #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/" $tag "##" $attr_name ">"]
+                    #[inline]
+                    pub fn $attr(self, value: impl ToAttribute<C, AttributeKind = $kind>) -> Self {
+                        self.attr($attr_name, value)
+                       }
+                )+
             }
+        }
     };
 }
 
 /// Generate a `attr` helpers implementation for the global attributes
 macro_rules! global_attrs {
     ($($attr:ident($kind:path, $attr_value:literal)),*) => {
-        impl<C: Component, T> HtmlElement<C, T> {
-            pastey::paste! {
+        pastey::paste! {
+            impl<C: Component, T> HtmlElement<C, T> {
                 $(
                     #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Global_attributes/" $attr_value ">"]
                     #[inline]
@@ -405,15 +405,15 @@ macro_rules! global_attrs {
 macro_rules! aria_attrs {
     ($($attr:ident),*) => {
         impl<C: Component, T> HtmlElement<C, T> {
-            $(
             pastey::paste! {
-                #[doc = "<https://developer.mozilla.org/docs/Web/Accessibility/ARIA/Reference/Attributes/aria%2d" $attr ">"]
-                #[inline]
-                pub fn [<aria_$attr>](self, value: impl ToAttribute<C>) -> Self {
-                    self.attr(concat!("aria-", stringify!($attr)), value)
-                }
+                $(
+                    #[doc = "<https://developer.mozilla.org/docs/Web/Accessibility/ARIA/Reference/Attributes/aria%2d" $attr ">"]
+                    #[inline]
+                    pub fn [<aria_$attr>](self, value: impl ToAttribute<C>) -> Self {
+                        self.attr(concat!("aria-", stringify!($attr)), value)
+                    }
+                )*
             }
-            )*
         }
     };
 }

@@ -506,28 +506,28 @@ impl<T: IntoSimpleSelector> IntoCompoundSelector for T {
     }
 }
 
-/// Define a pseudo element method
-macro_rules! pseudo_element {
-    ($element:ident) => {
+/// Define pseudo element methods
+macro_rules! pseudo_elements {
+    ($($element:ident),*; $($element_lit:literal => $method:ident),*) => {
         pastey::paste! {
-            #[doc = "<https://developer.mozilla.org/docs/Web/CSS/::" $element ">"]
-            fn $element(self) -> FinalizedSelector {
-                FinalizedSelector {
-                    head: self.into_complex(),
-                    element: Some(stringify!($element).into())
+            $(
+                #[doc = "<https://developer.mozilla.org/docs/Web/CSS/::" $element ">"]
+                fn $element(self) -> FinalizedSelector {
+                    FinalizedSelector {
+                        head: self.into_complex(),
+                        element: Some(stringify!($element).into())
+                    }
                 }
-            }
-        }
-    };
-    ($element:literal, $method:ident) => {
-        pastey::paste! {
-            #[doc = "<https://developer.mozilla.org/docs/Web/CSS/::" $element ">"]
-            fn $method(self) -> FinalizedSelector {
-                FinalizedSelector {
-                    head: self.into_complex(),
-                    element: Some(stringify!($element).into())
+            )*
+            $(
+                #[doc = "<https://developer.mozilla.org/docs/Web/CSS/::" $element_lit ">"]
+                fn $method(self) -> FinalizedSelector {
+                    FinalizedSelector {
+                        head: self.into_complex(),
+                        element: Some($element_lit.into())
+                    }
                 }
-            }
+            )*
         }
     };
 }
@@ -604,15 +604,13 @@ pub trait IntoComplexSelector: Sized {
         this
     }
 
-    pseudo_element!(after);
-    pseudo_element!(before);
-    pseudo_element!(backdrop);
-    pseudo_element!("file-selector-button", file_selector_button);
-    pseudo_element!(placeholder);
-    pseudo_element!("target-text", target_text);
-    pseudo_element!("first-line", first_line);
-    pseudo_element!("first-letter", first_letter);
-    pseudo_element!(cue);
+    pseudo_elements!(
+        after, before, backdrop, placeholder, cue;
+        "file-selector-button" => file_selector_button,
+        "target-text" => target_text,
+        "first-line" => first_line,
+        "first-letter" => first_letter
+    );
 }
 
 impl IntoComplexSelector for ComplexSelector {
