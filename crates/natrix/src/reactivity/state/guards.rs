@@ -3,6 +3,9 @@
 pub use super::{RenderCtx, State};
 use crate::reactivity::component::Component;
 
+// MAYBE: Can we somehow abstract over immutable vs mutable getters in a way that lets a user write
+// a provably pure getter that works for both?
+
 /// Get a guard handle that can be used to retrieve the `Some` variant of a option without having to
 /// use `.unwrap`.
 /// Should be used to achieve find-grained reactivity (internally this uses `.watch` on `.is_some()`)
