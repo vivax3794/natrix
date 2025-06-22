@@ -46,6 +46,8 @@ struct HookQueue {
     queue: BinaryHeap<OrderAssociatedData<(HookKey, usize), Reverse<u64>>>,
     /// A temporary next item
     next_item: Option<HookKey>,
+    /// Last processed hook to avoid duplicates
+    last_hook: Option<HookKey>,
 }
 
 /// Iterate over `iter` until it finds a key in `insertion_orders`
@@ -85,6 +87,7 @@ impl HookQueue {
             vectors,
             queue,
             next_item: None,
+            last_hook: None,
         }
     }
 
@@ -98,32 +101,44 @@ impl HookQueue {
     }
 
     /// Pop the next item
-    // PERF: This is not deduplicating hooks
     fn pop(&mut self, insertion_orders: &SecondaryMap<HookKey, u64>) -> Option<HookKey> {
         if let Some(next) = self.next_item.take() {
+            self.last_hook = Some(next);
             return Some(next);
         }
 
-        log::trace!("current queue: {:?}", self.queue);
-        let (hook, source_index) = self.queue.pop()?.data;
+        loop {
+            log::trace!("current queue: {:?}", self.queue);
+            let (hook, source_index) = self.queue.pop()?.data;
 
-        // NOTE: We know the `source_index` is valid, but I dont think there is a nice way in rust
-        // to enforce that invariant (maybe something fancy with marker lifetimes)
-        // Hopefully rust optimizes out the bounds check?
-        if let Some(vector) = self.vectors.get_mut(source_index) {
-            if let Some((hook, ordering)) = get_next_valid(insertion_orders, vector) {
-                self.queue.push(OrderAssociatedData {
-                    data: (hook, source_index),
-                    ordering: Reverse(ordering),
-                });
+            // NOTE: We know the `source_index` is valid, but I dont think there is a nice way in rust
+            // to enforce that invariant (maybe something fancy with marker lifetimes)
+            // Hopefully rust optimizes out the bounds check?
+            if let Some(vector) = self.vectors.get_mut(source_index) {
+                while let Some((next_hook, ordering)) = get_next_valid(insertion_orders, vector) {
+                    if Some(next_hook) != self.last_hook {
+                        self.queue.push(OrderAssociatedData {
+                            data: (next_hook, source_index),
+                            ordering: Reverse(ordering),
+                        });
+                        break;
+                    }
+                }
+            } else {
+                log_or_panic!(
+                    "`source_index` {source_index} out of range of HookQueue vectors list (len {})",
+                    self.vectors.len()
+                );
             }
-        } else {
-            log_or_panic!(
-                "`source_index` {source_index} out of range of HookQueue vectors list (len {})",
-                self.vectors.len()
-            );
+
+            // Skip duplicates
+            if Some(hook) == self.last_hook {
+                continue;
+            }
+
+            self.last_hook = Some(hook);
+            return Some(hook);
         }
-        Some(hook)
     }
 }
 
