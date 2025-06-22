@@ -116,6 +116,11 @@ impl HookQueue {
                     ordering: Reverse(ordering),
                 });
             }
+        } else {
+            log_or_panic!(
+                "`source_index` {source_index} out of range of HookQueue vectors list (len {})",
+                self.vectors.len()
+            );
         }
         Some(hook)
     }
