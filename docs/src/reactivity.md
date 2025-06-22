@@ -54,6 +54,9 @@ e::div()
 
 ```
 
+> [!TIP]
+> For handling multiple types of html elements, theres [`.generic()`](dom::html_elements::HtmlElement::generic), which returns `HtmlElement<C, ()>`, i.e erases the dom tag, allowing you to for example construct different tags in a `if`, and then later call methods on it. Ofc doing this means only global attribute helpers can be used, but you can always use `.attr` directly.
+
 ## `.watch`
 
 Now imagine you only access part of a field.
