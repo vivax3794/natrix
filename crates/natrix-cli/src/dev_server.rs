@@ -1,6 +1,6 @@
 //! Spawn live reloading server
 
-use std::net::TcpListener;
+use std::net::{Ipv4Addr, TcpListener};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::Duration;
@@ -69,7 +69,7 @@ pub(crate) fn do_dev(args: &options::DevArguments) -> Result<()> {
     let dist = config.dist.clone();
     let mutex_clone = Arc::clone(&asset_manifest_mutex);
     let server_port = args.port; // Pass the user-specified port to spawn_server
-    thread::spawn(move || spawn_server(dist, mutex_clone, server_port));
+    thread::spawn(move || spawn_server(dist, mutex_clone, server_port, config.live_reload));
 
     if let Some(port) = config.live_reload {
         thread::spawn(move || spawn_websocket(port, rx_reload));
@@ -127,19 +127,14 @@ fn spawn_websocket(port: u16, reload_signal: mpsc::Receiver<()>) {
 }
 
 /// Find a free port
-// PERF: Instead of trying to open the port in a loop, if the `preferred` isnt found attempt to ask
-// the os for a free one directly instead (I think thats possible?)
-pub(crate) fn get_free_port(mut preferred: u16) -> Result<u16> {
-    loop {
-        if TcpListener::bind(("127.0.0.1", preferred)).is_ok() {
-            return Ok(preferred);
-        }
-        if let Some(new_port) = preferred.checked_add(1) {
-            preferred = new_port;
-        } else {
-            return Err(anyhow!("Failed to find free port"));
-        }
+pub(crate) fn get_free_port(preferred: u16) -> Result<u16> {
+    if TcpListener::bind((Ipv4Addr::LOCALHOST, preferred)).is_ok() {
+        return Ok(preferred);
     }
+
+    Ok(TcpListener::bind((Ipv4Addr::LOCALHOST, 0))?
+        .local_addr()?
+        .port())
 }
 
 /// Spawn a dev server for serving files
@@ -152,6 +147,7 @@ pub(crate) fn spawn_server(
     folder: PathBuf,
     asset_manifest: Arc<Mutex<AssetManifest>>,
     preferred_port: Option<u16>,
+    live_reload: Option<u16>,
 ) {
     // Use the specified port if provided, otherwise start at 8000
     let port = match preferred_port {
@@ -166,9 +162,15 @@ pub(crate) fn spawn_server(
         .expect("Failed to get ip")
         .port();
     println!(
-        "{}{}",
+        "{}{}{}",
         "🚀 Dev server running at http://localhost:".green(),
-        port.to_string().bright_red()
+        port.to_string().bright_red(),
+        if let Some(live_reload) = live_reload {
+            format!(" (with live-reload via {live_reload})")
+        } else {
+            String::new()
+        }
+        .bright_black()
     );
 
     for request in server.incoming_requests() {
