@@ -8,14 +8,14 @@ docs:
     cargo doc --open -p natrix --lib --all-features
 
 book:
-    earthly ./docs+build-book
+    earthly --secret GITHUB_TOKEN="" ./docs+build-book
     cd ./docs/book && python3 -m http.server
 
 core:
-    earthly +run-core
+    earthly --secret GITHUB_TOKEN="" +run-core
 
 all:
-    earthly +all
+    earthly --secret GITHUB_TOKEN="" +all
 
 install_cli:
     cargo install --path ./crates/natrix-cli
