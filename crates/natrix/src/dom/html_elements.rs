@@ -192,6 +192,8 @@ impl<C: Component, T> HtmlElement<C, T> {
     ///     })
     /// # }}
     /// ```
+    // SPEC: Some html elements are only allowed inside specific other ones.
+    // SPEC: Some html elements only allow specific other elements
     #[inline]
     pub fn child<E: Element<C> + 'static>(mut self, child: E) -> Self
     where
