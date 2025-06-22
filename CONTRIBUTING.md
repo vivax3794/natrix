@@ -13,11 +13,32 @@ Thank you for considering contributing to Natrix! This guide will help you get s
 
 ## Development Setup
 
-Natrixse includes a large test suit. <TODO>
+Natrix uses [`just`](https://github.com/casey/just) for task automation and [`Earthly`](https://earthly.dev/) for containerized testing.
+
+**Why Earthly?** We use Earthly because Natrix has extensive E2E tests and benchmarks that would otherwise require installing around 10 different tools (Python, Chrome, wasm-bindgen, wasm-opt, various Rust tools, etc.). With Earthly, all dependencies are containerized, ensuring consistent builds across environments.
 
 ## Development Workflow
 
-<TODO>
+### Available `just` Targets
+
+Run `just --list` to see all available commands:
+
+#### Testing & Quality
+- **`just all`** - Run the complete test suite (same as CI)
+- **`just core`** - Run core framework tests
+- **`just update_snapshot`** - Update test snapshots using cargo-insta
+- **`just fix_typos`** - Fix typos in the codebase using typos
+
+#### Documentation
+- **`just docs`** - Generate and open Rust documentation
+- **`just book`** - Build and serve the mdBook documentation
+
+#### Development Tools
+- **`just install_cli`** - Install the natrix CLI tool locally (mainly for benchmarks and debugging)
+- **`just stress_size`** - Run binary size stress tests on WASM output
+- **`just bench`** - Run performance benchmarks (runs on host, not in container)
+
+Most targets use Earthly to ensure reproducible builds. For quick iteration during development, you can also use standard Rust commands like `cargo clippy` and `cargo test`.
 
 ## Code Style
 Natrix uses a wide range of clippy lints. But we do often use `#[expect]` on certain areas.
