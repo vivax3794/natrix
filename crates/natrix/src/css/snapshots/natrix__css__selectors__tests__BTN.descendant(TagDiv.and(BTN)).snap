@@ -1,5 +1,5 @@
 ---
-source: natrix/src/css/selectors.rs
+source: crates/natrix/src/css/selectors.rs
 expression: BTN.descendant(TagDiv.and(BTN))
 ---
-.btn>div.btn
+.btn div.btn

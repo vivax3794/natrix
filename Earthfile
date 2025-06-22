@@ -56,6 +56,7 @@ install-wasm-opt:
 
     SAVE ARTIFACT /tmp/binaryen-version_${BINARYEN_VERSION}/bin/wasm-opt wasm-opt
 
+# BUG: In CI this isnt using a github token, and is hitting ratelimits.
 install-tool-base:
     FROM +rust --toolchain=stable
 

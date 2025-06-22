@@ -132,6 +132,7 @@ impl CompoundSelector {
 }
 
 /// A simple selector
+// MAYBE: Data selector
 #[derive(Debug, Clone)]
 pub enum SimpleSelector {
     /// A css tag
@@ -276,10 +277,6 @@ impl NthArgument {
     }
 }
 
-// TODO: `has` - needs to support a ComplexSelector without `first`, i.e `:has(+ div)`
-// TODO: `not` - doesnt allow pseudo elements, i.e `:not(div::after)` should not be allowed
-// (do `has`, `where`, `is` do? `not` mentioned specifically it didnt)
-
 define_pseudo_class!(
     active, autofill, checked, default, defined, disabled, empty, enabled, first, focus,
     hover, indeterminate, invalid, link, modal, optional, required, root, scope, target,
@@ -337,7 +334,9 @@ macro_rules! define_pseudo_class_nested {
     };
 }
 
+// BUG: incorrectly permits pseudo-elements;
 define_pseudo_class_nested!(
+    // TODO: `Has` support complex selectors with a leading combinator, e.g. `:has(+ h1)`
     Has(S): Has(list) => format!("has({})", list.into_list().into_css()), "has";
     Is(S): Is(list) => format!("is({})", list.into_list().into_css()), "is";
     Not(S): Not(list) => format!("not({})", list.into_list().into_css()), "not";
@@ -568,7 +567,7 @@ pub trait IntoComplexSelector: Sized {
     fn descendant(self, descendant: impl IntoCompoundSelector) -> ComplexSelector {
         let mut this = self.into_complex();
         this.tail
-            .push((Combinator::DirectChild, descendant.into_compound()));
+            .push((Combinator::Descendant, descendant.into_compound()));
         this
     }
 
