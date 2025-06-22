@@ -65,6 +65,9 @@ Natrix has a few "comment tags" we use:
 * `TODO` - Unimplemented planned feature
 * `MAYBE` - Features we might or might not implement
 * `BUG` - Something is broken
+
+* `REFACTOR` - A fully working feature that could be improved.
+* `PERF` - Potential for optimization
 * `SPEC` - A un-enforced web-standard invariant, these are candidates for intruducing more compile-time or runtime-checks, but are not hard todos. They should be considerd a blend of `TODO`, `MAYBE`, and `BUG`
 
 ## Pull Request Process
