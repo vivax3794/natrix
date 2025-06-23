@@ -12,10 +12,6 @@ pub mod selectors;
 pub mod stylesheet;
 pub mod values;
 
-pub use selectors::{PseudoClass, PseudoClassNested};
-pub use stylesheet::StyleSheet;
-pub use values::Color;
-
 /// Struct to let `inventory` collect css from all across the dep graph
 #[doc(hidden)]
 #[cfg(feature = "_internal_collect_css")]
@@ -76,11 +72,9 @@ cfg_if::cfg_if! {
 /// Css prelude
 /// This is auto star imported in `register_css`
 pub mod prelude {
-    pub use super::PseudoClass::*;
-    pub use super::PseudoClassNested::*;
     pub use super::property::RuleBody;
-    pub use super::selectors::{Direction, NthArgument};
-    pub use super::{StyleSheet, values};
+    pub use super::stylesheet::StyleSheet;
+    pub use super::{selectors, values};
     pub use crate::selector_list;
 }
 
