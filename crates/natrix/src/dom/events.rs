@@ -1,6 +1,6 @@
 //! Implementation of event traits as well as a helper trait for event handlers.
 
-// TODO: Enforce certain events can only be put on certain elements.
+// SPEC: certain events can only be put on certain elements.
 
 use wasm_bindgen::JsCast;
 

@@ -459,12 +459,12 @@ can_have_children! {
     details, dialog, summary
 }
 
-// TEST: Somehow verify that all these attribute names are accurate.
 // MAYBE: Implement aliases for attributes, such as `relation` => `rel`.
-// NOTE: To be clear, we do currently rename attributes, such as `auto_focus` => `autofocus`,
+// To be clear, we do currently rename attributes, such as `auto_focus` => `autofocus`,
 // But for the "well-known" attributes we arent expanding abbrivations, because if we are being
 // honest people know what `rel` is, they might even be confused by `relation`.
 // But stuff like `encoding_type` is much better than `enctype`
+// TEST: Somehow verify that all these attribute names are accurate.
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes
 global_attrs! {
