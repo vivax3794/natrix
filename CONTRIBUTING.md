@@ -55,11 +55,11 @@ Natrix has two nightly "feature flags", `cfg(nightly)` and `cfg(feature = "night
 Natrix has a few "comment tags" we use:
 
 > [!NOTE]
-> While the codebase curretnly uses this, once we hit a proper public release we plan to migrate to github issues.
+> While the codebase currently uses this, once we hit a proper public release we plan to migrate to github issues.
 
 * `NOTE` - Justifications or context for surrounding code 
 * `HACK` - Working around a third party bug, link to relevant issues.
-* `INVARIANT` - A *internal* invarant that must be upheld by calling code, these a good target for refactor to move invariants to compile time.
+* `INVARIANT` - A *internal* invariant that must be upheld by calling code, these a good target for refactor to move invariants to compile time.
 
 * `TEST` - A test that should get written
 * `TODO` - Unimplemented planned feature
@@ -68,7 +68,7 @@ Natrix has a few "comment tags" we use:
 
 * `REFACTOR` - A fully working feature that could be improved.
 * `PERF` - Potential for optimization
-* `SPEC` - A un-enforced web-standard invariant, these are candidates for intruducing more compile-time or runtime-checks, but are not hard todos. They should be considerd a blend of `TODO`, `MAYBE`, and `BUG`
+* `SPEC` - A un-enforced web-standard invariant, these are candidates for introducing more compile-time or runtime-checks, but are not hard todos. They should be considered a blend of `TODO`, `MAYBE`, and `BUG`
 
 ### Editor Setup for Comment Tags
 
