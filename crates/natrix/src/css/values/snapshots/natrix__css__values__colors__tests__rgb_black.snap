@@ -1,5 +1,5 @@
 ---
-source: natrix/src/css/values.rs
+source: crates/natrix/src/css/values/colors.rs
 expression: "Color::rgb(0, 0, 0).to_css()"
 ---
 rgb(0 0 0/1)
