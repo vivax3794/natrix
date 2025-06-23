@@ -5,7 +5,6 @@
 // The code in this module is intended to be used at bundling time, and hence will not be included
 // in production applications.
 
-// TODO: Implement all of css
 // TODO: Allow composing css rules similar to css-modules `composes`
 
 pub mod property;
@@ -79,8 +78,9 @@ cfg_if::cfg_if! {
 pub mod prelude {
     pub use super::PseudoClass::*;
     pub use super::PseudoClassNested::*;
-    pub use super::StyleSheet;
+    pub use super::property::RuleBody;
     pub use super::selectors::{Direction, NthArgument};
+    pub use super::{StyleSheet, values};
     pub use crate::selector_list;
 }
 
