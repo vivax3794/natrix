@@ -16,6 +16,7 @@ register_css! {
 }
 
 #[derive(Component)]
+#[expect(dead_code, reason = "literally here to test DCE")]
 struct NotUsed;
 
 impl Component for NotUsed {
@@ -203,12 +204,11 @@ mod driver_tests {
         let start = Instant::now();
         loop {
             sleep(Duration::from_millis(100)).await;
-            if let Ok(element) = client.find(By::Id(RELOAD_ID.0)).await {
-                if let Ok(text) = element.text().await {
-                    if text == new_text {
-                        break;
-                    }
-                }
+            if let Ok(element) = client.find(By::Id(RELOAD_ID.0)).await
+                && let Ok(text) = element.text().await
+                && text == new_text
+            {
+                break;
             }
 
             if start.elapsed().as_secs() > 20 {
