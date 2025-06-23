@@ -5,14 +5,13 @@ use std::ops::Deref;
 use crate::error_handling::log_or_panic_assert;
 
 // TODO: Media queriez
-// TODO: Derive clone
 // TODO: Document that you can clone selectors to get "nesting"
 
 // MAYBE: Make selector generic over target elements allowing us to constrain properties that are
 // allowed on them.
 
 /// A list of selectors (`,`)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SelectorList(pub Vec<FinalizedSelector>);
 
 /// Create a Selector list of the given elements
@@ -53,7 +52,7 @@ impl SelectorList {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// A finalized selector that cant be modified more
 pub struct FinalizedSelector {
     /// The selector
@@ -75,7 +74,7 @@ impl FinalizedSelector {
 }
 
 /// A combination of various selectors (`h1 h2 > h3`)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ComplexSelector {
     /// The first selector
     pub first: CompoundSelector,
@@ -125,7 +124,7 @@ impl Combinator {
 }
 
 /// A compound selector
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CompoundSelector(pub Vec<SimpleSelector>);
 
 impl CompoundSelector {
