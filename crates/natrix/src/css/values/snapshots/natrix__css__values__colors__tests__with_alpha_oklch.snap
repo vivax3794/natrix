@@ -1,5 +1,5 @@
 ---
-source: natrix/src/css/values.rs
+source: crates/natrix/src/css/values/colors.rs
 expression: "Color::oklch(0.3, 0.1, 0.6).with_alpha(0.9).to_css()"
 ---
 oklch(0.3 0.1 0.6/0.9)

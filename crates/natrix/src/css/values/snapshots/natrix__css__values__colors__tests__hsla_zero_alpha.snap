@@ -1,5 +1,5 @@
 ---
-source: natrix/src/css/values.rs
+source: crates/natrix/src/css/values/colors.rs
 expression: "Color::hsla(120, 100, 50, 0.0).to_css()"
 ---
 hsl(120 100 50/0)
