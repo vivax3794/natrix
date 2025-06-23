@@ -4,6 +4,10 @@ use std::ops::Deref;
 
 use crate::error_handling::log_or_panic_assert;
 
+// TODO: Media queriez
+// TODO: Derive clone
+// TODO: Document that you can clone selectors to get "nesting"
+
 // MAYBE: Make selector generic over target elements allowing us to constrain properties that are
 // allowed on them.
 
@@ -134,8 +138,8 @@ impl CompoundSelector {
 /// A simple selector
 // MAYBE: Data selector
 // SPEC: The `Tag*` types do *not* implement `IntoSimpleSelector`, because they can
-// only be at the start of a compund selector, but the lower level api still allows
-// `BTN.and(SimpleSlector::Tag(...))`, unsure wether we should bother changing this.
+// only be at the start of a compound selector, but the lower level api still allows
+// `BTN.and(SimpleSlector::Tag(...))`, unsure whether we should bother changing this.
 #[derive(Debug, Clone)]
 pub enum SimpleSelector {
     /// A css tag
@@ -151,6 +155,8 @@ pub enum SimpleSelector {
 impl SimpleSelector {
     /// Convert this to css
     fn into_css(self) -> String {
+        // BUG: We are not escpaing invalid characthers
+        // But, all helper-based inputs to this only use valid characthers.
         match self {
             Self::Tag(value) => value.into(),
             Self::Class(value) => format!(".{value}"),
@@ -280,6 +286,7 @@ impl NthArgument {
     }
 }
 
+// TEST: Auto generate validity tests
 define_pseudo_class!(
     active, autofill, checked, default, defined, disabled, empty, enabled, first, focus,
     hover, indeterminate, invalid, link, modal, optional, required, root, scope, target,
@@ -310,6 +317,7 @@ impl IntoSimpleSelector for PseudoClass {
 }
 
 /// Define `PseudoClassNested`
+// TEST: Auto generate validity tests
 macro_rules! define_pseudo_class_nested {
     (
         $($c_def:ident($($c_arg:ty),*): $c_pat:pat => $c_expr:expr, $c_doc:literal);*;
@@ -510,6 +518,7 @@ impl<T: IntoSimpleSelector> IntoCompoundSelector for T {
 }
 
 /// Define pseudo element methods
+// TEST: Auto generate validity tests
 macro_rules! pseudo_elements {
     ($($element:ident),*; $($element_lit:literal => $method:ident),*) => {
         pastey::paste! {
