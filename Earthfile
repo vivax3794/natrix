@@ -123,7 +123,8 @@ outdated-dependencies:
     COPY (+install-tool/tool --tool=cargo-outdated) /bin/cargo-outdated
     COPY --keep-ts +workspace-src/src .
 
-    DO rust+CARGO --args="outdated -R --workspace"
+    # Newest version of thirtyfour seems hang
+    DO rust+CARGO --args="outdated -R --workspace --exclude thirtyfour --exit-code 1"
 
 check-docs:
     FROM +rust --toolchain=nightly
