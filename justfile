@@ -1,25 +1,40 @@
+# Print out all justfile targets
+default:
+    just --list
+
+# Run and update snapshots from snapshot tests (requires: cargo-insta)
 update_snapshot:
     cargo insta test --review --package natrix --unreferenced delete --test-runner nextest --all-features
 
+# Apply automatic typo fixes (requires: typos-cli)
 fix_typos:
     typos -w
 
+# Compile and open docs for `natrix`
 docs:
     cargo doc --open -p natrix --lib --all-features
 
-book:
+# Compile `./docs` (requires: earthly)
+build-book:
     earthly --secret GITHUB_TOKEN="" ./docs+build-book
+
+# Compile and open `./docs` (requires: earthly, python3)
+book: build-book
     cd ./docs/book && python3 -m http.server
 
+# Run tests for `./crates/natrix` (requires: earthly)
 core:
     earthly --secret GITHUB_TOKEN="" +run-core
 
+# Run entire CI pipeline (requires: earthly)
 all:
     earthly --secret GITHUB_TOKEN="" +all
 
+# Install natrix-cli
 install_cli:
     cargo install --path ./crates/natrix-cli
 
+# Compile `./ci/stress_test_binary_size` and print out size statistics (requires: wc, gzip, brotli, wasm-bindgen, wasm-opt)
 [working-directory: './ci/stress_test_binary_size']
 stress_size: install_cli
     @echo
@@ -47,6 +62,7 @@ stress_size: install_cli
     )
 
 
+# Runs the `./ci/benchmark` benchmarks (requires: wasm-bindgen, wasm-opt, python3, wasm_bench)
 [working-directory: './ci/benchmark']
 bench: install_cli
     #!/usr/bin/bash
