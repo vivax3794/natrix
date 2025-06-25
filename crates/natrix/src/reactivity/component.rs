@@ -322,7 +322,7 @@ pub fn mount<C: Component>(component: C) {
     }
     log::info!("Logging initialized");
     #[cfg(feature = "_internal_collect_css")]
-    crate::css::css_collect();
+    crate::css::do_css_setup();
 
     if cfg!(feature = "_internal_bundle") {
         log::info!("bundle mode, aboring mount.");
