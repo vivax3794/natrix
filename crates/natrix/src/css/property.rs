@@ -87,14 +87,11 @@ impl RuleBody {
     ///
     /// All defined properties have helper methods on this struct.
     #[inline]
-    pub fn set<Kind, P>(
-        mut self,
-        property: P,
-        value: impl values::ToCssValue<ValueKind = Kind>,
-    ) -> Self
+    pub fn set<V, P>(mut self, property: P, value: V) -> Self
     where
         P: Property,
-        P: Supports<Kind>,
+        P: Supports<V>,
+        V: values::ToCssValue,
     {
         self.properties.push((property.name(), value.to_css()));
         self
@@ -109,9 +106,11 @@ impl RuleBody {
 }
 
 /// Define a property with a specific supported value
-// TEST: Generate validity tests
 macro_rules! property {
     ($name:ident => $target:literal) => {
+        #[cfg(test)]
+        static_assertions::assert_impl_all!($name: Supports<values::WideKeyword>);
+
         pastey::paste! {
             #[doc = "`" $target "` property."]
             #[doc = ""]
@@ -131,8 +130,8 @@ macro_rules! property {
                 #[doc = ""]
                 #[doc = "<https://developer.mozilla.org/docs/Web/CSS/" $target ">"]
                 #[inline]
-                pub fn [< $name:snake >]<Kind>(self, value: impl values::ToCssValue<ValueKind = Kind>) -> Self
-                    where $name: Supports<Kind>
+                pub fn [< $name:snake >]<V>(self, value: V) -> Self
+                    where $name: Supports<V>, V: values::ToCssValue
                 {
                     self.set($name, value)
                 }
@@ -141,55 +140,70 @@ macro_rules! property {
     };
 }
 
+/// Generate tests for property support
+macro_rules! test_property {
+    ($prop:ident, $value:ty, $name:ident) => {
+        #[cfg(all(test, not(target_arch = "wasm32")))]
+        pastey::paste! {
+            proptest::proptest! {
+                #[test]
+                fn [< test_ $prop:snake _ $name >](value: $value) {
+                    let result = RuleCollection::new()
+                        .rule(crate::dom::html_elements::TagDiv, RuleBody::new().set($prop, value))
+                        .to_css();
+                    crate::css::assert_valid_css(&result);
+                }
+            }
+        }
+    };
+}
+
+/// Define a property support with automatic test generation
+macro_rules! support {
+    ($prop:ident, $value:ty, $test_name:ident) => {
+        impl Supports<$value> for $prop {}
+        test_property!($prop, $value, $test_name);
+    };
+}
+
 impl<P: Property> Supports<values::WideKeyword> for P {}
 
 property!(AlignContent => "align-content");
-property!(AlignItems => "align-items");
-property!(AlignSelf => "align-self");
+support!(AlignContent, values::Normal, normal);
+support!(AlignContent, values::Stretch, stretch);
+support!(AlignContent, values::ContentPosition, content);
+support!(AlignContent, values::BaselinePosition, baseline);
+support!(AlignContent, values::ContentDistribution, distribution);
+support!(
+    AlignContent,
+    values::OverflowPosition<values::ContentPosition>,
+    overflow
+);
 
-impl Supports<values::ContentPosition> for AlignContent {}
-impl Supports<values::BaselinePosition> for AlignContent {}
-impl Supports<values::ContentDistribution> for AlignContent {}
-impl Supports<values::OverflowPosition<values::ContentPosition>> for AlignContent {}
+property!(AlignSelf => "align-self");
+support!(AlignSelf, values::Auto, auto);
+support!(AlignSelf, values::Normal, normal);
+support!(AlignSelf, values::Stretch, stretch);
+support!(AlignSelf, values::BaselinePosition, baseline);
+support!(AlignSelf, values::SelfPosition, self);
+support!(
+    AlignSelf,
+    values::OverflowPosition<values::SelfPosition>,
+    overflow
+);
+
+property!(AlignItems => "align-items");
+support!(AlignItems, values::Normal, normal);
+support!(AlignItems, values::Stretch, stretch);
+support!(AlignItems, values::SelfPosition, self);
+support!(AlignItems, values::BaselinePosition, baseline);
+support!(
+    AlignItems,
+    values::OverflowPosition<values::SelfPosition>,
+    overflow
+);
 
 property!(All => "all");
-// NOTE: `all` only accepts `WideKeyword`, hence we do not implement any `Supports` specifically
-// here.
-
-#[cfg(all(test, not(target_arch = "wasm32")))]
-mod test {
-    use proptest::proptest;
-
-    use super::super::assert_valid_css;
-    use super::*;
-    use crate::dom::html_elements::TagDiv;
-
-    macro_rules! test_property {
-        ($prop:ident, $value:ty, $name:ident) => {
-            pastey::paste! {
-                proptest! {
-                    #[test]
-                    fn [< test_ $prop:snake _ $name >](value: $value) {
-                        let result = RuleCollection::new()
-                            .rule(TagDiv, RuleBody::new().set($prop, value))
-                            .to_css();
-                        assert_valid_css(&result);
-                    }
-                }
-            }
-        };
-    }
-
-    // NOTE: We cant test `WideKeyword` against everything because `lightningcss` doesnt include it
-    // as a option for its ast nodes.
-    test_property!(All, values::WideKeyword, wide);
-
-    test_property!(AlignContent, values::ContentPosition, content);
-    test_property!(AlignContent, values::BaselinePosition, baseline);
-    test_property!(AlignContent, values::ContentDistribution, distribution);
-    test_property!(
-        AlignContent,
-        values::OverflowPosition<values::ContentPosition>,
-        overflow
-    );
-}
+// NOTE: We cant test `WideKeyword` against everything because `lightningcss` doesnt include it
+// as a option for its ast nodes.
+test_property!(All, values::WideKeyword, wide);

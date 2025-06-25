@@ -163,7 +163,6 @@ impl Color {
 }
 
 impl ToCssValue for Color {
-    type ValueKind = Color;
     fn to_css(self) -> String {
         match self {
             Self::Rgb {
