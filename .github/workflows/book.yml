@@ -31,7 +31,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           earthly config global.buildkit_max_parallelism 1
-          earthly --ci --github-annotations --secret GITHUB_TOKEN=$GITHUB_TOKEN ./docs+build-book
+          earthly --strict --github-annotations --secret GITHUB_TOKEN=$GITHUB_TOKEN ./docs+build-book
 
       - uses: actions/upload-pages-artifact@v3
         with:
