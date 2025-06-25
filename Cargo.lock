@@ -1415,6 +1415,7 @@ dependencies = [
  "pastey",
  "pin-project",
  "proptest",
+ "proptest-derive",
  "rustversion",
  "ryu",
  "simple_logger",
@@ -2150,6 +2151,17 @@ dependencies = [
  "rusty-fork",
  "tempfile",
  "unarray",
+]
+
+[[package]]
+name = "proptest-derive"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "095a99f75c69734802359b682be8daaf8980296731f6470434ea2c652af1dd30"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.103",
 ]
 
 [[package]]
