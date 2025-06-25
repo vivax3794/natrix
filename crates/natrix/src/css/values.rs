@@ -5,7 +5,9 @@
 // TODO: Numeric calculations
 // TODO: More "color" types such as gradients.
 
+mod animations;
 mod colors;
+
 pub use colors::Color;
 
 /// Convert a value to a css value string
@@ -18,7 +20,6 @@ pub trait ToCssValue {
 }
 
 /// Define a `ToCssValue` enum
-// TEST: Auto generate tests for validity.
 macro_rules! define_enum {
     (
         $(#[$enum_meta:meta])*
@@ -39,7 +40,8 @@ macro_rules! define_enum {
             #[doc = ""]
             #[doc = "<" $mdn_url ">"]
             $(#[$enum_meta])*
-            #[derive(Clone, PartialEq, Eq, Hash)]
+            #[derive(Clone, PartialEq, Eq, Hash, Debug)]
+            #[cfg_attr(all(test, not(target_arch="wasm32")), derive(proptest_derive::Arbitrary))]
             pub enum $name {
                 $(
                     $(#[$variant_meta])*
@@ -77,7 +79,7 @@ define_enum! {
     "*",
     "https://developer.mozilla.org/docs/Web/CSS/CSS_Values_and_Units/CSS_data_types#css-wide_keywords",
     {
-        Initial => "inital",
+        Initial => "initial",
         Inherit => "inherit",
         Revert => "revert",
         RevertLayer => "revert-layer",
@@ -86,21 +88,38 @@ define_enum! {
 }
 
 define_enum! {
-    #[derive(Copy, Default)]
-    enum Align,
+    #[derive(Copy)]
+    enum ContentPosition,
     "align-*",
-    "https://developer.mozilla.org/en-US/docs/Web/CSS/align-content#values",
+    "https://www.w3.org/TR/css-align-3/#typedef-content-position",
     {
-        #[default]
-        Normal => "normal",
-        Start => "start",
         Center => "center",
+        Start => "start",
         End => "end",
         FlexStart => "flex-start",
         FlexEnd => "flex-end",
+    }
+}
+
+define_enum! {
+    #[derive(Copy)]
+    enum BaselinePosition,
+    "align-*",
+    "https://www.w3.org/TR/css-align-3/#typedef-baseline-position",
+    {
         Baseline => "baseline",
-        FirstBaseline => "first baseline",
-        // SPEC: These are noops on `align-content` in block layouts.
+        First => "first baseline",
+        // SPEC: Last-baseline not supported on `align-content`
+        Last => "last baseline",
+    }
+}
+
+define_enum! {
+    #[derive(Copy)]
+    enum ContentDistribution,
+    "align-*",
+    "https://www.w3.org/TR/css-align-3/#typedef-content-distribution",
+    {
         SpaceBetween => "space-between",
         SpaceAround => "space-around",
         SpaceEvenly => "space-evenly",
@@ -109,23 +128,27 @@ define_enum! {
 }
 
 /// <https://developer.mozilla.org/en-US/docs/Web/CSS/align-content#safe>
-pub struct Safe(pub Align);
-
-/// <https://developer.mozilla.org/en-US/docs/Web/CSS/align-content#unsafe>
-// MAYBE: Should we name this something else? considering `unsafe` has connotation in rust.
-pub struct Unsafe(pub Align);
-
-impl ToCssValue for Safe {
-    type ValueKind = Align;
-
-    fn to_css(self) -> String {
-        format!("safe {}", self.0.to_css())
-    }
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[cfg_attr(
+    all(test, not(target_arch = "wasm32")),
+    derive(proptest_derive::Arbitrary)
+)]
+pub enum OverflowPosition<T> {
+    /// `safe ...`
+    Safe(T),
+    /// `unsafe ...`
+    Unsafe(T),
 }
-impl ToCssValue for Unsafe {
-    type ValueKind = Align;
+
+impl<T: ToCssValue> ToCssValue for OverflowPosition<T> {
+    type ValueKind = OverflowPosition<T>;
 
     fn to_css(self) -> String {
-        format!("unsafe {}", self.0.to_css())
+        let (prefix, value) = match self {
+            Self::Safe(value) => ("safe", value),
+            Self::Unsafe(value) => ("unsafe", value),
+        };
+
+        format!("{prefix} {}", value.to_css())
     }
 }

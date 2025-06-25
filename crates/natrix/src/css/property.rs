@@ -1,8 +1,49 @@
 //! Css properties
 
 use super::values;
+use crate::css::selectors::IntoSelectorList;
 
 // TODO: Implement css properties
+
+/// A collection of css rules
+#[must_use]
+pub struct RuleCollection {
+    /// Raw sections of css
+    pub(crate) sections: Vec<String>,
+}
+
+impl Default for RuleCollection {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl RuleCollection {
+    /// Create a new stylesheet
+    pub fn new() -> Self {
+        Self {
+            sections: Vec::new(),
+        }
+    }
+
+    /// Add a rule to the stylesheet
+    pub fn rule(mut self, selector: impl IntoSelectorList, body: RuleBody) -> Self {
+        let selector = selector.into_list().into_css();
+        let body = body.into_css();
+
+        let section = format!("{selector}{{{body}}}");
+        self.sections.push(section);
+
+        self
+    }
+
+    /// Convert this to css
+    #[doc(hidden)]
+    #[must_use]
+    pub fn to_css(self) -> String {
+        self.sections.join("")
+    }
+}
 
 /// A impletor for a property
 pub trait Property {
@@ -106,10 +147,49 @@ property!(AlignContent => "align-content");
 property!(AlignItems => "align-items");
 property!(AlignSelf => "align-self");
 
-impl Supports<values::Align> for AlignContent {}
-impl Supports<values::Align> for AlignItems {}
-impl Supports<values::Align> for AlignSelf {}
+impl Supports<values::ContentPosition> for AlignContent {}
+impl Supports<values::BaselinePosition> for AlignContent {}
+impl Supports<values::ContentDistribution> for AlignContent {}
+impl Supports<values::OverflowPosition<values::ContentPosition>> for AlignContent {}
 
 property!(All => "all");
 // NOTE: `all` only accepts `WideKeyword`, hence we do not implement any `Supports` specifically
 // here.
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod test {
+    use proptest::proptest;
+
+    use super::super::assert_valid_css;
+    use super::*;
+    use crate::dom::html_elements::TagDiv;
+
+    macro_rules! test_property {
+        ($prop:ident, $value:ty, $name:ident) => {
+            pastey::paste! {
+                proptest! {
+                    #[test]
+                    fn [< test_ $prop:snake _ $name >](value: $value) {
+                        let result = RuleCollection::new()
+                            .rule(TagDiv, RuleBody::new().set($prop, value))
+                            .to_css();
+                        assert_valid_css(&result);
+                    }
+                }
+            }
+        };
+    }
+
+    // NOTE: We cant test `WideKeyword` against everything because `lightningcss` doesnt include it
+    // as a option for its ast nodes.
+    test_property!(All, values::WideKeyword, wide);
+
+    test_property!(AlignContent, values::ContentPosition, content);
+    test_property!(AlignContent, values::BaselinePosition, baseline);
+    test_property!(AlignContent, values::ContentDistribution, distribution);
+    test_property!(
+        AlignContent,
+        values::OverflowPosition<values::ContentPosition>,
+        overflow
+    );
+}

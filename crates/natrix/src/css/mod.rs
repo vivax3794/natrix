@@ -6,11 +6,21 @@
 // in production applications.
 
 // TODO: Allow composing css rules similar to css-modules `composes`
+// TODO: Media Queries
+// TODO: Other at rules
 
+pub mod keyframes;
 pub mod property;
 pub mod selectors;
-pub mod stylesheet;
 pub mod values;
+
+/// Css prelude
+/// This is auto star imported in the various `register_*` macros
+pub mod prelude {
+    pub use super::property::RuleBody;
+    pub use super::{property, selectors, values};
+    pub use crate::selector_list;
+}
 
 /// Struct to let `inventory` collect css from all across the dep graph
 #[doc(hidden)]
@@ -20,7 +30,7 @@ pub struct CssEmit(pub fn() -> String);
 #[cfg(feature = "_internal_collect_css")]
 inventory::collect!(CssEmit);
 
-#[cfg(feature = "_internal_no_ssg")]
+#[cfg(all(feature = "_internal_no_ssg", target_arch = "wasm32"))]
 #[expect(
     unsafe_code,
     reason = "This is required for inventory to work, it is not included in production builds"
@@ -29,62 +39,98 @@ unsafe extern "C" {
     fn __wasm_call_ctors();
 }
 
-cfg_if::cfg_if! {
-    if #[cfg(feature = "_internal_collect_css")] {
-        /// Register a css stylesheet to go in the bundler.
-        /// Any code in here wont be included in the final wasm build.
-        /// And will be run at compile time.
-        ///
-        /// This macro must not be called from within a function.
-        #[macro_export]
-        #[cfg(feature = "_internal_collect_css")]
-        macro_rules! register_css {
-            ($style:expr) => {
-                $crate::macro_ref::inventory::submit!($crate::macro_ref::CssEmit(|| {
-                    use $crate::css::prelude::*;
-                    $crate::macro_ref::log::trace!(concat!("generating css for ", file!(), " ", line!()));
-                    let sheet: $crate::macro_ref::StyleSheet = $style;
-                    sheet.to_css()
-                }));
-            };
-        }
-    }
-    else {
-        /// Register a css stylesheet to go in the bundler.
-        /// Any code in here wont be included in the final wasm build.
-        /// And will be run at compile time.
-        ///
-        /// This macro must not be called from within a function.
-        #[macro_export]
-        #[cfg(not(feature = "_internal_collect_css"))]
-        macro_rules! register_css {
-            ($style:expr) => {
-                const _: fn() -> $crate::macro_ref::StyleSheet = || {
-                    use $crate::css::prelude::*;
-                    $crate::macro_ref::log::warn!("Register css code called in non-collection mode");
-                    $style
-                };
-            };
-        }
-    }
+/// Register a css stylesheet to go in the bundler.
+/// Generally you should prefer the various other `register_` helpers.
+///
+/// Any code in here wont be included in the final wasm build.
+/// And will be run at compile time.
+/// This macro must not be called from within a function.
+#[macro_export]
+#[cfg(feature = "_internal_collect_css")]
+macro_rules! register_raw_css {
+    ($style:expr) => {
+        $crate::macro_ref::inventory::submit!($crate::macro_ref::css::CssEmit(|| {
+            $crate::macro_ref::log::trace!(concat!("generating css for ", file!(), " ", line!()));
+            $style
+        }));
+    };
 }
 
-/// Css prelude
-/// This is auto star imported in `register_css`
-pub mod prelude {
-    pub use super::property::RuleBody;
-    pub use super::stylesheet::StyleSheet;
-    pub use super::{selectors, values};
-    pub use crate::selector_list;
+/// Register a css string to go in the bundler.
+/// Generally you should prefer the various other `register_` helpers.
+///
+/// Any code in here wont be included in the final wasm build.
+/// And will be run at compile time.
+/// This macro must not be called from within a function.
+#[macro_export]
+#[cfg(not(feature = "_internal_collect_css"))]
+macro_rules! register_raw_css {
+    ($style:expr) => {
+        const _: fn() -> String = || {
+            $crate::macro_ref::log::warn!("Register css code called in non-collection mode");
+            $style
+        };
+    };
+}
+
+/// Register a `RuleCollection` to go in the bundler.
+///
+/// Any code in here wont be included in the final wasm build.
+/// And will be run at compile time.
+/// This macro must not be called from within a function.
+#[macro_export]
+macro_rules! register_rules {
+    ($collection:expr) => {
+        $crate::register_raw_css!({
+            use $crate::macro_ref::css::prelude::*;
+            let result: $crate::macro_ref::css::property::RuleCollection = $collection;
+            result.to_css()
+        });
+    };
+}
+
+/// Register a css rule to go in the bundler.
+///
+/// Any code in here wont be included in the final wasm build.
+/// And will be run at compile time.
+/// This macro must not be called from within a function.
+#[macro_export]
+macro_rules! register_rule {
+    ($selectors:expr $(,)?) => {
+        $crate::register_rules!(
+            $crate::macro_ref::css::property::RuleCollection::new().rule(
+                $selectors,
+                $crate::macro_ref::css::property::RuleBody::new()
+            )
+        );
+        compile_error!("Missing rule body");
+    };
+    ($selectors:expr, $body:expr) => {
+        $crate::register_rules!(
+            $crate::macro_ref::css::property::RuleCollection::new().rule($selectors, $body)
+        );
+    };
 }
 
 /// Do the css collection and either emit to STDOUT or inject into dom
 /// Depending on the selected feature flags.
 #[cfg(feature = "_internal_collect_css")]
-pub(crate) fn css_collect() {
-    log::info!("Collecting css");
+pub(crate) fn do_css_setup() {
+    let result = collect_css();
 
     #[cfg(feature = "_internal_no_ssg")]
+    css_runtime(&result);
+
+    #[cfg(feature = "_internal_bundle")]
+    css_emit(&result);
+}
+
+/// Collect the css into a string.
+#[cfg(feature = "_internal_collect_css")]
+fn collect_css() -> String {
+    log::info!("Collecting css");
+
+    #[cfg(all(feature = "_internal_no_ssg", target_arch = "wasm32"))]
     #[expect(
         unsafe_code,
         reason = "This is required for inventory to work on wasm, it is not included in production builds"
@@ -99,12 +145,7 @@ pub(crate) fn css_collect() {
     for emit in inventory::iter::<CssEmit> {
         result.push_str(&(emit.0)());
     }
-
-    #[cfg(feature = "_internal_no_ssg")]
-    css_runtime(&result);
-
-    #[cfg(feature = "_internal_bundle")]
-    css_emit(&result);
+    result
 }
 
 /// Inject the css into the dom at runtime
@@ -205,8 +246,36 @@ fn assert_valid_css(string: &str) {
 
 #[cfg(test)]
 mod tests {
+    use crate::prelude::IntoComplexSelector;
+
     #[test]
     fn unique_is_unique() {
         assert_ne!(unique_str!(), unique_str!());
+    }
+
+    const BUTTON_CLASS: crate::prelude::Class = crate::prelude::Class("btn"); // Consistent
+
+    crate::register_rule!(
+        BUTTON_CLASS,
+        RuleBody::new().align_content(values::ContentPosition::Start)
+    );
+    crate::register_rules!(
+        property::RuleCollection::new()
+            .rule(
+                BUTTON_CLASS.child(BUTTON_CLASS),
+                RuleBody::new().align_content(values::ContentPosition::FlexStart)
+            )
+            .rule(
+                BUTTON_CLASS.next_sibling(BUTTON_CLASS),
+                RuleBody::new().align_content(values::BaselinePosition::First)
+            )
+    );
+
+    #[cfg(all(feature = "_internal_collect_css", not(target_arch = "wasm32")))]
+    #[test]
+    fn test_css_collection() {
+        let result = super::collect_css();
+        super::assert_valid_css(&result);
+        insta::assert_snapshot!(result);
     }
 }
