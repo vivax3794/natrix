@@ -3,25 +3,9 @@ IMPORT ./../.. AS base
 IMPORT ./../../crates/natrix-cli AS cli
 IMPORT github.com/earthly/lib/rust:3.0.3 AS rust
 
-install-chromedriver:
-    FROM debian:bookworm-slim
-    ENV VERSION="137.0.7151.119"
-    ENV ARCHIVE_NAME="chromedriver-linux64.zip"
-    ENV DOWNLOAD_URL="https://storage.googleapis.com/chrome-for-testing-public/${VERSION}/linux64/${ARCHIVE_NAME}"
-
-    RUN apt-get update -qq
-    RUN apt-get install --no-install-recommends -qq ca-certificates curl unzip
-
-    RUN curl -sSL ${DOWNLOAD_URL} -o /tmp/${ARCHIVE_NAME} \
-        && unzip /tmp/${ARCHIVE_NAME} -d /tmp/ \
-        && rm /tmp/${ARCHIVE_NAME}
-
-    SAVE ARTIFACT /tmp/chromedriver-linux64/chromedriver chromedriver
-
 e2e-base:
     FROM base+wasm --toolchain=nightly
 
-    COPY +install-chromedriver/chromedriver /bin/chromedriver
     COPY (base+install-tool/tool --tool=cargo-nextest) /bin/cargo-nextest
     COPY cli+build-cli/natrix /bin/natrix
     COPY --keep-ts base+workspace-src/src .

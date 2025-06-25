@@ -1,5 +1,4 @@
 use natrix::prelude::*;
-use natrix::register_css;
 
 mod reload_tests;
 
@@ -9,11 +8,6 @@ const PANIC_ID: Id = natrix::id!();
 const BUTTON_ID: Id = natrix::id!();
 const RELOAD_ID: Id = natrix::id!();
 const IMG_ID: Id = natrix::id!();
-
-register_css! {
-    StyleSheet::new()
-        .raw("h1 {background-color: rgb(1, 2, 3, 1);}")
-}
 
 #[derive(Component)]
 #[expect(dead_code, reason = "literally here to test DCE")]
