@@ -17,6 +17,9 @@ Natrix uses [`just`](https://github.com/casey/just) for task automation and [`Ea
 
 **Why Earthly?** We use Earthly because Natrix has extensive E2E tests and benchmarks that would otherwise require installing around 10 different tools (Python, Chrome, wasm-bindgen, wasm-opt, various Rust tools, etc.). With Earthly, all dependencies are containerized, ensuring consistent builds across environments.
 
+**Okay why justfile as well then?** Because even the root earthly file contains "internal" targets, and justfile lets us easier expose "public" targets.
+In addition justfile allow us to also define targets that run on host, such as `update_snapshot`, and more importantly the benchmarks run on the host to avoid docker overhead. 
+
 ## Development Workflow
 
 ### Available `just` Targets
