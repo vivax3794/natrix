@@ -155,12 +155,10 @@ pub enum SimpleSelector {
 impl SimpleSelector {
     /// Convert this to css
     fn into_css(self) -> String {
-        // BUG: We are not escpaing invalid characthers
-        // But, all helper-based inputs to this only use valid characthers.
         match self {
             Self::Tag(value) => value.into(),
-            Self::Class(value) => format!(".{value}"),
-            Self::Id(value) => format!("#{value}"),
+            Self::Class(value) => format!(".{}", super::as_css_identifier(&value)),
+            Self::Id(value) => format!("#{}", super::as_css_identifier(&value)),
             Self::Pseudo(value) => format!(":{value}"),
         }
     }
