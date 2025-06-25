@@ -9,6 +9,8 @@
 // TODO: Media Queries
 // TODO: Other at rules
 
+use crate::error_handling::log_or_panic_assert;
+
 pub mod keyframes;
 pub mod property;
 pub mod selectors;
@@ -20,6 +22,58 @@ pub mod prelude {
     pub use super::property::RuleBody;
     pub use super::{property, selectors, values};
     pub use crate::selector_list;
+}
+
+/// The current state of the `as_css_identifier` function
+#[derive(PartialEq, Eq)]
+enum AsCssIdentifierState {
+    /// This is the first character
+    FirstChar,
+    /// This is the second character and the first one was `-`
+    PreviousCharWasFirstAndDash,
+    /// Any other character
+    Rest,
+}
+
+/// Escape special characthers in string such that it becomes a valid css identifier
+/// TEST: Ensure the output still matches html elements with the input
+#[must_use]
+pub fn as_css_identifier(input: &str) -> String {
+    log_or_panic_assert!(!input.is_empty(), "Css identifier cant be empty string");
+
+    let mut result = String::with_capacity(input.len());
+    let mut state = AsCssIdentifierState::FirstChar;
+    let mut buffer = itoa::Buffer::new();
+
+    for c in input.chars() {
+        state = match (state, c) {
+            (
+                AsCssIdentifierState::FirstChar | AsCssIdentifierState::PreviousCharWasFirstAndDash,
+                '0'..='9',
+            ) => {
+                result.push('\\');
+                result.push_str(buffer.format(c as u32));
+                result.push(' ');
+                AsCssIdentifierState::Rest
+            }
+            (AsCssIdentifierState::FirstChar, '-') => {
+                result.push('-');
+                AsCssIdentifierState::PreviousCharWasFirstAndDash
+            }
+            (_, 'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' | '\u{00A0}'..) => {
+                result.push(c);
+                AsCssIdentifierState::Rest
+            }
+            (_, _) => {
+                result.push('\\');
+                result.push_str(buffer.format(c as u32));
+                result.push(' ');
+                AsCssIdentifierState::Rest
+            }
+        }
+    }
+
+    result
 }
 
 /// Struct to let `inventory` collect css from all across the dep graph
@@ -244,9 +298,10 @@ fn assert_valid_css(string: &str) {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
-    use crate::prelude::IntoComplexSelector;
+    use crate::css::selectors::IntoSelectorList;
+    use crate::prelude::{Id, IntoComplexSelector};
 
     #[test]
     fn unique_is_unique() {
@@ -271,11 +326,28 @@ mod tests {
             )
     );
 
-    #[cfg(all(feature = "_internal_collect_css", not(target_arch = "wasm32")))]
+    #[cfg(feature = "_internal_collect_css")]
     #[test]
     fn test_css_collection() {
         let result = super::collect_css();
         super::assert_valid_css(&result);
         insta::assert_snapshot!(result);
+    }
+
+    #[test]
+    fn id_with_numeric_start() {
+        let id = Id("1A3b2");
+        let css = format!("{}{{}}", id.into_list().into_css());
+        super::assert_valid_css(&css);
+        insta::assert_snapshot!(css);
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn test_as_css_identifier(input in ".+") {
+            let result = super::as_css_identifier(&input);
+            let test_body = format!(".{result}{{}}");
+            super::assert_valid_css(&test_body);
+        }
     }
 }
