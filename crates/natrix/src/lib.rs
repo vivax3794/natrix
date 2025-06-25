@@ -72,6 +72,7 @@ pub mod prelude {
     pub use super::reactivity::component::{Component, NoMessages, SubComponent};
     pub use super::reactivity::state::{E, R};
 }
+
 pub use dom::Element;
 pub use dom::list::List;
 pub use natrix_macros::{Component, asset, data, format_elements};
@@ -85,9 +86,7 @@ pub mod macro_ref {
     pub use inventory;
     pub use {const_base, const_sha1, log};
 
-    #[cfg(feature = "_internal_collect_css")]
-    pub use super::css::CssEmit;
-    pub use super::css::stylesheet::StyleSheet;
+    pub use super::css;
     pub use super::dom::element::Element;
     pub use super::reactivity::component::ComponentBase;
     pub use super::reactivity::signal::{Signal, SignalMethods, SignalState};
