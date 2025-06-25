@@ -36,7 +36,7 @@ enum AsCssIdentifierState {
 }
 
 /// Escape special characthers in string such that it becomes a valid css identifier
-/// TEST: Ensure the output still matches html elements with the input
+// TEST: Ensure the output still matches html elements with the input
 #[must_use]
 pub fn as_css_identifier(input: &str) -> String {
     log_or_panic_assert!(!input.is_empty(), "Css identifier cant be empty string");
@@ -71,6 +71,13 @@ pub fn as_css_identifier(input: &str) -> String {
                 AsCssIdentifierState::Rest
             }
         }
+    }
+
+    if state == AsCssIdentifierState::PreviousCharWasFirstAndDash {
+        result.clear();
+        result.push('\\');
+        result.push_str(buffer.format('\\' as u32));
+        result.push(' ');
     }
 
     result
@@ -171,6 +178,8 @@ macro_rules! register_rule {
 #[cfg(feature = "_internal_collect_css")]
 pub(crate) fn do_css_setup() {
     let result = collect_css();
+
+    log::trace!("Produced css: {result}");
 
     #[cfg(feature = "_internal_no_ssg")]
     css_runtime(&result);
@@ -300,38 +309,42 @@ fn assert_valid_css(string: &str) {
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
-    use crate::css::selectors::IntoSelectorList;
-    use crate::prelude::{Id, IntoComplexSelector};
+    use super::selectors::IntoSelectorList;
+    use crate::prelude::Id;
 
     #[test]
     fn unique_is_unique() {
         assert_ne!(unique_str!(), unique_str!());
     }
 
-    const BUTTON_CLASS: crate::prelude::Class = crate::prelude::Class("btn"); // Consistent
-
-    crate::register_rule!(
-        BUTTON_CLASS,
-        RuleBody::new().align_content(values::ContentPosition::Start)
-    );
-    crate::register_rules!(
-        property::RuleCollection::new()
-            .rule(
-                BUTTON_CLASS.child(BUTTON_CLASS),
-                RuleBody::new().align_content(values::ContentPosition::FlexStart)
-            )
-            .rule(
-                BUTTON_CLASS.next_sibling(BUTTON_CLASS),
-                RuleBody::new().align_content(values::BaselinePosition::First)
-            )
-    );
-
     #[cfg(feature = "_internal_collect_css")]
-    #[test]
-    fn test_css_collection() {
-        let result = super::collect_css();
-        super::assert_valid_css(&result);
-        insta::assert_snapshot!(result);
+    mod test_collection {
+        use crate::prelude::*;
+
+        const BUTTON_CLASS: crate::prelude::Class = crate::prelude::Class("btn"); // Consistent
+
+        crate::register_rule!(
+            BUTTON_CLASS,
+            RuleBody::new().align_content(values::ContentPosition::Start)
+        );
+        crate::register_rules!(
+            property::RuleCollection::new()
+                .rule(
+                    BUTTON_CLASS.child(BUTTON_CLASS),
+                    RuleBody::new().align_content(values::ContentPosition::FlexStart)
+                )
+                .rule(
+                    BUTTON_CLASS.next_sibling(BUTTON_CLASS),
+                    RuleBody::new().align_content(values::BaselinePosition::First)
+                )
+        );
+
+        #[test]
+        fn test_collect() {
+            let result = super::super::collect_css();
+            super::super::assert_valid_css(&result);
+            insta::assert_snapshot!(result);
+        }
     }
 
     #[test]
@@ -342,11 +355,19 @@ mod tests {
         insta::assert_snapshot!(css);
     }
 
+    #[test]
+    fn identifier_single_dash() {
+        let id = Id("-");
+        let css = format!("{}{{}}", id.into_list().into_css());
+        super::assert_valid_css(&css);
+        insta::assert_snapshot!(css);
+    }
+
     proptest::proptest! {
         #[test]
         fn test_as_css_identifier(input in ".+") {
             let result = super::as_css_identifier(&input);
-            let test_body = format!(".{result}{{}}");
+            let test_body = format!("#{result}{{}}");
             super::assert_valid_css(&test_body);
         }
     }
