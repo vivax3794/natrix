@@ -12,9 +12,6 @@ pub use colors::Color;
 
 /// Convert a value to a css value string
 pub trait ToCssValue {
-    /// The kind of value this is
-    type ValueKind;
-
     /// Convert a value to a css value string
     fn to_css(self) -> String;
 }
@@ -55,8 +52,6 @@ macro_rules! define_enum {
             }
 
             impl ToCssValue for $name {
-                type ValueKind = $name;
-
                 #[inline]
                 fn to_css(self) -> String {
                     match self {
@@ -71,6 +66,28 @@ macro_rules! define_enum {
             }
         }
     }
+}
+
+/// Define a zero-sized css value struct
+macro_rules! zero_sized_value {
+    (struct $name:ident => $value:literal) => {
+        pastey::paste! {
+            #[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
+            #[cfg_attr(
+                all(test, not(target_arch = "wasm32")),
+                derive(proptest_derive::Arbitrary)
+            )]
+            #[doc = "`" $value "`"]
+            pub struct $name;
+
+            impl ToCssValue for $name {
+                #[inline]
+                fn to_css(self) -> String {
+                    $value.into()
+                }
+            }
+        }
+    };
 }
 
 define_enum! {
@@ -123,9 +140,28 @@ define_enum! {
         SpaceBetween => "space-between",
         SpaceAround => "space-around",
         SpaceEvenly => "space-evenly",
-        Stretch => "stretch"
     }
 }
+
+define_enum! {
+    #[derive(Copy)]
+    enum SelfPosition,
+    "align-*",
+    "https://www.w3.org/TR/css-align-3/#typedef-self-position",
+    {
+        Center => "center",
+        Start => "Start",
+        End => "End",
+        SelfStart => "self-start",
+        SelfEnd => "self-end",
+        FlexStart => "flex-start",
+        FlexEnd => "flex-end"
+    }
+}
+
+zero_sized_value!(struct Normal => "normal");
+zero_sized_value!(struct Auto => "auto");
+zero_sized_value!(struct Stretch => "stretch");
 
 /// <https://developer.mozilla.org/en-US/docs/Web/CSS/align-content#safe>
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -141,8 +177,6 @@ pub enum OverflowPosition<T> {
 }
 
 impl<T: ToCssValue> ToCssValue for OverflowPosition<T> {
-    type ValueKind = OverflowPosition<T>;
-
     fn to_css(self) -> String {
         let (prefix, value) = match self {
             Self::Safe(value) => ("safe", value),
