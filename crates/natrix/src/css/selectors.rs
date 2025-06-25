@@ -4,11 +4,12 @@ use std::ops::Deref;
 
 use crate::error_handling::log_or_panic_assert;
 
-// TODO: Media queriez
 // TODO: Document that you can clone selectors to get "nesting"
 
 // MAYBE: Make selector generic over target elements allowing us to constrain properties that are
 // allowed on them.
+
+// TEST: Property test
 
 /// A list of selectors (`,`)
 #[derive(Debug, Clone)]
