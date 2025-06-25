@@ -37,9 +37,25 @@ wasm:
     RUN apt-get update -qq
     RUN apt-get install --no-install-recommends -qq chromium
 
+    COPY (+install-chromedriver/chromedriver) /bin/chromedriver
     COPY (+install-tool/tool --tool=wasm-bindgen-cli --name=wasm-bindgen) /bin/wasm-bindgen
     COPY (+install-tool/tool --tool=wasm-bindgen-cli --name=wasm-bindgen-test-runner) /bin/wasm-bindgen-test-runner
     COPY (+install-wasm-opt/wasm-opt) /bin/wasm-opt
+
+install-chromedriver:
+    FROM debian:bookworm-slim
+    ENV VERSION="137.0.7151.119"
+    ENV ARCHIVE_NAME="chromedriver-linux64.zip"
+    ENV DOWNLOAD_URL="https://storage.googleapis.com/chrome-for-testing-public/${VERSION}/linux64/${ARCHIVE_NAME}"
+
+    RUN apt-get update -qq
+    RUN apt-get install --no-install-recommends -qq ca-certificates curl unzip
+
+    RUN curl -sSL ${DOWNLOAD_URL} -o /tmp/${ARCHIVE_NAME} \
+        && unzip /tmp/${ARCHIVE_NAME} -d /tmp/ \
+        && rm /tmp/${ARCHIVE_NAME}
+
+    SAVE ARTIFACT /tmp/chromedriver-linux64/chromedriver chromedriver
 
 install-wasm-opt:
     FROM debian:bookworm-slim
