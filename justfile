@@ -14,22 +14,6 @@ fix_typos:
 docs:
     cargo doc --open -p natrix --lib --all-features
 
-# Compile `./docs` (requires: earthly)
-build-book:
-    earthly --secret GITHUB_TOKEN="" ./docs+build-book
-
-# Compile and open `./docs` (requires: earthly, python3)
-book: build-book
-    cd ./docs/book && python3 -m http.server
-
-# Run tests for `./crates/natrix` (requires: earthly)
-core:
-    earthly --secret GITHUB_TOKEN="" +run-core
-
-# Run entire CI pipeline (requires: earthly)
-all:
-    earthly --secret GITHUB_TOKEN="" +all
-
 # Install natrix-cli
 install_cli:
     cargo install --path ./crates/natrix-cli
