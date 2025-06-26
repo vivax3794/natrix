@@ -74,16 +74,13 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg_attr(debug_assertions, should_panic(expected = "Error in release mode"))]
+    #[should_panic(expected = "Error in release mode")]
     fn test_debug_expect() {
         log_or_panic_result!(Err::<(), _>("error"), "Error in release mode");
     }
 
     #[test]
-    #[cfg_attr(
-        debug_assertions,
-        should_panic(expected = "This won't panic in release")
-    )]
+    #[should_panic(expected = "This won't panic in release")]
     fn test_debug_panic() {
         log_or_panic!("This won't panic in release");
     }

@@ -8,7 +8,7 @@ members = [
     "ci/integration_tests",
     "ci/integration_tests_dependency",
     "ci/stress_test_binary_size",
-    "ci/benchmark",
+    "ci/benchmark"
 ]
 
 [profile.release]
@@ -17,10 +17,6 @@ codegen-units = 1
 lto = "fat"
 panic = "abort"
 strip = "symbols"
-
-[profile.test-no-assertions]
-inherits = "test"
-debug-assertions = false
 
 [workspace.lints.rust]
 missing_docs = "warn"
