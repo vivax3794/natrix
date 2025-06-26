@@ -1,0 +1,12 @@
+[package]
+name = "dagger_pipeline"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dagger-sdk = "0.18.11"
+eyre = "0.6.12"
+tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true
