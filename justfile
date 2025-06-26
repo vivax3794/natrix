@@ -2,6 +2,9 @@
 default:
     just --list
 
+run_dagger:
+    dagger run cargo run -p dagger_pipeline
+
 # Run and update snapshots from snapshot tests (requires: cargo-insta)
 update_snapshot:
     cargo insta test --review --package natrix --unreferenced delete --test-runner nextest --all-features
