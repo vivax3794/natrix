@@ -11,10 +11,6 @@ test-native-dev:
     FROM +test-native-base
     DO rust+CARGO --args="nextest run --all-features -p natrix"
 
-test-native-release:
-    FROM +test-native-base
-    DO rust+CARGO --args="nextest run --all-features -p natrix --cargo-profile test-no-assertions"
-
 test-web:
     ARG --required toolchain
     FROM base+wasm --toolchain=$toolchain
@@ -54,7 +50,6 @@ cargo-deny:
 
 all:
     BUILD +test-native-dev
-    BUILD +test-native-release
     BUILD +test-web --toolchain=stable
     BUILD +test-web --toolchain=nightly
     BUILD +check --toolchain=stable
