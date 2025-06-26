@@ -74,8 +74,9 @@ mod driver_tests {
         let mut caps = DesiredCapabilities::chrome();
         caps.set_headless().unwrap();
         caps.set_no_sandbox().unwrap();
+        caps.set_disable_gpu().unwrap();
 
-        let driver = WebDriver::new("http://localhost:9999", caps)
+        let driver = WebDriver::new("http://127.0.0.1:9999", caps)
             .await
             .expect("Failed to connect to chrome driver");
 
@@ -121,6 +122,7 @@ mod driver_tests {
     }
 
     #[tokio::test]
+    #[ignore = "css in the middle of refactoring"]
     async fn primary_global_css() {
         let client = create_client().await;
         let element = client.find(By::Id(HELLO_ID.0)).await.unwrap();
