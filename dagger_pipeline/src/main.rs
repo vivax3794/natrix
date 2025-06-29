@@ -2,7 +2,7 @@
 
 /// Common items
 mod prelude {
-    pub use dagger_sdk::{Container, Directory, File, Query};
+    pub use dagger_sdk::{Container, Directory, Query};
     use dagger_sdk::{ContainerWithExecOptsBuilder, HostDirectoryOpts, ReturnType};
     pub use eyre::Result;
     use tokio::sync::Semaphore;
