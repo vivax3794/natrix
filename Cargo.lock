@@ -661,6 +661,7 @@ version = "0.1.0"
 dependencies = [
  "dagger-sdk",
  "eyre",
+ "serde",
  "serde_json",
  "tokio",
  "uuid",

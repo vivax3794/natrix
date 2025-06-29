@@ -1,28 +1,31 @@
 //! Actual targets
 
+use std::collections::HashMap;
+
 use dagger_sdk::{ContainerWithExecOptsBuilder, ReturnType};
+use serde::Deserialize;
 
 use crate::prelude::*;
 
+/// Lib test output
+#[derive(Deserialize)]
+struct TestLine {
+    /// Ok/Failed
+    event: String,
+    /// Name
+    name: String,
+    /// The stdout
+    stdout: Option<String>,
+}
+
 /// Run the native nextest tests
-pub async fn native_tests(client: &Query, state: &GlobalState) -> Result<File> {
+pub async fn native_tests(client: &Query, state: &GlobalState) -> Result<Directory> {
     let result = crate::base_images::rust(client)
         .with_directory(
             "/bin",
             crate::base_images::binstall(client, state, "cargo-nextest").await?,
         )
         .with_workspace(client)
-        .with_new_file(
-            ".config/nextest.toml",
-            r#"
-[profile.ci]
-fail-fast = false
-
-[profile.ci.junit]
-path = "junit.xml"
-report-name = "Unit Tests"
-"#,
-        )
         .with_workdir("./crates/natrix")
         .run_with_mutex(
             state,
@@ -37,6 +40,7 @@ report-name = "Unit Tests"
             false,
         )
         .await?
+        .with_env_variable("NEXTEST_EXPERIMENTAL_LIBTEST_JSON", "1")
         .with_exec_opts(
             vec![
                 "cargo",
@@ -45,24 +49,57 @@ report-name = "Unit Tests"
                 "run",
                 "--all-features",
                 "--offline",
-                "--profile",
-                "ci",
+                "--no-fail-fast",
+                "--message-format",
+                "libtest-json-plus",
+                "--message-format-version",
+                "0.1",
             ],
             ContainerWithExecOptsBuilder::default()
                 .expect(ReturnType::Any)
                 .build()?,
         )
-        // NOTE: Dagger doesnt seem to like using `.file` on stuff in a cache
-        .with_exec(vec!["mv", "/app/target/nextest/ci/junit.xml", "/junit.xml"])
-        .with_exec(vec![
-            "sed",
-            "-i",
-            r#"s/"natrix"/"Unit Tests"/g"#,
-            "/junit.xml",
-        ])
-        .file("/junit.xml");
+        .stdout()
+        .await?;
 
-    Ok(result)
+    let mut dir = client.directory();
+    for line in result.lines() {
+        if let Ok(json) = serde_json::from_str::<TestLine>(line) {
+            if json.event == "started" {
+                continue;
+            }
+
+            let status = if json.event == "ok" {
+                None
+            } else {
+                Some(serde_json::json!({
+                    "message": "Click for output",
+                    "trace": json.stdout,
+                }))
+            };
+            let id = uuid::Uuid::new_v4().to_string();
+            let test = serde_json::json!({
+                "uuid": id,
+                "name": json.name,
+                "status": if json.event == "ok" {"passed"} else {"failed"},
+                "statusDetails": status,
+                "labels": [
+                    {
+                        "name": "parentSuite",
+                        "value":  "Unit Tests",
+                    },
+                    {
+                        "name": "suite",
+                        "value":  "Native",
+                    },
+                ]
+            });
+            let test = serde_json::to_string(&test)?;
+            dir = dir.with_new_file(format!("{id}-result.json"), test);
+        }
+    }
+
+    Ok(dir)
 }
 
 /// Wasm unit tests
@@ -151,27 +188,67 @@ fn extract_test_result(
     toolchain: &'static str,
     output: &str,
 ) -> Result<Directory, eyre::Error> {
+    let mut traces = HashMap::new();
+
+    let mut hit_first = false;
+    let mut current_name = String::new();
+    let mut current_output = String::new();
+
+    for line in output.lines() {
+        if line.starts_with("----") {
+            let parts = line.split_whitespace().collect::<Vec<_>>();
+            if let [_, name, _, _] = parts[..] {
+                if hit_first {
+                    let mut new_name = name.to_string();
+                    std::mem::swap(&mut new_name, &mut current_name);
+                    traces.insert(new_name, std::mem::take(&mut current_output));
+                } else {
+                    current_name = name.to_string();
+                    hit_first = true;
+                }
+            }
+        }
+
+        if line.starts_with("test result") {
+            traces.insert(current_name, current_output);
+            break;
+        }
+
+        if hit_first {
+            current_output.push_str(line);
+            current_output.push('\n');
+        }
+    }
+
     let mut dir = client.directory();
-    let mut results = Vec::new();
     for line in output.lines() {
         if line.starts_with("test ") {
             let parts = line.split_whitespace().collect::<Vec<_>>();
             if let [_test, name, _dots, result] = &parts[..] {
                 let id = uuid::Uuid::new_v4().to_string();
 
+                let status = if *result == "ok" {
+                    None
+                } else {
+                    Some(serde_json::json!({
+                        "message": "Click for output",
+                        "trace": traces.get(*name),
+                    }))
+                };
+
                 let test = serde_json::json!({
                     "uuid": id,
                     "name": name,
                     "status": if *result == "ok" {"passed"} else {"failed"},
-                    "statusDetails": {
-                        "message": "See stack trace",
-                        // MAYBE: Capture the induvidual test case failrues
-                        "trace": if *result == "ok" {"ok"} else {&output},
-                    },
+                    "statusDetails": status,
                     "labels": [
                         {
+                            "name": "parentSuite",
+                            "value":  "Unit Tests",
+                        },
+                        {
                             "name": "suite",
-                            "value":  "Web Unit Tests",
+                            "value":  "Web",
                         },
                         {
                             "name": "subSuite",
@@ -181,7 +258,6 @@ fn extract_test_result(
                 });
                 let test = serde_json::to_string(&test)?;
                 dir = dir.with_new_file(format!("{id}-result.json"), test);
-                results.push(id);
             }
         }
     }

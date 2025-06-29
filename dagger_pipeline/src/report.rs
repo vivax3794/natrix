@@ -17,7 +17,7 @@ pub async fn generate_report(client: &Query, state: &GlobalState) -> Result<()> 
         .from("andgineer/allure")
         .with_directory("/reports", wasm_unit_nightly)
         .with_directory("/reports", wasm_unit_stable)
-        .with_file("/reports/native_tests.xml", native_tests)
+        .with_directory("/reports", native_tests)
         .with_mounted_cache("/history-cache/", client.cache_volume("allure-history"))
         .with_exec_opts(
             vec!["mv", "-v", "/history-cache/history", "/reports/history"],

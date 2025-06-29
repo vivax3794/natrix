@@ -710,10 +710,10 @@ mod tests {
             let selector = $expr.into_finalized(); // Ensure its correct from the top
             let result = selector.into_css();
 
-            assert_snapshot!(stringify!($expr), result, stringify!($expr));
-
             let wrapped = format!("{result} {{}}");
             assert_valid_css(&wrapped);
+
+            assert_snapshot!(stringify!($expr), result, stringify!($expr));
         };
     }
 
