@@ -2,6 +2,9 @@
 default:
     just --list
 
+run_dagger:
+    dagger run cargo run -p dagger_pipeline
+
 # Run and update snapshots from snapshot tests (requires: cargo-insta)
 update_snapshot:
     cargo insta test --review --package natrix --unreferenced delete --test-runner nextest --all-features
@@ -13,22 +16,6 @@ fix_typos:
 # Compile and open docs for `natrix`
 docs:
     cargo doc --open -p natrix --lib --all-features
-
-# Compile `./docs` (requires: earthly)
-build-book:
-    earthly --secret GITHUB_TOKEN="" ./docs+build-book
-
-# Compile and open `./docs` (requires: earthly, python3)
-book: build-book
-    cd ./docs/book && python3 -m http.server
-
-# Run tests for `./crates/natrix` (requires: earthly)
-core:
-    earthly --secret GITHUB_TOKEN="" +run-core
-
-# Run entire CI pipeline (requires: earthly)
-all:
-    earthly --secret GITHUB_TOKEN="" +all
 
 # Install natrix-cli
 install_cli:

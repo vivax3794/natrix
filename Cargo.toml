@@ -8,7 +8,8 @@ members = [
     "ci/integration_tests",
     "ci/integration_tests_dependency",
     "ci/stress_test_binary_size",
-    "ci/benchmark"
+    "ci/benchmark", 
+    "dagger_pipeline",
 ]
 
 [profile.release]

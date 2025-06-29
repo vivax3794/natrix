@@ -1,9 +1,0 @@
-VERSION 0.8
-IMPORT ./../ AS base 
-IMPORT github.com/earthly/lib/rust:3.0.3 AS rust
-
-all:
-   BUILD ./natrix+all
-   BUILD ./natrix-cli+all
-
-    
