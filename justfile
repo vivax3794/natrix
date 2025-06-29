@@ -4,6 +4,7 @@ default:
 
 run_dagger:
     dagger run cargo run -p dagger_pipeline
+    cd allure-report && python3 -m http.server 8000
 
 # Run and update snapshots from snapshot tests (requires: cargo-insta)
 update_snapshot:
