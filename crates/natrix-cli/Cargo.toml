@@ -14,7 +14,7 @@ natrix_shared = {path = "../natrix_shared", version="0.3.0", features=["macros"]
 
 anyhow = {version="1.0.97", default-features = false}
 clap = { version = "4.5.34", features = ["derive"], default-features = true}
-indicatif = "0.17.11"
+indicatif = "0.18.0"
 owo-colors = { version = "4.2.0", default-features = false }
 notify = "8.0.0"
 tiny_http = "0.12.0"

@@ -9,12 +9,12 @@ wasm_bindgen_test_configure!(run_in_browser);
 const BUTTON: Id = natrix::id!();
 
 #[derive(Component, Default)]
-struct StaleDepAccumilation {
+struct StaleDepAccumulation {
     modified: u8,
     read_only: u8,
 }
 
-impl Component for StaleDepAccumilation {
+impl Component for StaleDepAccumulation {
     type EmitMessage = NoMessages;
     type ReceiveMessage = NoMessages;
 
@@ -35,11 +35,11 @@ impl Component for StaleDepAccumilation {
     }
 }
 
-// As of writting this causes the `read_only` dep list to grow without ever being
+// As of writing this causes the `read_only` dep list to grow without ever being
 // cleared
 #[wasm_bindgen_test]
-fn stable_dep_accumilation() {
-    crate::mount_test(StaleDepAccumilation::default());
+fn stale_dep_accumulation() {
+    crate::mount_test(StaleDepAccumulation::default());
     let button = crate::get(BUTTON);
 
     for _ in 0..50 {

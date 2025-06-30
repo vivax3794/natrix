@@ -1,6 +1,6 @@
 //! Contains the base images
 
-use dagger_sdk::ContainerWithEnvVariableOpts;
+use dagger_sdk::{ContainerWithEnvVariableOpts, File};
 
 use crate::prelude::*;
 
@@ -9,16 +9,21 @@ pub fn base(client: &Query) -> Container {
     client
         .container()
         .from("debian:bookworm-slim")
-        .with_env_variable("FORCE_COLOR", "1")
-        .with_env_variable("CLICOLOR_FORCE", "1")
-        .with_env_variable("CARGO_TERM_COLOR", "always")
         .with_exec(vec!["apt", "update"])
+        .with_mounted_cache("/file_caches", client.cache_volume("file_caches"))
 }
 
 /// A base image with rust installed
 pub fn rust(client: &Query) -> Container {
     base(client)
-        .with_exec(vec!["apt", "install", "-yqq", "curl", "build-essential"])
+        .with_exec(vec![
+            "apt",
+            "install",
+            "-yqq",
+            "curl",
+            "build-essential",
+            "libc6-dev",
+        ])
         .with_exec(vec![
             "sh",
             "-c",
@@ -34,17 +39,31 @@ pub fn rust(client: &Query) -> Container {
             client.cache_volume("cargo-registry"),
         )
         .with_mounted_cache("/root/.cargo/git", client.cache_volume("cargo-git"))
+        .with_symlink("/file_caches/package-cache", "/root/.cargo/.package-cache")
         .with_exec(vec!["rustup", "toolchain", "install", "nightly"])
 }
 
-/// Base for wasm-tests
-pub async fn wasm(client: &Query, state: &GlobalState) -> Result<Container> {
-    let (wasm_pack, wasm_bindgen) = tokio::try_join!(
-        binstall(client, state, "wasm-pack"),
-        binstall(client, state, "wasm-bindgen-cli")
-    )?;
+/// Container for mdbook (already contains workspace)
+pub fn book(client: &Query) -> Container {
+    rust(client)
+        .with_exec(vec!["rustup", "default", "nightly"])
+        .with_exec(vec!["rustup", "component", "add", "rust-analyzer"])
+        .with_exec(vec![
+            "cargo",
+            "install",
+            "mdbookkit",
+            "--features",
+            "mdbook-rustdoc-link",
+        ])
+        .with_directory("/bin", binstall(client, "mdbook"))
+        .with_directory("/bin", binstall(client, "mdbook-callouts"))
+        .with_workspace(client)
+        .with_workdir("./docs")
+}
 
-    let container = chrome(client, &rust(client))
+/// Base for wasm-tests
+pub fn wasm(client: &Query) -> Container {
+    chrome(client, &rust(client))
         .with_exec(vec![
             "rustup",
             "+nightly",
@@ -60,10 +79,31 @@ pub async fn wasm(client: &Query, state: &GlobalState) -> Result<Container> {
             "wasm32-unknown-unknown",
         ])
         .with_exec(vec!["rustup", "+nightly", "component", "add", "rust-src"])
-        .with_directory("/bin", wasm_pack)
-        .with_directory("/bin", wasm_bindgen);
+        .with_directory("/bin", binstall(client, "wasm-pack"))
+        .with_directory("/bin", binstall(client, "wasm-bindgen-cli"))
+        .with_file("/bin/wasm-opt", wasm_opt(client))
+}
 
-    Ok(container)
+/// Instal wasm-opt
+pub fn wasm_opt(client: &Query) -> File {
+    // https://github.com/WebAssembly/binaryen/releases/download/version_123/binaryen-version_123-aarch64-linux.tar.gz
+    let version = "123";
+    let archive = format!("binaryen-version_{version}-x86_64-linux.tar.gz");
+    let download_url = format!(
+        "https://github.com/WebAssembly/binaryen/releases/download/version_{version}/{archive}"
+    );
+
+    base(client)
+        .with_exec(vec!["apt", "install", "-y", "curl", "tar"])
+        .with_exec(vec![
+            "curl".into(),
+            "-sSL".into(),
+            download_url,
+            "-o".into(),
+            format!("/{archive}"),
+        ])
+        .with_exec(vec!["tar".into(), "-xzf".into(), format!("/{archive}")])
+        .file(format!("/binaryen-version_{version}/bin/wasm-opt"))
 }
 
 /// Install chrome and chromedriver
@@ -79,11 +119,7 @@ fn chrome(client: &Query, container: &Container) -> Container {
         "https://storage.googleapis.com/chrome-for-testing-public/{chrome_version}/linux64/{archive_chrome}.zip"
     );
 
-    let base = client
-        .container()
-        .from("debian:bookworm-slim")
-        .with_exec(vec!["apt", "update"])
-        .with_exec(vec!["apt", "install", "-y", "curl", "unzip"]);
+    let base = base(client).with_exec(vec!["apt", "install", "-y", "curl", "unzip"]);
     let chromedriver = base
         .with_exec(vec![
             "curl".into(),
@@ -134,14 +170,9 @@ fn chrome(client: &Query, container: &Container) -> Container {
 }
 
 /// Install a tool with bininstall and return a bin folder
-pub async fn binstall(
-    client: &Query,
-    state: &GlobalState,
-    tool: &'static str,
-) -> Result<Directory> {
-    let result = rust(client)
-        .run_with_mutex(state, vec!["cargo", "install", "cargo-binstall"], false)
-        .await?
+pub fn binstall(client: &Query, tool: &'static str) -> Directory {
+    rust(client)
+        .with_exec(vec!["cargo", "install", "cargo-binstall"])
         .with_exec(vec![
             "cargo",
             "binstall",
@@ -150,6 +181,5 @@ pub async fn binstall(
             "--install-path",
             "/result",
         ])
-        .directory("/result");
-    Ok(result)
+        .directory("/result")
 }

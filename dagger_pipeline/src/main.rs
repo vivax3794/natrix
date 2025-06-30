@@ -1,80 +1,70 @@
 //! Run the CI pipeline using dagger
 
+// TODO: `cargo-sweep` caches.
+
 /// Common items
 mod prelude {
-    pub use dagger_sdk::{Container, Directory, Query};
-    use dagger_sdk::{ContainerWithExecOptsBuilder, HostDirectoryOpts, ReturnType};
+    use dagger_sdk::HostDirectoryOpts;
+    pub use dagger_sdk::{Container, ContainerWithExecOptsBuilder, Directory, Query, ReturnType};
     pub use eyre::Result;
-    use tokio::sync::Semaphore;
 
-    /// Global mutexses and semphores
-    pub struct GlobalState {
-        /// Semaphore to hold during potentially expensive cpu actions
-        cpu_work: Semaphore,
-    }
-
-    impl GlobalState {
-        /// create a new version of the global state
-        pub fn new() -> Self {
-            Self {
-                cpu_work: Semaphore::new(1),
-            }
-        }
+    /// Result of executing a command in a container
+    #[derive(Debug)]
+    pub struct ExecutionResult {
+        /// Exit code of the command
+        pub exit_code: isize,
+        /// Standard output of the command
+        pub stdout: String,
+        /// Standard error of the command
+        pub stderr: String,
     }
 
     /// Extension trait for dagger containers
     pub trait ContainerExtension {
-        /// Run the given command while holding the mutex, forcing the sync point right away.
-        async fn run_with_mutex(
-            &self,
-            state: &GlobalState,
-            args: Vec<impl Into<String>>,
-            fail_okay: bool,
-        ) -> Result<Container>;
-
         /// Copy in the workspace and setup target cache
         fn with_workspace(&self, client: &Query) -> Container;
+
+        /// Execute a command with default options (`ReturnType::Any`)
+        fn with_exec_any(&self, args: Vec<&str>) -> Result<Container>;
+
+        /// Get the full execution result (exit code, stdout, stderr) from the current container
+        async fn get_result(&self) -> Result<ExecutionResult>;
     }
 
     impl ContainerExtension for Container {
-        async fn run_with_mutex(
-            &self,
-            state: &GlobalState,
-            args: Vec<impl Into<String>>,
-            fail_okay: bool,
-        ) -> Result<Container> {
-            let container = self.with_exec_opts(
-                args,
-                ContainerWithExecOptsBuilder::default()
-                    .expect(if fail_okay {
-                        ReturnType::Any
-                    } else {
-                        ReturnType::Success
-                    })
-                    .build()?,
-            );
-
-            {
-                let lock = state.cpu_work.acquire().await?;
-                container.sync().await?;
-                drop(lock);
-            }
-
-            Ok(container)
-        }
-
+        // MAYBE: Allow to specify needed crates.
         fn with_workspace(&self, client: &Query) -> Container {
             let workspace = client.host().directory_opts(
                 ".",
                 HostDirectoryOpts {
-                    exclude: Some(vec!["target", "dist", "book", "allure-report"]),
+                    exclude: Some(vec!["target", "dist", "book"]),
                     include: None,
-                    no_cache: Some(true),
+                    no_cache: None,
                 },
             );
             self.with_directory("/app", workspace)
                 .with_workdir("/app")
                 .with_mounted_cache("/app/target", client.cache_volume("rust-target"))
+        }
+
+        fn with_exec_any(&self, args: Vec<&str>) -> Result<Container> {
+            Ok(self.with_exec_opts(
+                args,
+                ContainerWithExecOptsBuilder::default()
+                    .expect(ReturnType::Any)
+                    .build()?,
+            ))
+        }
+
+        async fn get_result(&self) -> Result<ExecutionResult> {
+            let (exit_code, stdout, stderr) =
+                tokio::try_join!(self.exit_code(), self.stdout(), self.stderr(),)?;
+
+            Ok(ExecutionResult {
+                exit_code,
+                stdout,
+                stderr,
+            })
         }
     }
 }
@@ -88,9 +78,9 @@ use prelude::*;
 #[tokio::main]
 async fn main() -> Result<()> {
     dagger_sdk::connect(async |client| {
-        let state = GlobalState::new();
-
-        report::generate_report(&client, &state).await?;
+        let reports = report::run_all_tests(&client).await?;
+        let report = report::generate_report(&client, reports)?;
+        report::serve_report(&client, report).await?;
         Ok(())
     })
     .await

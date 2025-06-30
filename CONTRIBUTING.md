@@ -5,7 +5,7 @@ Thank you for considering contributing to Natrix! This guide will help you get s
 ## Project Structure
 
 - **crates/natrix/**: Core framework library
-- **crates/natrix_macros/**: Procedural macros for components and CSS
+- **crates/natrix_macros/**: Procedural macros for components and assets
 - **crates/natrix_shared/**: Shared utilities between core and CLI
 - **crates/natrix-cli/**: CLI tool for project management
 - **ci/**: End-to-end testing, benchmarks, etc

@@ -5,7 +5,7 @@
 //! `HtmlElement` instance if needed.
 //!
 //! # Example
-//! ```ignore
+//! ```no_run
 //! # use natrix::prelude::*;
 //! # let _: e::HtmlElement<(), _> =
 //! e::div()

@@ -18,3 +18,4 @@ after = ["links"]
 cargo-features = ["all"]
 cache-dir = "../target/doc-cache"
 fail-on-warnings = "always"
+#rust-analyzer-timeout = 300 # 5 minutes
