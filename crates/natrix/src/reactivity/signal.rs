@@ -5,6 +5,7 @@ use std::ops::{Deref, DerefMut};
 
 use indexmap::IndexSet;
 
+use crate::error_handling::{do_performance_check, performance_lint};
 use crate::reactivity::state::HookKey;
 
 // TODO: Make the transformation of component structs into per-field signals a more generic
@@ -109,6 +110,15 @@ impl<T> SignalMethods for Signal<T> {
     fn register_dep(&mut self, dep: HookKey) {
         if self.read.get() {
             self.deps.insert(dep);
+            if do_performance_check() {
+                if self.deps.len() > 20 {
+                    performance_lint!(
+                        "`{}` signal has {} dependencies",
+                        std::any::type_name::<T>(),
+                        self.deps.len()
+                    );
+                }
+            }
         }
     }
 
