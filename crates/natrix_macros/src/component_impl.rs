@@ -1,5 +1,7 @@
 //! Implementation of the `Component` derive macro
 
+// TODO: Make components impl `Element`
+
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
 use syn::{ItemStruct, parse_quote};
