@@ -7,6 +7,14 @@ use serde::Deserialize;
 
 use crate::prelude::*;
 
+// TODO: Clippy workspace
+// TODO: Clippy hack natrix
+// TODO: cargo-deny
+// TODO: cargo-udeps
+// TODO: cargo-outdated
+// TODO: project gen test
+// TODO: integration_tests
+
 /// Lib test output
 #[derive(Deserialize)]
 struct TestLine {
