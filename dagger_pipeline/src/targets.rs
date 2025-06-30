@@ -134,7 +134,7 @@ pub async fn wasm_unit_tests(
                 "--target",
                 "wasm32-unknown-unknown",
                 "--features",
-                "test_utils",
+                "_internal_testing",
                 if toolchain == "nightly" {
                     "--all-features"
                 } else {
@@ -171,7 +171,7 @@ pub async fn wasm_unit_tests(
                 "--headless",
                 "--chrome",
                 "--features",
-                "test_utils",
+                "_internal_testing",
                 if toolchain == "nightly" {
                     "--all-features"
                 } else {

@@ -67,7 +67,31 @@ macro_rules! log_or_panic {
     };
 }
 
-pub(crate) use {log_or_panic, log_or_panic_assert, log_or_panic_result};
+/// if `performance_lint` is enabled log a warning to console
+/// if `_internal_testing` is enabled panic
+macro_rules! performance_lint {
+    ($($msg:expr),*) => {
+        $crate::error_handling::cold_path();
+
+        if cfg!(feature = "performance_lints") {
+            ::log::warn!($($msg),*);
+        }
+        if cfg!(feature = "_internal_testing") {
+            panic!($($msg),*);
+        }
+    };
+}
+
+/// Is the `_internal_performance_checks` feature set, and we are in dev mode
+#[inline]
+pub(crate) fn do_performance_check() -> bool {
+    cfg!(all(
+        feature = "_internal_performance_checks",
+        debug_assertions
+    ))
+}
+
+pub(crate) use {log_or_panic, log_or_panic_assert, log_or_panic_result, performance_lint};
 
 #[cfg(test)]
 mod tests {

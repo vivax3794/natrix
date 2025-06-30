@@ -49,7 +49,7 @@ cfg-if = "1.0.0"
 indexmap = "2.9.0"
 
 [features]
-default_app = ["console_log", "async"]
+default_app = ["console_log", "async", "performance_lints"]
 
 nightly = ["natrix_macros/nightly"]
 ergonomic_ops = []
@@ -59,6 +59,10 @@ async_utils = ["async", "dep:futures-channel"]
 
 test_utils = ["web-sys/console"]
 
+performance_lints = ["_internal_performance_checks"]
+
+_internal_performance_checks = []
+_internal_testing = ["test_utils", "_internal_performance_checks"]
 _internal_collect_css = ["dep:inventory"]
 _internal_no_ssg = ["_internal_collect_css"]
 _internal_bundle = ["_internal_collect_css", "dep:simple_logger"]
