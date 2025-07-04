@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+clap = { version = "4.5.40", features = ["derive"] }
 dagger-sdk = "0.18.11"
 eyre = "0.6.12"
 futures = "0.3.31"

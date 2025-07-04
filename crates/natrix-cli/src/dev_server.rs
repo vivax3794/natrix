@@ -66,13 +66,19 @@ pub(crate) fn do_dev(args: &options::DevArguments) -> Result<()> {
         }
     }
 
+    let ip = if args.allow_external {
+        Ipv4Addr::UNSPECIFIED
+    } else {
+        Ipv4Addr::LOCALHOST
+    };
+
     let dist = config.dist.clone();
     let mutex_clone = Arc::clone(&asset_manifest_mutex);
     let server_port = args.port; // Pass the user-specified port to spawn_server
-    thread::spawn(move || spawn_server(dist, mutex_clone, server_port, config.live_reload));
+    thread::spawn(move || spawn_server(dist, mutex_clone, server_port, config.live_reload, ip));
 
     if let Some(port) = config.live_reload {
-        thread::spawn(move || spawn_websocket(port, rx_reload));
+        thread::spawn(move || spawn_websocket(port, rx_reload, ip));
     }
 
     loop {
@@ -101,15 +107,19 @@ pub(crate) fn do_dev(args: &options::DevArguments) -> Result<()> {
     clippy::needless_pass_by_value,
     reason = "This is running in a thread"
 )]
-fn spawn_websocket(port: u16, reload_signal: mpsc::Receiver<()>) {
-    let server = TcpListener::bind(("127.0.1", port)).expect("Failed to bind websocket");
+fn spawn_websocket(port: u16, reload_signal: mpsc::Receiver<()>, ip: Ipv4Addr) {
+    let server = TcpListener::bind((ip, port)).expect("Failed to bind websocket");
     let clients = Arc::new(Mutex::new(Vec::new()));
 
     let clients_2 = clients.clone();
     thread::spawn(move || {
         for stream in server.incoming() {
-            let stream = stream.expect("Failed to accept connection");
-            let ws = tungstenite::accept(stream).expect("Failed to accept websocket");
+            let Ok(stream) = stream else {
+                continue;
+            };
+            let Ok(ws) = tungstenite::accept(stream) else {
+                continue;
+            };
             let mut clients = clients_2.lock().expect("Mutex gone");
             clients.push(ws);
         }
@@ -148,6 +158,7 @@ pub(crate) fn spawn_server(
     asset_manifest: Arc<Mutex<AssetManifest>>,
     preferred_port: Option<u16>,
     live_reload: Option<u16>,
+    ip: Ipv4Addr,
 ) {
     // Use the specified port if provided, otherwise start at 8000
     let port = match preferred_port {
@@ -155,15 +166,17 @@ pub(crate) fn spawn_server(
         None => get_free_port(8000).expect("Failed to find free port for server"),
     };
 
-    let server = Server::http(("127.0.0.1", port)).expect("Failed to start server");
+    let server = Server::http((ip, port)).expect("Failed to start server");
     let port = server
         .server_addr()
         .to_ip()
         .expect("Failed to get ip")
         .port();
     println!(
-        "{}{}{}",
-        "🚀 Dev server running at http://localhost:".green(),
+        "{}{}{}{}{}",
+        "🚀 Dev server running at http://".green(),
+        ip.bright_red(),
+        ":".bright_red(),
         port.to_string().bright_red(),
         if let Some(live_reload) = live_reload {
             format!(" (with live-reload via {live_reload})")

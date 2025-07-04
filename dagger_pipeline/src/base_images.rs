@@ -16,14 +16,7 @@ pub fn base(client: &Query) -> Container {
 /// A base image with rust installed
 pub fn rust(client: &Query) -> Container {
     base(client)
-        .with_exec(vec![
-            "apt",
-            "install",
-            "-yqq",
-            "curl",
-            "build-essential",
-            "libc6-dev",
-        ])
+        .with_exec(vec!["apt", "install", "-yqq", "curl", "build-essential"])
         .with_exec(vec![
             "sh",
             "-c",
@@ -108,7 +101,7 @@ pub fn wasm_opt(client: &Query) -> File {
 
 /// Install chrome and chromedriver
 fn chrome(client: &Query, container: &Container) -> Container {
-    let chrome_version = "137.0.7151.119";
+    let chrome_version = "138.0.7204.92";
     let archive_driver = "chromedriver-linux64";
     let archive_chrome = "chrome-linux64";
 
@@ -170,6 +163,7 @@ fn chrome(client: &Query, container: &Container) -> Container {
 }
 
 /// Install a tool with bininstall and return a bin folder
+// TODO: Lock version and specify hashes using a "CI Lockfile"
 pub fn binstall(client: &Query, tool: &'static str) -> Directory {
     rust(client)
         .with_exec(vec!["cargo", "install", "cargo-binstall"])

@@ -2,6 +2,18 @@
 
 // TODO: `cargo-sweep` caches.
 
+/// Run a dagger pipeline too generate test reports.
+#[derive(clap::Parser)]
+struct Cli {
+    /// Only run a subset of tests
+    #[arg(short, long)]
+    quick: bool,
+    /// How many jobs to run in parallel.
+    /// If not specified defaults to 1
+    #[arg(short, long)]
+    jobs: Option<usize>,
+}
+
 /// Common items
 mod prelude {
     use dagger_sdk::HostDirectoryOpts;
@@ -25,7 +37,7 @@ mod prelude {
         fn with_workspace(&self, client: &Query) -> Container;
 
         /// Execute a command with default options (`ReturnType::Any`)
-        fn with_exec_any(&self, args: Vec<&str>) -> Result<Container>;
+        fn with_exec_any(&self, args: Vec<impl Into<String>>) -> Result<Container>;
 
         /// Get the full execution result (exit code, stdout, stderr) from the current container
         async fn get_result(&self) -> Result<ExecutionResult>;
@@ -37,7 +49,7 @@ mod prelude {
             let workspace = client.host().directory_opts(
                 ".",
                 HostDirectoryOpts {
-                    exclude: Some(vec!["target", "dist", "book"]),
+                    exclude: Some(vec!["target", "*/dist", "docs/book", ".jj"]),
                     include: None,
                     no_cache: None,
                 },
@@ -47,7 +59,7 @@ mod prelude {
                 .with_mounted_cache("/app/target", client.cache_volume("rust-target"))
         }
 
-        fn with_exec_any(&self, args: Vec<&str>) -> Result<Container> {
+        fn with_exec_any(&self, args: Vec<impl Into<String>>) -> Result<Container> {
             Ok(self.with_exec_opts(
                 args,
                 ContainerWithExecOptsBuilder::default()
@@ -73,12 +85,15 @@ mod base_images;
 mod report;
 mod targets;
 
+use clap::Parser;
 use prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    dagger_sdk::connect(async |client| {
-        let reports = report::run_all_tests(&client).await?;
+    let arguments = Cli::parse();
+
+    dagger_sdk::connect(async move |client| {
+        let reports = report::run_all_tests(&client, arguments).await?;
         let report = report::generate_report(&client, reports)?;
         report::serve_report(&client, report).await?;
         Ok(())

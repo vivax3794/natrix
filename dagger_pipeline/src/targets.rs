@@ -1,12 +1,13 @@
 //! Actual targets
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
+use dagger_sdk::Service;
 use serde::{Deserialize, Serialize};
 
+use crate::Cli;
 use crate::prelude::*;
 
-// TODO: integration_tests
 // MAYBE: Unused features
 // MAYBE: Record timing info
 // MAYBE: Add execution info
@@ -14,6 +15,10 @@ use crate::prelude::*;
 // TODO: Update snapshots.
 // TODO: Build book
 // TODO: Build docs
+
+// MAYBE: Check for semver breaking changes.
+// Actually that might just need to be a pure CI thing
+// I dont really see how useful it is to run it locally.
 
 /// Test suite names
 const UNIT_TESTS: &str = "Unit Tests";
@@ -35,7 +40,7 @@ enum TestStatus {
 }
 
 /// Test event result types
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "lowercase")]
 enum TestEventResult {
     /// Test passed
@@ -47,18 +52,18 @@ enum TestEventResult {
 }
 
 /// Test event types
-#[derive(Deserialize)]
-#[serde(rename_all = "lowercase")]
-#[serde(untagged)]
+#[derive(Deserialize, Debug)]
 enum TestEvent {
     /// Test started (ignored in processing)
+    #[serde(rename = "started")]
     Started,
     /// Test completed with result
+    #[serde(untagged)]
     Result(TestEventResult),
 }
 
 /// Label types
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 #[serde(tag = "name", content = "value")]
 enum LabelType {
     /// Suite label
@@ -70,7 +75,7 @@ enum LabelType {
 }
 
 /// Lib test output
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct TestLine {
     /// Test event type
     event: TestEvent,
@@ -131,14 +136,27 @@ impl TestResult {
 }
 
 /// Parse libtest JSON output and create test result directory
-fn parse_libtest_json(client: &Query, output: &str, suite_name: &str) -> Result<Directory> {
+fn parse_libtest_json(
+    client: &Query,
+    output: &str,
+    labels: &[LabelType],
+    prefix: &str,
+) -> Result<Directory> {
+    // HACK: It seems that instead of reporting "ignored" events for skipped tests
+    // nextest instead emits a "Started" event and then just never finish them.
+    let mut not_finished = HashSet::new();
+
     let mut dir = client.directory();
     for line in output.lines() {
         if let Ok(json) = serde_json::from_str::<TestLine>(line) {
             let event_result = match json.event {
-                TestEvent::Started => continue,
+                TestEvent::Started => {
+                    not_finished.insert(json.name);
+                    continue;
+                }
                 TestEvent::Result(result) => result,
             };
+            not_finished.remove(&json.name);
 
             let status_details = match event_result {
                 TestEventResult::Ok => None,
@@ -152,7 +170,7 @@ fn parse_libtest_json(client: &Query, output: &str, suite_name: &str) -> Result<
                 uuid: uuid::Uuid::new_v4().to_string(),
                 name: json
                     .name
-                    .strip_prefix("natrix::natrix$")
+                    .strip_prefix(prefix)
                     .unwrap_or(&json.name)
                     .to_string(),
                 status: match event_result {
@@ -161,16 +179,30 @@ fn parse_libtest_json(client: &Query, output: &str, suite_name: &str) -> Result<
                     TestEventResult::Ignored => TestStatus::Skipped,
                 },
                 status_details,
-                labels: vec![
-                    LabelType::Suite(UNIT_TESTS.to_string()),
-                    LabelType::SubSuite(suite_name.to_string()),
-                ],
+                labels: labels.to_owned(),
                 steps: None,
             };
 
             dir = dir.with_directory(".", test_result.into_file(client)?);
         }
     }
+
+    for not_finished in not_finished {
+        let test_result = TestResult {
+            uuid: uuid::Uuid::new_v4().to_string(),
+            name: not_finished
+                .strip_prefix(prefix)
+                .unwrap_or(&not_finished)
+                .to_string(),
+            status: TestStatus::Skipped,
+            labels: labels.to_owned(),
+            status_details: None,
+            steps: None,
+        };
+
+        dir = dir.with_directory(".", test_result.into_file(client)?);
+    }
+
     Ok(dir)
 }
 
@@ -208,7 +240,7 @@ async fn run_linter(client: &Query, config: LinterConfig) -> Result<Directory> {
     let mut container = if config.use_rust_image {
         crate::base_images::rust(client)
     } else {
-        client.container().from("busybox")
+        crate::base_images::base(client)
     };
 
     for tool in &config.needs_binstall {
@@ -263,14 +295,6 @@ pub async fn native_tests(client: &Query) -> Result<Directory> {
         )
         .with_workspace(client)
         .with_workdir("./crates/natrix")
-        .with_exec(vec![
-            "cargo",
-            "+nightly",
-            "nextest",
-            "run",
-            "--all-features",
-            "--no-run",
-        ])
         .with_env_variable("NEXTEST_EXPERIMENTAL_LIBTEST_JSON", "1")
         .with_exec_any(vec![
             "cargo",
@@ -283,14 +307,22 @@ pub async fn native_tests(client: &Query) -> Result<Directory> {
             "--offline",
             "--no-fail-fast",
             "--message-format",
-            "libtest-json-plus",
+            "libtest-json",
             "--message-format-version",
             "0.1",
         ])?
         .stdout()
         .await?;
 
-    let dir = parse_libtest_json(client, &result, "Native")?;
+    let dir = parse_libtest_json(
+        client,
+        &result,
+        &[
+            LabelType::Suite(UNIT_TESTS.to_string()),
+            LabelType::SubSuite("Native".to_string()),
+        ],
+        "natrix::natrix$",
+    )?;
     Ok(dir)
 }
 
@@ -299,25 +331,6 @@ pub async fn wasm_unit_tests(client: &Query, toolchain: &'static str) -> Result<
     let output = crate::base_images::wasm(client)
         .with_workspace(client)
         .with_workdir("./crates/natrix")
-        .with_exec(vec![
-            "cargo",
-            if toolchain == "nightly" {
-                "+nightly"
-            } else {
-                "+stable"
-            },
-            "build",
-            "--tests",
-            "--target",
-            "wasm32-unknown-unknown",
-            "--features",
-            "_internal_testing",
-            if toolchain == "nightly" {
-                "--all-features"
-            } else {
-                "--" // Just a valid argument
-            },
-        ])
         .with_new_file(
             "./webdriver.json",
             r#"
@@ -572,6 +585,8 @@ pub async fn outdated_deps(client: &Query) -> Result<Directory> {
                 "--root-deps-only",
                 "--exit-code",
                 "1",
+                "--exclude",
+                "thirtyfour", // HACK: Newest version breaks CI.
             ],
             capture_stderr: false,
             ..Default::default()
@@ -718,10 +733,19 @@ pub async fn test_docs(client: &Query) -> Result<Directory> {
         .stdout()
         .await?;
 
-    parse_libtest_json(client, &output, "Documentation")
+    parse_libtest_json(
+        client,
+        &output,
+        &[
+            LabelType::Suite(UNIT_TESTS.to_string()),
+            LabelType::SubSuite("Documentation".to_string()),
+        ],
+        "",
+    )
 }
 
 /// Test the links in the mdbooks
+/// INVARIANT: Should not run in parallel as contains timeouts
 pub async fn test_book_links(client: &Query) -> Result<Directory> {
     let result = crate::base_images::book(client)
         .with_exec_any(vec!["mdbook", "build"])?
@@ -755,6 +779,7 @@ pub async fn test_book_links(client: &Query) -> Result<Directory> {
 /// Run the example tests in the book
 /// INVARIANT: This test is extremely flaky in terms of cache state.
 /// So should not be run in parallel.
+/// INVARIANT: `test_book_links` needs to have been run before hand to prime cache.
 pub async fn test_book_examples(client: &Query) -> Result<Directory> {
     let result = crate::base_images::book(client)
         .with_exec_any(vec!["sh", "-c", "rm -r ../target/debug/deps/*natrix*"])?
@@ -797,4 +822,135 @@ pub async fn test_book_examples(client: &Query) -> Result<Directory> {
         steps: None,
     };
     result.into_file(client)
+}
+
+/// A service that spins up `natrix dev` in the integration tests directory.
+/// The server runs on port 3000
+fn natrix_dev(client: &Query, profile: &str) -> Service {
+    crate::base_images::wasm(client)
+        .with_exec(vec!["rustup", "default", "nightly"])
+        .with_directory("/bin", cli(client))
+        .with_workspace(client)
+        .with_workdir("./ci/integration_tests")
+        .with_exec(vec!["natrix", "build", "--profile", profile])
+        .with_entrypoint(vec![
+            "natrix",
+            "dev",
+            "--profile",
+            profile,
+            "--port",
+            "3000",
+            "--allow-external",
+            "--no-reload",
+        ])
+        .with_exposed_port(3000)
+        .as_service()
+}
+
+/// A service running a chromedriver, with the given serve mounted under the hostname `page`
+/// The chromedriver runs on port 8000
+fn chrome_driver_with_page(client: &Query, page: Service) -> Service {
+    crate::base_images::wasm(client)
+        .with_service_binding("page.local", page)
+        .with_entrypoint(vec![
+            "chromedriver",
+            "--port=8000",
+            "--allowed-ips=",
+            "--allowed-origins=*",
+            "--remote-debugging-pipe",
+            "--user-data-dir=/tmp/chrome",
+        ])
+        .with_exposed_port(8000)
+        .as_service()
+}
+
+/// Returns a nginx server with a natrix build
+fn natrix_build(client: &Query) -> Service {
+    let page = crate::base_images::wasm(client)
+        .with_exec(vec!["rustup", "default", "nightly"])
+        .with_directory("/bin", cli(client))
+        .with_workspace(client)
+        .with_workdir("./ci/integration_tests")
+        .with_exec(vec!["natrix", "build"])
+        .directory("./dist");
+
+    client
+        .container()
+        .from("nginx:alpine")
+        .with_directory("/usr/share/nginx/html/dist", page)
+        .with_exposed_port(80)
+        .as_service()
+}
+
+/// The integration test mode
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum IntegrationTestMode {
+    /// `natrix dev`
+    Dev,
+    /// `natrix dev --release`
+    Release,
+    /// `natrix build`
+    Build,
+}
+
+/// Run the integration tests against `natrix dev`
+/// INVARIANT: This should not run in parallel as it has timeouts that could be affected by CPU
+/// churn
+// TEST: We cant do the reload test with this containerzed setup.
+// As the integration test needs to modify the files the dev server is watching.
+// TEST: Does not allow the `dist` tests.
+pub async fn integration_test(
+    client: &Query,
+    mode: IntegrationTestMode,
+    arguments: &Cli,
+) -> Result<Directory> {
+    let page = match mode {
+        IntegrationTestMode::Dev => natrix_dev(client, "dev"),
+        IntegrationTestMode::Release => natrix_dev(client, "release"),
+        IntegrationTestMode::Build => natrix_build(client),
+    };
+    let chrome = chrome_driver_with_page(client, page.clone());
+
+    let mut command = vec![
+        "cargo".to_string(),
+        "+nightly".to_string(),
+        "nextest".to_string(),
+        "run".to_string(),
+        "-j".to_string(),
+        arguments.jobs.unwrap_or(1).to_string(),
+        "--no-fail-fast".to_string(),
+        "--message-format".to_string(),
+        "libtest-json".to_string(),
+        "--message-format-version".to_string(),
+        "0.1".to_string(),
+    ];
+    if mode == IntegrationTestMode::Build {
+        command.extend(["--features".to_string(), "build_test".to_string()]);
+    }
+
+    let output = crate::base_images::rust(client)
+        .with_service_binding("chrome.local", chrome.clone())
+        .with_directory(
+            "/bin",
+            crate::base_images::binstall(client, "cargo-nextest"),
+        )
+        .with_workspace(client)
+        .with_workdir("./ci/integration_tests")
+        .with_env_variable("NEXTEST_EXPERIMENTAL_LIBTEST_JSON", "1")
+        .with_exec_any(command)?
+        .stdout()
+        .await?;
+
+    chrome.stop().await?;
+    page.stop().await?;
+
+    parse_libtest_json(
+        client,
+        &output,
+        &[
+            LabelType::Suite(END_TO_END_TESTS.to_string()),
+            LabelType::SubSuite(format!("Integration {mode:?}")),
+        ],
+        "integration_tests::integration_tests$",
+    )
 }

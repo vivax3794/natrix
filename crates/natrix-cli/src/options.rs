@@ -81,6 +81,12 @@ pub(crate) struct DevArguments {
     /// Port to use for dev server
     #[arg(short, long)]
     pub(crate) port: Option<u16>,
+    /// Bind to 0.0.0.0 instead of 127.0.0.1
+    #[arg(long)]
+    pub(crate) allow_external: bool,
+    /// Disable live-reloading
+    #[arg(long)]
+    pub(crate) no_reload: bool,
     /// The shared arguments
     #[command(flatten)]
     pub(crate) shared: SharedArguments,
@@ -138,7 +144,9 @@ impl DevArguments {
         let dist = target.join("dist");
 
         // Always try to use port 9000 for live reload WebSocket
-        let live_reload = if let Ok(port) = get_free_port(9000) {
+        let live_reload = if self.no_reload {
+            None
+        } else if let Ok(port) = get_free_port(9000) {
             Some(port)
         } else {
             println!(

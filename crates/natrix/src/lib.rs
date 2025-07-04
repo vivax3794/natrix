@@ -16,6 +16,8 @@ mod type_macros;
 
 pub use wasm_bindgen::intern;
 
+// TODO: Create a `natrix_unsafe` crate to encapsulate unsafe micro-optimizations.
+
 thread_local! {
     /// A lazy initlized reference to the js document.
     static DOCUMENT: web_sys::Document = {
