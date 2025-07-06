@@ -14,7 +14,7 @@ pub(crate) mod messages;
 mod watch;
 
 #[cfg(feature = "async")]
-pub use self::async_state::{DeferredCtx, DeferredRef};
+pub use self::async_state::DeferredCtx;
 pub use self::core::{RenderCtx, State};
 pub use self::data_manager::ComponentData;
 pub use self::guards::Guard;

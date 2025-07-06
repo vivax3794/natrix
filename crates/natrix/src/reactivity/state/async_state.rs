@@ -1,8 +1,7 @@
 //! Implementation of core async features
 
 use std::cell::RefCell;
-use std::ops::{Deref, DerefMut};
-use std::rc::{Rc, Weak};
+use std::rc::Weak;
 
 pub use super::{EventToken, State};
 use crate::error_handling::log_or_panic;
@@ -34,9 +33,6 @@ impl<T: Component> State<T> {
         wasm_bindgen_futures::spawn_local(future);
     }
 }
-
-use std::cell::RefMut;
-use std::marker::PhantomData;
 
 /// A wrapper future that checks `has_panicked` before resolving.
 ///
@@ -71,91 +67,23 @@ pub struct DeferredCtx<T: Component> {
     inner: Weak<RefCell<State<T>>>,
 }
 
-// We put a bound on `'p` so that users are not able to store the upgraded reference (unless
-// they want to use ouroboros themself to store it alongside the weak).
-#[ouroboros::self_referencing]
-struct DeferredRefInner<'p, T: Component> {
-    rc: Rc<RefCell<State<T>>>,
-    lifetime: PhantomData<&'p ()>,
-    #[borrows(rc)]
-    #[covariant]
-    reference: RefMut<'this, State<T>>,
-}
-
-/// a `RefMut` that also holds a `Rc`.
-/// See the `DeferredCtx::borrow_mut` on drop semantics and safety
-#[cfg_attr(feature = "nightly", must_not_suspend)]
-#[must_use]
-pub struct DeferredRef<'p, T: Component>(DeferredRefInner<'p, T>);
-
 impl<T: Component> DeferredCtx<T> {
-    /// Borrow this `Weak<RefCell<...>>`, this will create a `Rc` for as long as the borrow is
-    /// active. Returns `None` if the component was dropped. Its recommended to use the
-    /// following construct to safely cancel async tasks:
-    /// ```ignore
-    /// let Some(mut borrow) = ctx.borrow_mut() else {return;};
-    /// // ...
-    /// drop(borrow);
-    /// foo().await;
-    /// let Some(mut borrow) = ctx.borrow_mut() else {return;};
-    /// // ...
-    /// ```
+    /// Run a function on the component state, returning `None` if the component was dropped.
     ///
     /// # Reactivity
-    /// Calling this function clears the internal reactive flags (which is safe as long as the
-    /// borrow safety rules below are followed).
+    /// Calling this function clears the internal reactive flags.
     /// Once this value is dropped it will trigger a reactive update for any changed fields.
-    ///
-    /// # Borrow Safety
-    /// The framework guarantees that it will never hold a borrow between event calls.
-    /// This means the only source of panics is if you are holding a borrow when you yield to
-    /// the event loop, i.e you should *NOT* hold this value across `.await` points.
-    /// framework will regularly borrow the state on any registered event handler trigger, for
-    /// example a user clicking a button.
-    ///
-    /// Keeping this type across an `.await` point or otherwise yielding control to the event
-    /// loop while the borrow is active could also lead to reactivity failrues and desyncs.
-    ///
-    /// ## Nightly
-    /// The nightly feature flag enables a lint to detect this misuse.
-    /// See the [Features]() chapther for details on how to set it up (it requires a bit more
-    /// setup than just turning on the feature flag).
     #[must_use]
-    pub fn borrow_mut(&self) -> Option<DeferredRef<'_, T>> {
+    pub fn update<R>(&self, func: impl FnOnce(&mut State<T>) -> R) -> Option<R> {
         let rc = self.inner.upgrade()?;
-        let borrow = DeferredRefInner::try_new(rc, PhantomData, |rc| rc.try_borrow_mut());
-
-        let Ok(mut borrow) = borrow else {
+        let Ok(mut borrow) = rc.try_borrow_mut() else {
             log_or_panic!(
                 "Deferred state borrowed while already borrowed. This might happen due to holding it across a yield point"
             );
             return None;
         };
 
-        borrow.with_reference_mut(|ctx| ctx.clear());
-        Some(DeferredRef(borrow))
-    }
-}
-
-impl<T: Component> Deref for DeferredRef<'_, T> {
-    type Target = State<T>;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        self.0.borrow_reference()
-    }
-}
-impl<T: Component> DerefMut for DeferredRef<'_, T> {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.with_reference_mut(|cell| &mut **cell)
-    }
-}
-
-impl<T: Component> Drop for DeferredRef<'_, T> {
-    fn drop(&mut self) {
-        self.0.with_reference_mut(|ctx| {
-            ctx.update();
-        });
+        let result = borrow.track_changes(func);
+        Some(result)
     }
 }

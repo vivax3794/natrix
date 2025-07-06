@@ -65,24 +65,22 @@ impl<C: Component> ReactiveNode<C> {
     /// INVARIANT: This function works with the assumption what it returns will be put in its
     /// `target_node` field. This function is split out to facilitate `Self::create_initial`
     fn render(&mut self, ctx: &mut State<C>, you: HookKey) -> ElementRenderResult {
-        ctx.clear();
-
-        let element = (self.callback)(&mut RenderCtx {
-            ctx,
-            render_state: RenderingState {
-                keep_alive: &mut self.keep_alive,
-                hooks: &mut self.hooks,
-                parent_dep: you,
-            },
+        let element = ctx.track_reads(you, |ctx| {
+            (self.callback)(&mut RenderCtx {
+                ctx,
+                render_state: RenderingState {
+                    keep_alive: &mut self.keep_alive,
+                    hooks: &mut self.hooks,
+                    parent_dep: you,
+                },
+            })
         });
-        ctx.reg_dep(you);
 
         let mut state = RenderingState {
             keep_alive: &mut self.keep_alive,
             hooks: &mut self.hooks,
             parent_dep: you,
         };
-
         element.render(ctx, &mut state)
     }
 
@@ -192,20 +190,21 @@ impl<C: Component, K: ReactiveValue> ReactiveHook<C> for SimpleReactive<C, K> {
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
         let hooks = std::mem::take(&mut self.hooks);
 
-        ctx.clear();
         self.keep_alive.clear();
-        let value = (self.callback)(
-            &mut RenderCtx {
-                ctx,
-                render_state: RenderingState {
-                    keep_alive: &mut self.keep_alive,
-                    hooks: &mut self.hooks,
-                    parent_dep: you,
+
+        let value = ctx.track_reads(you, |ctx| {
+            (self.callback)(
+                &mut RenderCtx {
+                    ctx,
+                    render_state: RenderingState {
+                        keep_alive: &mut self.keep_alive,
+                        hooks: &mut self.hooks,
+                        parent_dep: you,
+                    },
                 },
-            },
-            &self.node,
-        );
-        ctx.reg_dep(you);
+                &self.node,
+            )
+        });
 
         match value {
             SimpleReactiveResult::Apply(value) => {

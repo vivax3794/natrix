@@ -9,12 +9,10 @@ The framework makes liberal use of debug only panics, but is very careful about 
   - In release natrix will skip executing the action it attempted, for example creating a dom node.
 - **Unexpected Dom State** - If natrix cant find a expected dom node or the node isnt of the expected type.
   - Natrix will skip updating that part of the dom tree
+- **Internal Borrow Errors** - Natrix uses `RefCell` internally, but the api design means panics should be impossible.
+    - Natrix will skip handling the event/message, this might lead to dropped messages.
 
 ### User Errors
-- **Internal Borrow Errors** - These should only be triggrable by misuse of [`ctx.deferred_borrow`](reactivity::state::State::deferred_borrow)/[`ctx.use_async`](reactivity::state::State::use_async).
-  - Natrix will skip handling the event/message, this might lead to dropped messages.
-- **User Borrow Errors** - If you use [`.borrow_mut`](reactivity::state::DeferredCtx::borrow_mut) while a borrow is active (which again can only happen due to dev error) it will panic in debug builds.
-  - In release builds it will return `None` to signal the calling context should cancel itself.
 - **Other Validations** A few methods have debug_asserts, listing all of them would be impractical.
 
 ## When does Natrix panic (in release builds)?

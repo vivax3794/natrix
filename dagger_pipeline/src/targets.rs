@@ -897,6 +897,8 @@ pub enum IntegrationTestMode {
 // TEST: We cant do the reload test with this containerzed setup.
 // As the integration test needs to modify the files the dev server is watching.
 // TEST: Does not allow the `dist` tests.
+// PERFORMANCE: the chromedriver sercice seemingly takes a while to pass health checks for some
+// reason.
 pub async fn integration_test(
     client: &Query,
     mode: IntegrationTestMode,

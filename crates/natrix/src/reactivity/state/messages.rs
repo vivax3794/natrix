@@ -84,11 +84,11 @@ impl<C: Component> EagerMessageSender<C> {
         if let Ok(mut direct) = direct.try_borrow_mut() {
             log::trace!("Handling message immediately");
 
-            direct.clear();
-            for message in messages {
-                direct.handle_message(message);
-            }
-            direct.update();
+            direct.track_changes(|ctx| {
+                for message in messages {
+                    ctx.handle_message(message);
+                }
+            });
         } else {
             log::debug!("Recursive event handling detected, deferring handling of message");
 

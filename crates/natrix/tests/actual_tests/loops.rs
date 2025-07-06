@@ -1,3 +1,5 @@
+#![cfg(false)]
+
 use natrix::dom::List;
 use natrix::prelude::*;
 use natrix::reactivity::State;

@@ -152,9 +152,9 @@ impl<C: Component, T> HtmlElement<C, T> {
                     return;
                 };
 
-                ctx.clear();
-                function(&mut ctx, EventToken::new(), event);
-                ctx.update();
+                ctx.track_changes(|ctx| {
+                    function(ctx, EventToken::new(), event);
+                });
             });
             let closure = Closure::wrap(callback);
             let function = closure.as_ref().unchecked_ref();

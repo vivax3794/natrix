@@ -32,7 +32,6 @@ smallvec = "1.15.0"
 wasm-bindgen-futures = { version = "0.4.50", default-features = false, optional = true}
 futures-channel = { version = "0.3.31", optional = true}
 pin-project = { version = "1.1.10", optional = true}
-ouroboros = { version = "0.18.0", default-features = false, optional=true}
 
 # Css
 const_base = "0.2.0"
@@ -54,7 +53,7 @@ default_app = ["console_log", "async", "performance_lints"]
 nightly = ["natrix_macros/nightly"]
 ergonomic_ops = []
 console_log = ["dep:console_log"]
-async = ["dep:pin-project", "dep:wasm-bindgen-futures", "dep:ouroboros"]
+async = ["dep:pin-project", "dep:wasm-bindgen-futures"]
 async_utils = ["async", "dep:futures-channel"]
 
 test_utils = ["web-sys/console"]

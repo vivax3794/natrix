@@ -1,6 +1,5 @@
 //! Implementation of `ctx.watch`
 
-use super::data_manager::ComponentData;
 use super::{HookKey, RenderCtx};
 use crate::State;
 use crate::reactivity::component::Component;
@@ -23,9 +22,7 @@ where
     F: Fn(&mut State<C>) -> T,
 {
     fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
-        ctx.clear();
-        let new_value = (self.calc_value)(ctx);
-        ctx.reg_dep(you);
+        let new_value = ctx.track_reads(you, &self.calc_value);
 
         if new_value == self.last_value {
             UpdateResult::Nothing
@@ -79,21 +76,20 @@ impl<C: Component> RenderCtx<'_, C> {
         F: Fn(&mut State<C>) -> T + 'static,
         T: PartialEq + Clone + 'static,
     {
-        let signal_state = self.ctx.data.pop_signals();
+        self.ctx.with_restore_signals(|ctx| {
+            let me = ctx.hooks.reserve_key();
 
-        let result = func(self.ctx);
+            let result = ctx.track_reads(me, &func);
 
-        let hook = WatchState {
-            calc_value: Box::new(func),
-            last_value: result.clone(),
-            dep: self.render_state.parent_dep,
-        };
-        let me = self.ctx.hooks.insert_hook(Some(Box::new(hook)));
-        self.ctx.reg_dep(me);
-        self.render_state.hooks.push(me);
+            let hook = WatchState {
+                calc_value: Box::new(func),
+                last_value: result.clone(),
+                dep: self.render_state.parent_dep,
+            };
+            ctx.hooks.set_hook(me, Box::new(hook));
+            self.render_state.hooks.push(me);
 
-        self.ctx.data.set_signals(signal_state);
-
-        result
+            result
+        })
     }
 }

@@ -76,7 +76,6 @@ pub mod prelude {
 }
 
 pub use dom::Element;
-pub use dom::list::List;
 pub use natrix_macros::{Component, asset, data, format_elements};
 pub use reactivity::component::{Component, NoMessages, SubComponent, mount};
 pub use reactivity::state::{RenderCtx, State};

@@ -25,8 +25,9 @@ impl Component for AsyncComponent {
             .on::<events::Click>(|ctx: E<Self>, token, _| {
                 ctx.use_async(token, async |ctx| {
                     async_utils::sleep_milliseconds(10).await;
-                    let mut borrow = ctx.borrow_mut()?;
-                    *borrow.data += 10;
+                    ctx.update(|ctx| {
+                        *ctx.data += 10;
+                    })?;
                     Some(())
                 });
             })

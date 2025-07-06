@@ -180,17 +180,14 @@ pub trait ComponentData: Sized + 'static {
 
 impl<T: Component> State<T> {
     /// Clear all signals
-    pub(crate) fn clear(&mut self) {
+    fn clear(&mut self) {
         for signal in self.data.signals_mut() {
             signal.clear();
         }
     }
 
     /// Register a dependency for all read signals
-    /// INVARIANT: Hooks must call `.reg_dep` in the relative order they are required to be updated and invalidated.
-    /// INVARIANT: This must be called in the same relative order as `.reserve_key`/`.insert_hook`
-    /// TODO: Create method to abstract over this and make this method private
-    pub(crate) fn reg_dep(&mut self, dep: HookKey) {
+    fn reg_dep(&mut self, dep: HookKey) {
         for signal in self.data.signals_mut() {
             signal.register_dep(dep);
         }
@@ -198,10 +195,7 @@ impl<T: Component> State<T> {
 
     /// Loop over signals and update any depdant hooks for changed signals
     /// This also drains the deferred message queue
-    /// INVARIANT: `.clear` and `.update` should always come in pairs around user code, and you
-    /// should never yield control to js between them, as other state mutation code will (should)
-    /// call `.clear` in the middle of your operation if you do.
-    pub(crate) fn update(&mut self) {
+    fn update(&mut self) {
         self.drain_message_queue();
         log::trace!("Performing update cycle for {}", std::any::type_name::<T>());
 
@@ -231,5 +225,38 @@ impl<T: Component> State<T> {
             });
         }
         log::trace!("Update cycle complete");
+    }
+
+    /// Run the given method and track the reactive modifications done in it.
+    /// and call initiate the update cycle afterwards.
+    pub(crate) fn track_changes<R>(&mut self, func: impl FnOnce(&mut Self) -> R) -> R {
+        self.clear();
+        let result = func(self);
+        self.update();
+        result
+    }
+
+    /// Run the given method and track reads, registering the given hook as a dependency of read
+    /// signals
+    pub(crate) fn track_reads<R>(
+        &mut self,
+        hook: HookKey,
+        func: impl for<'a> FnOnce(&'a mut Self) -> R,
+    ) -> R {
+        self.clear();
+        let result = func(self);
+        self.reg_dep(hook);
+        result
+    }
+
+    /// Run the given function pop and restoring signals around it
+    pub(crate) fn with_restore_signals<R>(
+        &mut self,
+        func: impl for<'a> FnOnce(&'a mut Self) -> R,
+    ) -> R {
+        let state = self.data.pop_signals();
+        let result = func(self);
+        self.data.set_signals(state);
+        result
     }
 }
