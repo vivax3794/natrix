@@ -1,7 +1,6 @@
 //! Run the CI pipeline using dagger
 
 // TODO: `cargo-sweep` caches.
-// MAYBE: Use https://docs.dagger.io/cookbook#create-custom-spans to make TUI output better.
 
 mod base_images;
 mod fix;

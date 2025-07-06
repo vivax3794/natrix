@@ -20,10 +20,7 @@ pub async fn run_all_tests(client: &Query, arguments: TestCommand) -> Result<Dir
         Box::pin(crate::targets::test_docs(client)),
         Box::pin(crate::targets::cargo_deny(client, "./crates/natrix")),
     ];
-    let mut need_sequential: Vec<Pin<Box<dyn Future<Output = _>>>> = vec![
-        Box::pin(crate::targets::test_book_links(client)),
-        Box::pin(crate::targets::test_book_examples(client)),
-    ];
+    let mut need_sequential: Vec<Pin<Box<dyn Future<Output = _>>>> = vec![];
 
     if !arguments.quick {
         tasks.extend::<[Pin<Box<dyn Future<Output = _>>>; _]>([
@@ -37,6 +34,8 @@ pub async fn run_all_tests(client: &Query, arguments: TestCommand) -> Result<Dir
             Box::pin(crate::targets::test_project_gen(client, "nightly")),
         ]);
         need_sequential.extend::<[Pin<Box<dyn Future<Output = _>>>; _]>([
+            Box::pin(crate::targets::test_book_links(client)),
+            Box::pin(crate::targets::test_book_examples(client)),
             Box::pin(crate::targets::integration_test(
                 client,
                 IntegrationTestMode::Dev,

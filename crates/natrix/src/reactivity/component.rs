@@ -16,6 +16,9 @@ use crate::reactivity::KeepAlive;
 use crate::reactivity::render_callbacks::RenderingState;
 use crate::reactivity::state::{ComponentData, E, EventToken, HookKey, State, messages};
 
+// TODO: Allow storing sub component senders on the state.
+// We would need derive macro support to mark a field as non-reactive.
+
 /// The base component, this is implemented by the `#[derive(Component)]` macro and handles
 /// associating a component with its reactive state as well as converting to a struct to its
 /// reactive counter part
