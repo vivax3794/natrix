@@ -2,6 +2,13 @@
 
 // TODO: `cargo-sweep` caches.
 
+mod base_images;
+mod report;
+mod targets;
+
+use clap::Parser;
+use prelude::*;
+
 /// Run a dagger pipeline too generate test reports.
 #[derive(clap::Parser)]
 struct Cli {
@@ -80,13 +87,6 @@ mod prelude {
         }
     }
 }
-
-mod base_images;
-mod report;
-mod targets;
-
-use clap::Parser;
-use prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
