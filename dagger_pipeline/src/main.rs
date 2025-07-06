@@ -3,15 +3,16 @@
 // TODO: `cargo-sweep` caches.
 
 mod base_images;
+mod fix;
 mod report;
 mod targets;
 
 use clap::Parser;
 use prelude::*;
 
-/// Run a dagger pipeline too generate test reports.
+/// Generate a test report, or simply run the tests
 #[derive(clap::Parser)]
-struct Cli {
+struct TestCommand {
     /// Only run a subset of tests
     #[arg(short, long)]
     quick: bool,
@@ -19,6 +20,15 @@ struct Cli {
     /// If not specified defaults to 1
     #[arg(short, long)]
     jobs: Option<usize>,
+}
+
+/// Run a dagger pipeline too generate test reports.
+#[derive(clap::Parser)]
+enum Cli {
+    /// Generate a test report, or simply run the tests
+    Tests(TestCommand),
+    /// Apply various fixes
+    Fix,
 }
 
 /// Common items
@@ -93,9 +103,27 @@ async fn main() -> Result<()> {
     let arguments = Cli::parse();
 
     dagger_sdk::connect(async move |client| {
-        let reports = report::run_all_tests(&client, arguments).await?;
-        let report = report::generate_report(&client, reports)?;
-        report::serve_report(&client, report).await?;
+        match arguments {
+            Cli::Tests(arguments) => {
+                let reports = report::run_all_tests(&client, arguments).await?;
+                let report = report::generate_report(&client, reports)?;
+                report::serve_report(&client, report).await?;
+            }
+            Cli::Fix => {
+                let source = client.host().directory_opts(
+                    ".",
+                    dagger_sdk::HostDirectoryOpts {
+                        exclude: Some(vec!["target", "*/dist", "docs/book", ".jj"]),
+                        include: None,
+                        no_cache: None,
+                    },
+                );
+                let source = fix::typos(&client, source)?;
+                let source = fix::fmt(&client, source);
+                let source = fix::snapshots(&client, source);
+                source.export(".").await?;
+            }
+        }
         Ok(())
     })
     .await

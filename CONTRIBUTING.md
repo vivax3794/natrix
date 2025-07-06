@@ -25,6 +25,11 @@ The primary way to run tests is through the justfile targets:
 
 - **`just full [jobs]`** - Run the complete test suite (same as CI)
 - **`just quick [jobs]`** - Run the "Quick" test subset
+- **`just fix`** - Runs automatic fixing of typos, formatting, and outdated snapshot tests.
+
+> [!IMPORTANT]
+> * The snapshot tests will assume the new results are correct, always verify the new output is correct in the error logs first.
+> * `typos` might assume the wrong correction, always inspect the suggestions in its errors before running `just fix`
 
 Examples:
 ```bash

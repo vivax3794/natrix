@@ -5,12 +5,12 @@ use std::pin::Pin;
 use dagger_sdk::{ContainerWithExecOptsBuilder, PortForward, ReturnType, ServiceUpOpts};
 use futures::{StreamExt, stream};
 
-use crate::Cli;
+use crate::TestCommand;
 use crate::prelude::*;
 use crate::targets::IntegrationTestMode;
 
 /// Run all tests and return a directory of allure reports
-pub async fn run_all_tests(client: &Query, arguments: Cli) -> Result<Directory> {
+pub async fn run_all_tests(client: &Query, arguments: TestCommand) -> Result<Directory> {
     let mut tasks: Vec<Pin<Box<dyn Future<Output = _>>>> = vec![
         Box::pin(crate::targets::native_tests(client)),
         Box::pin(crate::targets::wasm_unit_tests(client, "nightly")),

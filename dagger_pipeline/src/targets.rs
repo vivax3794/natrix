@@ -5,13 +5,12 @@ use std::collections::{HashMap, HashSet};
 use dagger_sdk::Service;
 use serde::{Deserialize, Serialize};
 
-use crate::Cli;
+use crate::TestCommand;
 use crate::prelude::*;
 
 // MAYBE: Unused features
 // MAYBE: Record timing info
 // MAYBE: Add execution info
-// TODO: Run `typos -w` and apply fixes
 // TODO: Update snapshots.
 // TODO: Build book
 // TODO: Build docs
@@ -902,7 +901,7 @@ pub enum IntegrationTestMode {
 pub async fn integration_test(
     client: &Query,
     mode: IntegrationTestMode,
-    arguments: &Cli,
+    arguments: &TestCommand,
 ) -> Result<Directory> {
     let page = match mode {
         IntegrationTestMode::Dev => natrix_dev(client, "dev"),
