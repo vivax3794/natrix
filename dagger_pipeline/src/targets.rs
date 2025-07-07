@@ -825,7 +825,6 @@ fn natrix_dev(client: &Query, profile: &str) -> Service {
         .with_directory("/bin", cli(client))
         .with_workspace(client)
         .with_workdir("./ci/integration_tests")
-        .with_exec(vec!["natrix", "build", "--profile", profile])
         .with_entrypoint(vec![
             "natrix",
             "dev",

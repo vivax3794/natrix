@@ -112,9 +112,7 @@ pub(crate) fn minimize_js(js_file: &PathBuf, mapping: RenameMap) -> Result<(), a
     let codegen = oxc::codegen::Codegen::new()
         .with_options(oxc::codegen::CodegenOptions {
             minify: true,
-            comments: false,
-            annotation_comments: false,
-            legal_comments: oxc::codegen::LegalComment::None,
+            comments: oxc::codegen::CommentOptions::disabled(),
             ..Default::default()
         })
         .with_scoping(symbols);
