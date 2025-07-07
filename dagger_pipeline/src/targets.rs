@@ -329,31 +329,17 @@ pub async fn wasm_unit_tests(client: &Query, toolchain: &'static str) -> Result<
     let output = crate::base_images::wasm(client)
         .with_workspace(client)
         .with_workdir("./crates/natrix")
-        .with_new_file(
-            "./webdriver.json",
-            r#"
-{
-  "goog:chromeOptions": {
-    "args": [
-      "--no-sandbox",
-      "--user-data-dir=/tmp/data-dir",
-      "--disable-dev-shm-usage",
-      "--use-fake-device-for-media-stream",
-      "--use-fake-ui-for-media-stream",
-      "--headless"
-    ]
-  }
-}
-            "#,
-        )
         .with_exec_any(vec![
-            "rustup",
-            "run",
-            toolchain,
-            "wasm-pack",
+            "cargo",
+            if toolchain == "nightly" {
+                "+nightly"
+            } else {
+                "+stable"
+            },
             "test",
-            "--headless",
-            "--chrome",
+            "--tests",
+            "--target",
+            "wasm32-unknown-unknown",
             "--features",
             "_internal_testing",
             if toolchain == "nightly" {
@@ -365,13 +351,13 @@ pub async fn wasm_unit_tests(client: &Query, toolchain: &'static str) -> Result<
         .stdout()
         .await?;
 
-    let dir = parse_wasm_pack_output(client, toolchain, &output)?;
+    let dir = parse_wasmbindgen_test_output(client, toolchain, &output)?;
 
     Ok(dir)
 }
 
 /// Extract the result of a `wasm-pack test` run
-fn parse_wasm_pack_output(
+fn parse_wasmbindgen_test_output(
     client: &Query,
     toolchain: &'static str,
     output: &str,
@@ -412,7 +398,14 @@ fn parse_wasm_pack_output(
     for line in output.lines() {
         if line.starts_with("test ") {
             let parts = line.split_whitespace().collect::<Vec<_>>();
-            if let [_test, name, _dots, result] = &parts[..] {
+            if let Some(["test", name, "...", result]) = &parts.get(..4) {
+                // When a test is ignored it has extra stuff at the end
+                // If not its always 4 parts.
+                // This check prevents false positives.
+                if !result.starts_with("ignored") && parts.len() != 4 {
+                    continue;
+                }
+
                 let id = uuid::Uuid::new_v4().to_string();
 
                 let status_details = if *result == "ok" {
@@ -432,6 +425,8 @@ fn parse_wasm_pack_output(
                         .to_string(),
                     status: if *result == "ok" {
                         TestStatus::Passed
+                    } else if result.starts_with("ignored") {
+                        TestStatus::Skipped
                     } else {
                         TestStatus::Failed
                     },
