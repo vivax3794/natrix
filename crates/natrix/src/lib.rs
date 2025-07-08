@@ -72,6 +72,7 @@ pub mod prelude {
     };
     pub use super::dom::{Element, events, html_elements as e};
     pub use super::reactivity::State;
+    pub use super::reactivity::signal::Signal;
     pub use super::reactivity::state::{Ctx, RenderCtx};
 }
 

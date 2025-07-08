@@ -10,4 +10,3 @@ mod nested_reactivity;
 mod performance_hits;
 mod simple_reactivty;
 mod simple_rendering;
-mod sub_components;

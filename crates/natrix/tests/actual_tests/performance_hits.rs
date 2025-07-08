@@ -8,31 +8,26 @@ wasm_bindgen_test_configure!(run_in_browser);
 
 const BUTTON: Id = natrix::id!();
 
-#[derive(Component, Default)]
+#[derive(State, Default)]
 struct StaleDepAccumulation {
-    modified: u8,
-    read_only: u8,
+    modified: Signal<u8>,
+    read_only: Signal<u8>,
 }
 
-impl Component for StaleDepAccumulation {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-
-    fn render() -> impl Element<Self> {
-        e::div()
-            .child(
-                e::button()
-                    .id(BUTTON)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                        *ctx.modified += 1;
-                    })
-                    .text(|ctx: RenderCtx<Self>| *ctx.modified),
-            )
-            .child(|ctx: RenderCtx<Self>| {
-                *ctx.modified;
-                |ctx: RenderCtx<Self>| *ctx.read_only
-            })
-    }
+fn render_stale_dep() -> impl Element<StaleDepAccumulation> {
+    e::div()
+        .child(
+            e::button()
+                .id(BUTTON)
+                .on::<events::Click>(|ctx: &mut Ctx<StaleDepAccumulation>, _, _| {
+                    *ctx.modified += 1;
+                })
+                .text(|ctx: &mut RenderCtx<StaleDepAccumulation>| *ctx.modified),
+        )
+        .child(|ctx: &mut RenderCtx<StaleDepAccumulation>| {
+            *ctx.modified;
+            |ctx: &mut RenderCtx<StaleDepAccumulation>| *ctx.read_only
+        })
 }
 
 // As of writing this causes the `read_only` dep list to grow without ever being
@@ -40,7 +35,7 @@ impl Component for StaleDepAccumulation {
 #[wasm_bindgen_test]
 #[ignore = "Unsure whether we want to optimize this"]
 fn stale_dep_accumulation() {
-    crate::mount_test(StaleDepAccumulation::default());
+    crate::mount_test(StaleDepAccumulation::default(), render_stale_dep());
     let button = crate::get(BUTTON);
 
     for _ in 0..50 {

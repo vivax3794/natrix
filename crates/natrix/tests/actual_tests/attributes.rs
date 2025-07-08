@@ -1,56 +1,49 @@
 use natrix::dom::ToAttribute;
 use natrix::prelude::*;
-use natrix::reactivity::NonReactive;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 wasm_bindgen_test_configure!(run_in_browser);
 
 const ROOT: Id = natrix::id!();
 const BUTTON: Id = natrix::id!();
 
-#[derive(Component, Default)]
-struct Generic<T>(T);
+#[derive(State, Default)]
+struct Empty;
 
-impl<T: ToAttribute<()> + Copy> Component for Generic<T> {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::div()
-            .attr("abc", |ctx: RenderCtx<Self>| NonReactive(*ctx.0))
-            .id(ROOT)
-    }
+fn render_with_attr<T: ToAttribute<Empty>>(attr_value: T) -> impl Element<Empty> {
+    e::div().attr("abc", attr_value).id(ROOT)
 }
 
 #[wasm_bindgen_test]
 fn simple_true() {
-    crate::mount_test(Generic(true));
+    crate::mount_test(Empty, render_with_attr(true));
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("".to_owned()));
 }
 #[wasm_bindgen_test]
 fn simple_false() {
-    crate::mount_test(Generic(false));
+    crate::mount_test(Empty, render_with_attr(false));
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), None);
 }
 #[wasm_bindgen_test]
 fn simple_string() {
-    crate::mount_test(Generic("hello"));
+    crate::mount_test(Empty, render_with_attr("hello"));
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("hello".to_owned()));
 }
 #[wasm_bindgen_test]
 fn simple_some() {
-    crate::mount_test(Generic(Some("hello")));
+    crate::mount_test(Empty, render_with_attr(Some("hello")));
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("hello".to_owned()));
 }
 #[wasm_bindgen_test]
 fn simple_none() {
-    crate::mount_test(Generic(None::<u8>));
+    crate::mount_test(Empty, render_with_attr(None::<u8>));
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), None);
@@ -58,40 +51,50 @@ fn simple_none() {
 
 #[wasm_bindgen_test]
 fn simple_ok() {
-    crate::mount_test(Generic(Ok::<&'static str, &'static str>("hello")));
+    crate::mount_test(
+        Empty,
+        render_with_attr(Ok::<&'static str, &'static str>("hello")),
+    );
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("hello".to_owned()));
 }
 #[wasm_bindgen_test]
 fn simple_err() {
-    crate::mount_test(Generic(Err::<&'static str, &'static str>("world")));
+    crate::mount_test(
+        Empty,
+        render_with_attr(Err::<&'static str, &'static str>("world")),
+    );
 
     let button = crate::get(ROOT);
     assert_eq!(button.get_attribute("abc"), Some("world".to_owned()));
 }
 
-#[derive(Component, Default)]
+#[derive(State, Default)]
 struct Counter {
-    value: u8,
+    value: Signal<u8>,
 }
 
-impl Component for Counter {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::button()
-            .id(ROOT)
-            .attr("abc", |ctx: RenderCtx<Self>| format!("{}", *ctx.value))
-            .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                *ctx.value += 1;
-            })
+impl Counter {
+    fn increment(&mut self) {
+        *self.value += 1;
     }
+}
+
+fn render_counter() -> impl Element<Counter> {
+    e::button()
+        .id(ROOT)
+        .attr("abc", |ctx: &mut RenderCtx<Counter>| {
+            format!("{}", *ctx.value)
+        })
+        .on::<events::Click>(|ctx: &mut Ctx<Counter>, _, _| {
+            ctx.increment();
+        })
 }
 
 #[wasm_bindgen_test]
 fn reactive_attribute() {
-    crate::mount_test(Counter::default());
+    crate::mount_test(Counter::default(), render_counter());
 
     let button = crate::get(ROOT);
 
@@ -110,37 +113,43 @@ fn reactive_attribute() {
     assert_eq!(button.get_attribute("abc"), Some("4".to_owned()));
 }
 
-#[derive(Component, Default)]
+#[derive(State, Default)]
 struct Toggle {
-    value: bool,
+    value: Signal<bool>,
 }
 
-impl Component for Toggle {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::div()
-            .child(
-                e::button()
-                    .id(ROOT)
-                    .attr("abc", |ctx: RenderCtx<Self>| *ctx.value)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                        *ctx.value = !*ctx.value;
-                    }),
-            )
-            .child(
-                e::button()
-                    .id(BUTTON)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                        *ctx.value = false;
-                    }),
-            )
+impl Toggle {
+    fn toggle(&mut self) {
+        *self.value = !*self.value;
     }
+
+    fn set_false(&mut self) {
+        *self.value = false;
+    }
+}
+
+fn render_toggle() -> impl Element<Toggle> {
+    e::div()
+        .child(
+            e::button()
+                .id(ROOT)
+                .attr("abc", |ctx: &mut RenderCtx<Toggle>| *ctx.value)
+                .on::<events::Click>(|ctx: &mut Ctx<Toggle>, _, _| {
+                    ctx.toggle();
+                }),
+        )
+        .child(
+            e::button()
+                .id(BUTTON)
+                .on::<events::Click>(|ctx: &mut Ctx<Toggle>, _, _| {
+                    ctx.set_false();
+                }),
+        )
 }
 
 #[wasm_bindgen_test]
 fn reactive_bool() {
-    crate::mount_test(Toggle::default());
+    crate::mount_test(Toggle::default(), render_toggle());
 
     let button = crate::get(ROOT);
 
@@ -155,7 +164,7 @@ fn reactive_bool() {
 
 #[wasm_bindgen_test]
 fn reactive_change_set_but_no_change() {
-    crate::mount_test(Toggle::default());
+    crate::mount_test(Toggle::default(), render_toggle());
 
     let button = crate::get(ROOT);
     let button2 = crate::get(BUTTON);

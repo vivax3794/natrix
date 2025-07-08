@@ -42,5 +42,5 @@ This will start a local server that auto reloads on changes. Try changing the te
 
 ## Further Reading
 
-- [Components](reactivity::components.md) - Components are the core of natrix, and are the most important part of the framework.
+- [Render Functions](render-functions.md) - Render functions are the core of natrix, and are the most important part of the framework.
 - [Html](html.md) - This goes over the [`html_elements`](dom::html_elements) module and how to use it.

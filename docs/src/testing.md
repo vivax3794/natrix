@@ -14,15 +14,13 @@ use natrix::prelude::*;
 
 const HELLO: Id = natrix::id!();
 
-#[derive(Component)]
+#[derive(State)]
 struct HelloWorld;
 
-impl Component for HelloWorld {
-    fn render() -> impl Element<Self> {
-        e::div()
-            .text("Hello World")
-            .id(HELLO)
-    }
+fn render_hello_world() -> impl Element<HelloWorld> {
+    e::div()
+        .text("Hello World")
+        .id(HELLO)
 }
 
 mod tests {
@@ -34,7 +32,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     fn test_hello_world() {
-        test_utils::mount_test(HelloWorld);
+        test_utils::mount_test(HelloWorld, render_hello_world());
         let hello = test_utils::get(HELLO);
         assert_eq!(hello.text_content(), Some("Hello World".to_string()));
     }

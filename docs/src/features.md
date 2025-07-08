@@ -6,24 +6,6 @@
 
 this feature enables nightly only features. this includes:
 
-#### Default types for [`EmitMessage`](reactivity::component::Component::EmitMessage) and [`ReceiveMessage`](reactivity::component::Component::ReceiveMessage)
-
-this allows you to omit these in your trait implementation, which is really nice.
-
-```rust
-# extern crate natrix;
-# use natrix::prelude::*;
-#
-# #[derive(Component)]
-# struct Example;
-#
-impl Component for Example{
-    fn render() -> impl Element<Self> {
-        e::div()
-            .text("hello world")
-    }
-}
-```
 
 #### `must_not_suspend`
 

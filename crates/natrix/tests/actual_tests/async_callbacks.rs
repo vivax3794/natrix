@@ -10,33 +10,34 @@ wasm_bindgen_test_configure!(run_in_browser);
 
 const BUTTON_ID: Id = natrix::id!();
 
-#[derive(Component)]
+#[derive(State)]
 struct AsyncComponent {
-    data: u8,
+    data: Signal<u8>,
 }
 
-impl Component for AsyncComponent {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::button()
-            .id(BUTTON_ID)
-            .text(|ctx: RenderCtx<Self>| *ctx.data)
-            .on::<events::Click>(|ctx: Ctx<Self>, token, _| {
-                ctx.use_async(token, async |ctx| {
-                    async_utils::sleep_milliseconds(10).await;
-                    ctx.update(|ctx| {
-                        *ctx.data += 10;
-                    })?;
-                    Some(())
-                });
-            })
-    }
+fn render_async_component() -> impl Element<AsyncComponent> {
+    e::button()
+        .id(BUTTON_ID)
+        .text(|ctx: &mut RenderCtx<AsyncComponent>| *ctx.data)
+        .on::<events::Click>(|ctx: &mut Ctx<AsyncComponent>, token, _| {
+            ctx.use_async(token, async |ctx| {
+                async_utils::sleep_milliseconds(10).await;
+                ctx.update(|ctx| {
+                    *ctx.data += 10;
+                })?;
+                Some(())
+            });
+        })
 }
 
 #[wasm_bindgen_test]
 async fn async_works() {
-    crate::mount_test(AsyncComponent { data: 0 });
+    crate::mount_test(
+        AsyncComponent {
+            data: Signal::new(0),
+        },
+        render_async_component(),
+    );
 
     let button = crate::get(BUTTON_ID);
 
@@ -47,7 +48,12 @@ async fn async_works() {
 
 #[wasm_bindgen_test]
 async fn async_multiple() {
-    crate::mount_test(AsyncComponent { data: 0 });
+    crate::mount_test(
+        AsyncComponent {
+            data: Signal::new(0),
+        },
+        render_async_component(),
+    );
 
     let button = crate::get(BUTTON_ID);
 

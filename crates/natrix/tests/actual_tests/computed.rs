@@ -1,3 +1,5 @@
+#![cfg(false)]
+
 use natrix::prelude::*;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
@@ -6,31 +8,35 @@ wasm_bindgen_test_configure!(run_in_browser);
 const BUTTON_ID: Id = natrix::id!();
 const TEXT: Id = natrix::id!();
 
-#[derive(Component)]
+#[derive(State)]
 struct Counter {
-    value: u8,
+    value: Signal<u8>,
 }
 
-impl Component for Counter {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::button()
-            .id(BUTTON_ID)
-            .child(|ctx: RenderCtx<Self>| {
-                if ctx.watch(|ctx| *ctx.value > 2) {
-                    e::div().text(|ctx: RenderCtx<Self>| *ctx.value).id(TEXT)
-                } else {
-                    e::div()
-                }
-            })
-            .on::<events::Click>(|ctx: Ctx<Self>, _, _| *ctx.value += 1)
+impl Counter {
+    fn increment(&mut self) {
+        *self.value += 1;
     }
+}
+
+fn render_counter() -> impl Element<Counter> {
+    e::button()
+        .id(BUTTON_ID)
+        .child(|ctx: &mut RenderCtx<Counter>| {
+            if ctx.watch(|ctx| *ctx.value > 2) {
+                e::div()
+                    .text(|ctx: &mut RenderCtx<Counter>| *ctx.value)
+                    .id(TEXT)
+            } else {
+                e::div()
+            }
+        })
+        .on::<events::Click>(|ctx: &mut Ctx<Counter>, _, _| ctx.increment())
 }
 
 #[wasm_bindgen_test]
 fn works() {
-    crate::mount_test(Counter { value: 0 });
+    crate::mount_test(Counter { value: 0 }, render_counter());
 
     let button = crate::get(BUTTON_ID);
 

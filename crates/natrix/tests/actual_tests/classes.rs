@@ -9,50 +9,49 @@ const CLICKED_CLASS: Class = natrix::class!();
 const NOT_CLICKED_CLASS: Class = natrix::class!();
 const CLICKED_MORE_THAN_2_CLASS: Class = natrix::class!();
 
-#[derive(Component)]
+#[derive(State)]
 struct HelloWorld {
-    counter: usize,
+    counter: Signal<usize>,
 }
 
-impl Component for HelloWorld {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::div()
-            .child(
-                e::button()
-                    .id(BUTTON_ID)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                        *ctx.counter += 1;
-                    })
-                    .class(|ctx: RenderCtx<Self>| {
-                        if *ctx.counter > 0 {
-                            CLICKED_CLASS
-                        } else {
-                            NOT_CLICKED_CLASS
-                        }
-                    })
-                    .class(|ctx: RenderCtx<Self>| {
-                        if *ctx.counter > 2 {
-                            Some(CLICKED_MORE_THAN_2_CLASS)
-                        } else {
-                            None
-                        }
-                    }),
-            )
-            .child(
-                e::button()
-                    .id(DECREMENT_ID)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                        *ctx.counter -= 1;
-                    }),
-            )
-    }
+fn render_hello_world() -> impl Element<HelloWorld> {
+    e::div()
+        .child(
+            e::button()
+                .id(BUTTON_ID)
+                .on::<events::Click>(|ctx: &mut Ctx<HelloWorld>, _, _| {
+                    *ctx.counter += 1;
+                })
+                .class(|ctx: &mut RenderCtx<HelloWorld>| {
+                    if *ctx.counter > 0 {
+                        CLICKED_CLASS
+                    } else {
+                        NOT_CLICKED_CLASS
+                    }
+                })
+                .class(|ctx: &mut RenderCtx<HelloWorld>| {
+                    if *ctx.counter > 2 {
+                        Some(CLICKED_MORE_THAN_2_CLASS)
+                    } else {
+                        None
+                    }
+                }),
+        )
+        .child(e::button().id(DECREMENT_ID).on::<events::Click>(
+            |ctx: &mut Ctx<HelloWorld>, _, _| {
+                *ctx.counter -= 1;
+            },
+        ))
 }
 
 #[wasm_bindgen_test]
 fn test_class_initial() {
-    crate::mount_test(HelloWorld { counter: 0 });
+    crate::mount_test(
+        HelloWorld {
+            counter: Signal::new(0),
+        },
+        render_hello_world(),
+    );
     let button = crate::get(BUTTON_ID);
 
     assert_eq!(button.class_name(), NOT_CLICKED_CLASS.0);
@@ -60,7 +59,12 @@ fn test_class_initial() {
 
 #[wasm_bindgen_test]
 fn test_class_pure_str_change() {
-    crate::mount_test(HelloWorld { counter: 0 });
+    crate::mount_test(
+        HelloWorld {
+            counter: Signal::new(0),
+        },
+        render_hello_world(),
+    );
     let button = crate::get(BUTTON_ID);
 
     button.click();
@@ -69,7 +73,12 @@ fn test_class_pure_str_change() {
 
 #[wasm_bindgen_test]
 fn test_option() {
-    crate::mount_test(HelloWorld { counter: 0 });
+    crate::mount_test(
+        HelloWorld {
+            counter: Signal::new(0),
+        },
+        render_hello_world(),
+    );
     let button = crate::get(BUTTON_ID);
 
     button.click();

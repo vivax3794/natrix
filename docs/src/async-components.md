@@ -1,6 +1,6 @@
 # Async
 
-Async is a really important part of any web application, as its how you do IO and talk to other services or your backend.
+Async is a really important part of any web application, as it's how you do IO and talk to other services or your backend.
 Natrix provides [`DeferredCtx`](reactivity::state::DeferredCtx), via the [`.deferred_borrow`](reactivity::state::State::deferred_borrow) method, to facilitate this. as well as the [`.use_async`](reactivity::state::State::use_async) helper.
 
 ## What is a `DeferredCtx`?
@@ -9,7 +9,7 @@ Internally natrix stores the state as a `Rc<RefCell<...>>`, [`DeferredCtx`](reac
 
 The main method on a deferred context is the [`.update`](reactivity::state::DeferredCtx::update) method, which allows you to borrow the state mutably. This returns a `Option<...>`, if this returns [`None`](std::option::Option::None), then the component is dropped and you should in most case return/cancel the current task.
 
-On borrowing (via [`.update`](reactivity::state::DeferredCtx::update)) the framework will clear the reactive state of signals, and will trigger a reactive update on closure return. (i.e the framework will keep the UI in sync with changes). But this also means you should not borrow this in a loop, and should prefer to borrow it for the maximum amount of time that doesnt hold it across a yield point.
+On borrowing (via [`.update`](reactivity::state::DeferredCtx::update)) the framework will clear the reactive state of signals, and will trigger a reactive update on closure return. (i.e the framework will keep the UI in sync with changes). But this also means you should not borrow this in a loop, and should prefer to borrow it for the maximum amount of time that doesn't hold it across a yield point.
 
 ### Example
 
@@ -20,17 +20,11 @@ On borrowing (via [`.update`](reactivity::state::DeferredCtx::update)) the frame
 #
 # async fn foo() {}
 #
-#[derive(Component)]
- struct HelloWorld {
-     counter: u8,
+#[derive(State)]
+struct HelloWorld {
+    counter: Signal<u8>,
 }
 
-# impl Component for HelloWorld {
-#     fn render() -> impl Element<Self> {
-#         e::div()
-#     }
-# }
-#
 async fn use_context(mut ctx: DeferredCtx<HelloWorld>) {
     if ctx.update(|ctx| {
         *ctx.counter += 1;
@@ -56,30 +50,28 @@ The [`.use_async`](reactivity::state::State::use_async) method is a wrapper that
 #
 # async fn foo() {}
 #
-#[derive(Component)]
+#[derive(State)]
 struct HelloWorld {
-    counter: u8,
+    counter: Signal<u8>,
 }
 
-impl Component for HelloWorld {
-    fn render() -> impl Element<Self> {
-        e::button()
-            .text(|ctx: R<Self>| *ctx.counter)
-            .on::<events::Click>(|ctx: E<Self>, token, _| {
-                ctx.use_async(token, async |ctx| {
-                    ctx.update(|ctx| {
-                        *ctx.counter += 1;
-                    })?;
+fn render_hello_world() -> impl Element<HelloWorld> {
+    e::button()
+        .text(|ctx: &mut RenderCtx<HelloWorld>| *ctx.counter)
+        .on::<events::Click>(|ctx: &mut Ctx<HelloWorld>, token, _| {
+            ctx.use_async(token, async |ctx| {
+                ctx.update(|ctx| {
+                    *ctx.counter += 1;
+                })?;
 
-                    foo().await;
+                foo().await;
 
-                    ctx.update(|ctx| {
-                        *ctx.counter += 1;
-                    })?;
+                ctx.update(|ctx| {
+                    *ctx.counter += 1;
+                })?;
 
-                    Some(())
-                });
-            })
-    }
+                Some(())
+            });
+        })
 }
 ```

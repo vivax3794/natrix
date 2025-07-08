@@ -1,3 +1,5 @@
+#![cfg(false)]
+
 use natrix::prelude::*;
 use natrix::{guard_option, guard_result};
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};

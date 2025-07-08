@@ -8,6 +8,7 @@ publish = false
 [dependencies]
 natrix = { path="../../crates/natrix", features = ["nightly"] }
 log = {version = "*", features=["release_max_level_off"]}
+pastey = "0.1"
 
 [package.metadata.natrix]
 cache_bust = "none"

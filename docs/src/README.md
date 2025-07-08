@@ -13,27 +13,26 @@ A simple counter in Natrix looks like this:
 # extern crate natrix;
 # use natrix::prelude::*;
 #
-#[derive(Component)]
-struct Counter(usize);
+#[derive(State)]
+struct Counter {
+    value: Signal<usize>,
+}
 
-impl Component for Counter {
-    fn render() -> impl Element<Self> {
-        e::button()
-            .text(|ctx: R<Self>| *ctx.0)
-            .on::<events::Click>(|ctx: E<Self>, _, _| {
-                *ctx.0 += 1;
-            })
-    }
+fn render_counter() -> impl Element<Counter> {
+    e::button()
+        .text(|ctx: &mut RenderCtx<Counter>| *ctx.value)
+        .on::<events::Click>(|ctx: &mut Ctx<Counter>, _, _| {
+            *ctx.value += 1;
+        })
 }
 #
 # fn main() {
-#    natrix::mount(Counter(0));
+#    natrix::mount(Counter { value: Signal::new(0) }, render_counter());
 # }
 ```
 
 ## Standout features
 * ✅ **No macro DSL** – Macro-based DSLs break formatting & Rust Analyzer support. Natrix avoids them completely for a smoother dev experience.
-* ✅ **Derive macros for reactive state** – No need for `useSignal` everywhere, define a struct, thats it.
 * ✅ **Callbacks use references to state** – Instead of closures capturing state setters, Natrix callbacks take a reference to the state, which better aligns with Rust’s ownership model.
 * ✅ **JS style bundling solution** – Natrix has a compile time css and asset bundling solution that works with dependencies out of the box.
 

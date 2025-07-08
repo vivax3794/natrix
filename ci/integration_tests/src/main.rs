@@ -9,50 +9,52 @@ const BUTTON_ID: Id = natrix::id!();
 const RELOAD_ID: Id = natrix::id!();
 const IMG_ID: Id = natrix::id!();
 
-#[derive(Component)]
+#[derive(State)]
 #[expect(dead_code, reason = "literally here to test DCE")]
 struct NotUsed;
 
-impl Component for NotUsed {
-    fn render() -> impl Element<Self> {
-        e::img()
-    }
+#[expect(dead_code, reason = "literally here to test DCE")]
+fn render_not_used() -> impl Element<NotUsed> {
+    e::img()
 }
 
-#[derive(Component)]
+#[derive(State)]
 struct HelloWorld {
-    counter: usize,
+    counter: Signal<usize>,
 }
 
-impl Component for HelloWorld {
-    fn render() -> impl Element<Self> {
-        e::div()
-            .child(e::h1().text(HELLO_TEXT).id(HELLO_ID))
-            .child(SubComponent::new(integration_tests_dependency::DepComp))
-            .child(e::button().id(PANIC_ID).text("PANIC").on::<events::Click>(
-                |_ctx: Ctx<Self>, _, _| {
-                    panic!("Panic button clicked!");
-                },
-            ))
-            .child(
-                e::button()
-                    .id(BUTTON_ID)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                        *ctx.counter += 1;
-                    })
-                    .text(|ctx: RenderCtx<Self>| *ctx.counter), // .class(HELLO),
-            )
-            .child(e::div().id(RELOAD_ID).text(reload_tests::VALUE))
-            .child(
-                e::img()
-                    .src(natrix::asset!("../../assets/logo.png"))
-                    .id(IMG_ID),
-            )
-    }
+fn render_hello_world() -> impl Element<HelloWorld> {
+    e::div()
+        .child(e::h1().text(HELLO_TEXT).id(HELLO_ID))
+        .child(integration_tests_dependency::dep_component())
+        .child(e::button().id(PANIC_ID).text("PANIC").on::<events::Click>(
+            |_ctx: &mut Ctx<HelloWorld>, _, _| {
+                panic!("Panic button clicked!");
+            },
+        ))
+        .child(
+            e::button()
+                .id(BUTTON_ID)
+                .on::<events::Click>(|ctx: &mut Ctx<HelloWorld>, _, _| {
+                    *ctx.counter += 1;
+                })
+                .text(|ctx: &mut RenderCtx<HelloWorld>| *ctx.counter), // .class(HELLO),
+        )
+        .child(e::div().id(RELOAD_ID).text(reload_tests::VALUE))
+        .child(
+            e::img()
+                .src(natrix::asset!("../../assets/logo.png"))
+                .id(IMG_ID),
+        )
 }
 
 fn main() {
-    natrix::mount(HelloWorld { counter: 0 });
+    natrix::mount(
+        HelloWorld {
+            counter: Signal::new(0),
+        },
+        render_hello_world,
+    );
 }
 
 #[cfg(test)]

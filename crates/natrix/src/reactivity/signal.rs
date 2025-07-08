@@ -78,9 +78,14 @@ impl<T: 'static> State for Signal<T> {
     }
 
     fn dirty_deps_lists(&mut self) -> impl Iterator<Item = indexmap::set::IntoIter<HookKey>> {
-        let mut new = IndexSet::with_capacity(self.deps.len());
-        std::mem::swap(&mut new, &mut self.deps);
-        std::iter::once(new.into_iter())
+        if self.written {
+            let mut new = IndexSet::with_capacity(self.deps.len());
+            std::mem::swap(&mut new, &mut self.deps);
+            Some(new.into_iter())
+        } else {
+            None
+        }
+        .into_iter()
     }
 }
 
@@ -98,6 +103,12 @@ impl<T> DerefMut for Signal<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.written = true;
         &mut self.data
+    }
+}
+
+impl<T: Default> Default for Signal<T> {
+    fn default() -> Self {
+        Self::new(T::default())
     }
 }
 

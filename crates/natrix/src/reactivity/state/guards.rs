@@ -1,5 +1,5 @@
 //! Implementation of guards
-#![cfg(false)] // TODO: Re-implment guards using Lens
+#![cfg(false)] // TODO: Re-implement guards using Lens
 
 pub use super::{Ctx, RenderCtx};
 

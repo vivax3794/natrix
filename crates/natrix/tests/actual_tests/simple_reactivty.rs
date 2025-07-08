@@ -6,35 +6,36 @@ wasm_bindgen_test_configure!(run_in_browser);
 
 const BUTTON_ID: Id = natrix::id!();
 
-#[derive(Component)]
+#[derive(State)]
 struct Counter {
-    value: u8,
+    value: Signal<u8>,
 }
 
-impl natrix::data!(Counter) {
+impl Counter {
     fn increment(&mut self) {
         *self.value += 1;
     }
 }
 
-impl Component for Counter {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::button()
-            .id(BUTTON_ID)
-            .children(format_elements!(
-                |ctx: RenderCtx<Self>| "value: {}-{}",
-                *ctx.value,
-                *ctx.value + 10
-            ))
-            .on::<events::Click>(|ctx: Ctx<Self>, _, _| ctx.increment())
-    }
+fn render_counter() -> impl Element<Counter> {
+    e::button()
+        .id(BUTTON_ID)
+        .children(format_elements!(
+            |ctx: &mut RenderCtx<Counter>| "value: {}-{}",
+            *ctx.value,
+            *ctx.value + 10
+        ))
+        .on::<events::Click>(|ctx: &mut Ctx<Counter>, _, _| ctx.increment())
 }
 
 #[wasm_bindgen_test]
 fn renders_initial() {
-    crate::mount_test(Counter { value: 0 });
+    crate::mount_test(
+        Counter {
+            value: Signal::new(0),
+        },
+        render_counter(),
+    );
 
     let button = crate::get(BUTTON_ID);
     assert_eq!(button.text_content(), Some("value: 0-10".to_owned()));
@@ -42,7 +43,12 @@ fn renders_initial() {
 
 #[wasm_bindgen_test]
 fn uses_initial_data() {
-    crate::mount_test(Counter { value: 123 });
+    crate::mount_test(
+        Counter {
+            value: Signal::new(123),
+        },
+        render_counter(),
+    );
 
     let button = crate::get(BUTTON_ID);
     assert_eq!(button.text_content(), Some("value: 123-133".to_owned()));
@@ -50,7 +56,12 @@ fn uses_initial_data() {
 
 #[wasm_bindgen_test]
 fn updates_text() {
-    crate::mount_test(Counter { value: 0 });
+    crate::mount_test(
+        Counter {
+            value: Signal::new(0),
+        },
+        render_counter(),
+    );
 
     let button = crate::get(BUTTON_ID);
 
@@ -64,29 +75,30 @@ fn updates_text() {
     assert_eq!(button.text_content(), Some("value: 3-13".to_owned()));
 }
 
-#[derive(Component)]
+#[derive(State)]
 struct TwoValues {
-    foo: u8,
-    bar: u8,
+    foo: Signal<u8>,
+    bar: Signal<u8>,
 }
 
-impl Component for TwoValues {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-
-    fn render() -> impl Element<Self> {
-        e::button()
-            .id(BUTTON_ID)
-            .text(|ctx: RenderCtx<Self>| format!("{}-{}", *ctx.foo, *ctx.bar))
-            .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                *ctx.foo += 1;
-            })
-    }
+fn render_two() -> impl Element<TwoValues> {
+    e::button()
+        .id(BUTTON_ID)
+        .text(|ctx: &mut RenderCtx<TwoValues>| format!("{}-{}", *ctx.foo, *ctx.bar))
+        .on::<events::Click>(|ctx: &mut Ctx<TwoValues>, _, _| {
+            *ctx.foo += 1;
+        })
 }
 
 #[wasm_bindgen_test]
 fn test_two_values() {
-    crate::mount_test(TwoValues { foo: 0, bar: 0 });
+    crate::mount_test(
+        TwoValues {
+            foo: Signal::new(0),
+            bar: Signal::new(0),
+        },
+        render_two(),
+    );
 
     let button = crate::get(BUTTON_ID);
 

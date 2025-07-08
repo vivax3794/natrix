@@ -37,6 +37,8 @@ pub struct RenderResult<C: State> {
 /// Mount the specified component at natrixses default location. and calls `setup_runtime`
 /// This is what should be used when building with the natrix cli.
 ///
+/// The render method is called lazily, for example its never called during css collection.
+///
 /// IMPORTANT: This is the intended entry point for `natrix-cli` build applications, and the natrix
 /// cli build system expects this to be called. And you should not attempt to access browser ap
 ///
@@ -48,7 +50,7 @@ pub struct RenderResult<C: State> {
     clippy::expect_used,
     reason = "This will never happen if `natrix build` is used, and also happens early in the app lifecycle"
 )]
-pub fn mount<C: State>(component: C, tree: impl Element<C>) {
+pub fn mount<C: State, E: Element<C>>(component: C, tree: impl FnOnce() -> E) {
     crate::panics::set_panic_hook();
     #[cfg(feature = "console_log")]
     if cfg!(target_arch = "wasm32") {
@@ -69,7 +71,7 @@ pub fn mount<C: State>(component: C, tree: impl Element<C>) {
         return;
     }
 
-    mount_at(component, tree, natrix_shared::MOUNT_POINT).expect("Failed to mount");
+    mount_at(component, tree(), natrix_shared::MOUNT_POINT).expect("Failed to mount");
 }
 
 /// Mounts the component at the target id

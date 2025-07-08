@@ -26,7 +26,7 @@ fn render_option_some() {
 
 #[wasm_bindgen_test]
 fn render_option_none() {
-    crate::mount_test(Render(None::<String>));
+    crate::mount_test(Empty, e::div().id(HELLO_ID).child(None::<String>));
 
     let element = crate::get(HELLO_ID);
     assert_eq!(element.text_content(), Some("".to_owned()));
@@ -34,7 +34,7 @@ fn render_option_none() {
 
 #[wasm_bindgen_test]
 fn render_result_ok() {
-    crate::mount_test(Render(Ok::<&str, &str>("hey")));
+    crate::mount_test(Empty, e::div().id(HELLO_ID).child(Ok::<&str, &str>("hey")));
 
     let element = crate::get(HELLO_ID);
     assert_eq!(element.text_content(), Some("hey".to_owned()));
@@ -42,7 +42,7 @@ fn render_result_ok() {
 
 #[wasm_bindgen_test]
 fn render_result_err() {
-    crate::mount_test(Render(Err::<&str, &str>("hey")));
+    crate::mount_test(Empty, e::div().id(HELLO_ID).child(Err::<&str, &str>("hey")));
 
     let element = crate::get(HELLO_ID);
     assert_eq!(element.text_content(), Some("hey".to_owned()));
@@ -56,7 +56,12 @@ mod either_test {
 
     #[wasm_bindgen_test]
     fn render_either_left() {
-        crate::mount_test(Render(Either::Left::<&str, &str>("hey")));
+        crate::mount_test(
+            Empty,
+            e::div()
+                .id(HELLO_ID)
+                .child(Either::Left::<&str, &str>("hey")),
+        );
 
         let element = crate::get(HELLO_ID);
         assert_eq!(element.text_content(), Some("hey".to_owned()));
@@ -64,7 +69,12 @@ mod either_test {
 
     #[wasm_bindgen_test]
     fn render_either_right() {
-        crate::mount_test(Render(Either::Right::<&str, &str>("hey")));
+        crate::mount_test(
+            Empty,
+            e::div()
+                .id(HELLO_ID)
+                .child(Either::Right::<&str, &str>("hey")),
+        );
 
         let element = crate::get(HELLO_ID);
         assert_eq!(element.text_content(), Some("hey".to_owned()));

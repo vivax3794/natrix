@@ -7,44 +7,36 @@ const BUTTON_1: Id = natrix::id!();
 const BUTTON_2: Id = natrix::id!();
 const TEXT: Id = natrix::id!();
 
-#[derive(Component, Default)]
+#[derive(State, Default)]
 struct DoubleCounter {
-    value_one: u8,
-    value_two: u8,
+    value_one: Signal<u8>,
+    value_two: Signal<u8>,
 }
 
-impl Component for DoubleCounter {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::div()
-            .child(
-                e::button()
-                    .id(BUTTON_1)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                        *ctx.value_one += 1;
-                    }),
+fn render_double_counter() -> impl Element<DoubleCounter> {
+    e::div()
+        .child(e::button().id(BUTTON_1).on::<events::Click>(
+            |ctx: &mut Ctx<DoubleCounter>, _, _| {
+                *ctx.value_one += 1;
+            },
+        ))
+        .child(e::button().id(BUTTON_2).on::<events::Click>(
+            |ctx: &mut Ctx<DoubleCounter>, _, _| {
+                *ctx.value_two += 1;
+            },
+        ))
+        .child(|ctx: &mut RenderCtx<DoubleCounter>| {
+            (*ctx.value_one >= 2).then_some(
+                e::div()
+                    .id(TEXT)
+                    .child(|ctx: &mut RenderCtx<DoubleCounter>| *ctx.value_two),
             )
-            .child(
-                e::button()
-                    .id(BUTTON_2)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                        *ctx.value_two += 1;
-                    }),
-            )
-            .child(|ctx: RenderCtx<Self>| {
-                (*ctx.value_one >= 2).then_some(
-                    e::div()
-                        .id(TEXT)
-                        .child(|ctx: RenderCtx<Self>| *ctx.value_two),
-                )
-            })
-    }
+        })
 }
 
 #[wasm_bindgen_test]
 fn update_affects_inner_node() {
-    crate::mount_test(DoubleCounter::default());
+    crate::mount_test(DoubleCounter::default(), render_double_counter());
 
     let button_1 = crate::get(BUTTON_1);
     let button_2 = crate::get(BUTTON_2);

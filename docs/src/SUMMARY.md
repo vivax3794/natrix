@@ -9,11 +9,8 @@
 
 - [Features](features.md)
 - [Panic Policy](panics.md)
-- [Components](components.md)
-  - [State Less Components](stateless-components.md)
-  - [Sub Components](sub-components.md)
-  - [Generic Components](generic-components.md)
-  - [Async](async-components.md)
+- [Render Functions](render-functions.md)
+- [Async](async-components.md)
 - [Html](html.md)
 - [Css](css.md)
 - [Assets](assets.md)

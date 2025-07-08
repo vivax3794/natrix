@@ -44,15 +44,17 @@ pub(crate) fn state_derive_implementation(item: ItemStruct) -> TokenStream {
         where_clause = quote!(#where_clause #type_: ::natrix::macro_ref::State ,);
         clear = quote!(
             #clear
-            self.#access.clear();
+            ::natrix::macro_ref::State::clear(&mut self.#access);
         );
         reg_dep = quote!(
             #reg_dep
-            self.#access.reg_dep(key);
+            ::natrix::macro_ref::State::reg_dep(&mut self.#access, key);
         );
         dirty_deps_lists = quote!(
             #dirty_deps_lists
-            deps.extend(self.#access.dirty_deps_list());
+            deps.extend(
+                ::natrix::macro_ref::State::dirty_deps_lists(&mut self.#access)
+            );
         );
     }
 
@@ -65,7 +67,7 @@ pub(crate) fn state_derive_implementation(item: ItemStruct) -> TokenStream {
             fn reg_dep(&mut self, key: ::natrix::macro_ref::HookKey) {
                 #reg_dep
             }
-            fn dirty_deps_lists(&mut self) -> impl Iterator<Item = ::natrix::macro_ref::indexmap::set::IntoIter<HookKey>> {
+            fn dirty_deps_lists(&mut self) -> impl Iterator<Item = ::natrix::macro_ref::indexmap::set::IntoIter<::natrix::macro_ref::HookKey>> {
                 let mut deps = Vec::new();
                 #dirty_deps_lists
                 deps.into_iter()
