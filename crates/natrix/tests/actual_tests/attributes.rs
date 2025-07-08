@@ -15,7 +15,7 @@ impl<T: ToAttribute<()> + Copy> Component for Generic<T> {
     type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
         e::div()
-            .attr("abc", |ctx: R<Self>| NonReactive(*ctx.0))
+            .attr("abc", |ctx: RenderCtx<Self>| NonReactive(*ctx.0))
             .id(ROOT)
     }
 }
@@ -82,8 +82,8 @@ impl Component for Counter {
     fn render() -> impl Element<Self> {
         e::button()
             .id(ROOT)
-            .attr("abc", |ctx: R<Self>| format!("{}", *ctx.value))
-            .on::<events::Click>(|ctx: E<Self>, _, _| {
+            .attr("abc", |ctx: RenderCtx<Self>| format!("{}", *ctx.value))
+            .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                 *ctx.value += 1;
             })
     }
@@ -123,15 +123,15 @@ impl Component for Toggle {
             .child(
                 e::button()
                     .id(ROOT)
-                    .attr("abc", |ctx: R<Self>| *ctx.value)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    .attr("abc", |ctx: RenderCtx<Self>| *ctx.value)
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                         *ctx.value = !*ctx.value;
                     }),
             )
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                         *ctx.value = false;
                     }),
             )

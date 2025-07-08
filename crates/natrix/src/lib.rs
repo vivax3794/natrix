@@ -61,7 +61,7 @@ pub(crate) fn get_window() -> web_sys::Window {
 
 /// Commonly used types and traits.
 pub mod prelude {
-    pub use natrix_macros::Component;
+    pub use natrix_macros::State;
 
     pub use super::css::selectors::{
         Class,
@@ -71,25 +71,24 @@ pub mod prelude {
         IntoFinalizedSelector,
     };
     pub use super::dom::{Element, events, html_elements as e};
-    pub use super::reactivity::component::{Component, NoMessages, SubComponent};
-    pub use super::reactivity::state::{E, R};
+    pub use super::reactivity::State;
+    pub use super::reactivity::state::{Ctx, RenderCtx};
 }
 
 pub use dom::Element;
-pub use natrix_macros::{Component, asset, data, format_elements};
-pub use reactivity::component::{Component, NoMessages, SubComponent, mount};
-pub use reactivity::state::{RenderCtx, State};
+pub use natrix_macros::{State, asset, data, format_elements};
+pub use reactivity::mount::mount;
+pub use reactivity::state::{Ctx, RenderCtx};
 
 /// Public exports of internal data structures for `natrix_macros` (and `macro_rules`) to use in generated code.
 #[doc(hidden)]
 pub mod macro_ref {
     #[cfg(feature = "_internal_collect_css")]
     pub use inventory;
-    pub use {const_base, const_sha1, log};
+    pub use {const_base, const_sha1, indexmap, log};
 
     pub use super::css;
     pub use super::dom::element::Element;
-    pub use super::reactivity::component::ComponentBase;
-    pub use super::reactivity::signal::{Signal, SignalMethods, SignalState};
-    pub use super::reactivity::state::{ComponentData, E, Guard, State};
+    pub use super::reactivity::signal::{Signal, SignalState};
+    pub use super::reactivity::state::{Ctx, HookKey, State};
 }

@@ -15,10 +15,10 @@ mod watch;
 
 #[cfg(feature = "async")]
 pub use self::async_state::DeferredCtx;
-pub use self::core::{RenderCtx, State};
-pub use self::data_manager::ComponentData;
-pub use self::guards::Guard;
-pub(crate) use self::hook_manager::HookKey;
+pub use self::core::{Ctx, RenderCtx};
+pub use self::data_manager::State;
+#[doc(hidden)]
+pub use self::hook_manager::HookKey;
 
 /// A token only accessible in events.
 /// This is used to guard certain apis that should only be used in events.
@@ -34,11 +34,3 @@ impl EventToken {
         Self { _private: () }
     }
 }
-
-/// A type alias for `&mut State<C>`, should be preferred in closure argument hints.
-/// such as `|ctx: E<Self>| ...`
-pub type E<'c, C> = &'c mut State<C>;
-
-/// A type alias for `&mut RenderCtx<C>`, should be preferred in closure argument hints.
-/// such as `|ctx: R<Self>| ...`
-pub type R<'a, 'c, C> = &'a mut RenderCtx<'c, C>;

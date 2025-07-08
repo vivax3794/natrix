@@ -1,7 +1,8 @@
 //! Implementation of `ctx.watch`
+#![cfg(false)] // TODO: Reimplement watch using lenses
 
 use super::{HookKey, RenderCtx};
-use crate::State;
+use crate::Ctx;
 use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::{ReactiveHook, UpdateResult};
 
@@ -19,9 +20,9 @@ impl<C, F, T> ReactiveHook<C> for WatchState<F, T>
 where
     C: Component,
     T: PartialEq,
-    F: Fn(&mut State<C>) -> T,
+    F: Fn(&mut Ctx<C>) -> T,
 {
-    fn update(&mut self, ctx: &mut State<C>, you: HookKey) -> UpdateResult {
+    fn update(&mut self, ctx: &mut Ctx<C>, you: HookKey) -> UpdateResult {
         let new_value = ctx.track_reads(you, &self.calc_value);
 
         if new_value == self.last_value {
@@ -63,7 +64,7 @@ impl<C: Component> RenderCtx<'_, C> {
     #[inline]
     pub fn watch<T, F>(&mut self, func: F) -> T
     where
-        F: Fn(&State<C>) -> T + 'static,
+        F: Fn(&Ctx<C>) -> T + 'static,
         T: PartialEq + Clone + 'static,
     {
         self.watch_mut(move |ctx| func(ctx))
@@ -73,7 +74,7 @@ impl<C: Component> RenderCtx<'_, C> {
     #[doc(hidden)]
     pub fn watch_mut<T, F>(&mut self, func: F) -> T
     where
-        F: Fn(&mut State<C>) -> T + 'static,
+        F: Fn(&mut Ctx<C>) -> T + 'static,
         T: PartialEq + Clone + 'static,
     {
         self.ctx.with_restore_signals(|ctx| {

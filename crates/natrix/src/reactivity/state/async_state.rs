@@ -3,11 +3,11 @@
 use std::cell::RefCell;
 use std::rc::Weak;
 
-pub use super::{EventToken, State};
+pub use super::{Ctx, EventToken};
 use crate::error_handling::log_or_panic;
-use crate::reactivity::component::Component;
+use crate::reactivity::State;
 
-impl<T: Component> State<T> {
+impl<T: State> Ctx<T> {
     /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
     /// framework assumptions.
     pub fn deferred_borrow(&self, _token: EventToken) -> DeferredCtx<T> {
@@ -62,19 +62,19 @@ impl<F: Future> Future for PanicCheckFuture<F> {
 /// A combiend `Weak` and `RefCell` that facilities upgrading and borrowing as a shared
 /// operation
 #[must_use]
-pub struct DeferredCtx<T: Component> {
+pub struct DeferredCtx<T: State> {
     /// The `Weak<RefCell<T>>` in question
-    inner: Weak<RefCell<State<T>>>,
+    inner: Weak<RefCell<Ctx<T>>>,
 }
 
-impl<T: Component> DeferredCtx<T> {
+impl<T: State> DeferredCtx<T> {
     /// Run a function on the component state, returning `None` if the component was dropped.
     ///
     /// # Reactivity
     /// Calling this function clears the internal reactive flags.
     /// Once this value is dropped it will trigger a reactive update for any changed fields.
     #[must_use]
-    pub fn update<R>(&self, func: impl FnOnce(&mut State<T>) -> R) -> Option<R> {
+    pub fn update<R>(&self, func: impl FnOnce(&mut Ctx<T>) -> R) -> Option<R> {
         let rc = self.inner.upgrade()?;
         let Ok(mut borrow) = rc.try_borrow_mut() else {
             log_or_panic!(

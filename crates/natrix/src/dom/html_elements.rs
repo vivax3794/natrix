@@ -31,12 +31,12 @@ use crate::dom::{ToAttribute, ToClass, attributes};
 use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::get_document;
 use crate::prelude::Id;
-use crate::reactivity::component::Component;
+use crate::reactivity::State;
 use crate::reactivity::render_callbacks::RenderingState;
-use crate::reactivity::state::{EventToken, State};
+use crate::reactivity::state::{Ctx, EventToken};
 
 /// A deferred function to do something once state is available
-pub(crate) type DeferredFunc<C> = Box<dyn FnOnce(&mut State<C>, &mut RenderingState)>;
+pub(crate) type DeferredFunc<C> = Box<dyn FnOnce(&mut Ctx<C>, &mut RenderingState)>;
 
 /// Indicates the given element is allowed to children
 /// This will catch errors such as:
@@ -53,7 +53,7 @@ impl CanHaveChild for () {}
 /// A Generic html node with a given name.
 #[must_use = "Web elements are useless if not rendered"]
 #[non_exhaustive]
-pub struct HtmlElement<C: Component, T = ()> {
+pub struct HtmlElement<C: State, T = ()> {
     /// Dom element
     pub element: web_sys::Element,
     /// The deferred actions
@@ -68,7 +68,7 @@ pub struct HtmlElement<C: Component, T = ()> {
     reactive_attributes: HashSet<&'static str>,
 }
 
-impl<C: Component, T> HtmlElement<C, T> {
+impl<C: State, T> HtmlElement<C, T> {
     /// Create a new html element with the specific tag
     ///
     /// All non-deprecated html elements have a helper function in this module
@@ -112,11 +112,11 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// The event handler is a closure taking a mutable reference to `S<Self>`.
     /// ```rust
     /// # use natrix::prelude::*;
-    /// # #[derive(Component)]
-    /// # struct MyComponent {
+    /// # #[derive(State)]
+    /// # struct MyState {
     /// #     some_value: i32,
     /// # }
-    /// # impl Component for MyComponent {
+    /// # impl State for MyState {
     /// # type EmitMessage = NoMessages;
     /// # type ReceiveMessage = NoMessages;
     /// # fn render() -> impl Element<Self> {
@@ -144,11 +144,11 @@ impl<C: Component, T> HtmlElement<C, T> {
                 };
 
                 let Some(ctx) = ctx_weak.upgrade() else {
-                    log_or_panic!("Component dropped without event handlers being cleaned up");
+                    log_or_panic!("State dropped without event handlers being cleaned up");
                     return;
                 };
                 let Ok(mut ctx) = ctx.try_borrow_mut() else {
-                    log_or_panic!("Component already mutably borrowed in event handler");
+                    log_or_panic!("State already mutably borrowed in event handler");
                     return;
                 };
 
@@ -173,11 +173,11 @@ impl<C: Component, T> HtmlElement<C, T> {
     /// This accepts any valid element including closures.
     /// ```rust
     /// # use natrix::prelude::*;
-    /// # #[derive(Component)]
-    /// # struct MyComponent {
+    /// # #[derive(State)]
+    /// # struct MyState {
     /// #     toggle: bool,
     /// # }
-    /// # impl Component for MyComponent {
+    /// # impl State for MyState {
     /// # type EmitMessage = NoMessages;
     /// # type ReceiveMessage = NoMessages;
     /// # fn render() -> impl Element<Self> {
@@ -327,7 +327,7 @@ impl<C: Component, T> HtmlElement<C, T> {
     }
 }
 
-impl<C: Component, T: 'static> Element<C> for HtmlElement<C, T> {
+impl<C: State, T: 'static> Element<C> for HtmlElement<C, T> {
     #[inline]
     fn render(self) -> MaybeStaticElement<C> {
         MaybeStaticElement::Html(self.generic())
@@ -351,7 +351,7 @@ macro_rules! elements {
 
                 #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/" $name ">"]
                 #[inline]
-                pub fn $name<C: Component>() -> HtmlElement<C, [< Tag $name:camel >]> {
+                pub fn $name<C: State>() -> HtmlElement<C, [< Tag $name:camel >]> {
                     HtmlElement::new(stringify!($name))
                 }
             )*
@@ -374,7 +374,7 @@ macro_rules! can_have_children {
 macro_rules! attr_helpers {
     ($tag:ident => $($attr:ident($kind:path, $attr_name:literal)),+) => {
         pastey::paste! {
-            impl<C: Component> HtmlElement<C, [< Tag $tag:camel >]> {
+            impl<C: State> HtmlElement<C, [< Tag $tag:camel >]> {
                 $(
                     #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/" $tag "##" $attr_name ">"]
                     #[inline]
@@ -391,7 +391,7 @@ macro_rules! attr_helpers {
 macro_rules! global_attrs {
     ($($attr:ident($kind:path, $attr_value:literal)),*) => {
         pastey::paste! {
-            impl<C: Component, T> HtmlElement<C, T> {
+            impl<C: State, T> HtmlElement<C, T> {
                 $(
                     #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Global_attributes/" $attr_value ">"]
                     #[inline]
@@ -407,7 +407,7 @@ macro_rules! global_attrs {
 /// Generate a `attr` helpers implementation for the aria attributes
 macro_rules! aria_attrs {
     ($($attr:ident),*) => {
-        impl<C: Component, T> HtmlElement<C, T> {
+        impl<C: State, T> HtmlElement<C, T> {
             pastey::paste! {
                 $(
                     #[doc = "<https://developer.mozilla.org/docs/Web/Accessibility/ARIA/Reference/Attributes/aria%2d" $attr ">"]
@@ -509,7 +509,7 @@ attr_helpers!(a =>
     target(attributes::Target, "target")
 );
 
-impl<C: Component> HtmlElement<C, TagA> {
+impl<C: State> HtmlElement<C, TagA> {
     /// add `target="_blank"`
     #[inline]
     pub fn open_in_new_tab(self) -> Self {
@@ -569,7 +569,7 @@ attr_helpers!(iframe =>
     sandbox(attributes::SandboxAllow, "sandbox"), src(String, "src"), srcdoc(String, "srcdoc"), width(attributes::Integer, "width")
 );
 
-impl<C: Component> HtmlElement<C, TagIframe> {
+impl<C: State> HtmlElement<C, TagIframe> {
     /// add `referrerpolicy="no-referrer" sandbox="" credentialless`
     #[inline]
     pub fn secure(self) -> Self {

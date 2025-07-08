@@ -295,9 +295,8 @@ fn assert_valid_css(string: &str) {
                 panic!("The following code produced warnings\n{string}");
             }
 
-            // I cant be arsed to write a visitor for this
+            // REFACTOR: Use a proper visitor for this.
             let debug_reps = format!("{stylesheet:?}");
-
             let invalid = debug_reps.contains("Unparsed") || debug_reps.contains("Unknown");
             assert!(
                 !invalid,

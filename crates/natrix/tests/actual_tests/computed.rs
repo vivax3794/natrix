@@ -17,14 +17,14 @@ impl Component for Counter {
     fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)
-            .child(|ctx: R<Self>| {
+            .child(|ctx: RenderCtx<Self>| {
                 if ctx.watch(|ctx| *ctx.value > 2) {
-                    e::div().text(|ctx: R<Self>| *ctx.value).id(TEXT)
+                    e::div().text(|ctx: RenderCtx<Self>| *ctx.value).id(TEXT)
                 } else {
                     e::div()
                 }
             })
-            .on::<events::Click>(|ctx: E<Self>, _, _| *ctx.value += 1)
+            .on::<events::Click>(|ctx: Ctx<Self>, _, _| *ctx.value += 1)
     }
 }
 

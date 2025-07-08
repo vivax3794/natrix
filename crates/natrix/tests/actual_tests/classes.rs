@@ -22,17 +22,17 @@ impl Component for HelloWorld {
             .child(
                 e::button()
                     .id(BUTTON_ID)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                         *ctx.counter += 1;
                     })
-                    .class(|ctx: R<Self>| {
+                    .class(|ctx: RenderCtx<Self>| {
                         if *ctx.counter > 0 {
                             CLICKED_CLASS
                         } else {
                             NOT_CLICKED_CLASS
                         }
                     })
-                    .class(|ctx: R<Self>| {
+                    .class(|ctx: RenderCtx<Self>| {
                         if *ctx.counter > 2 {
                             Some(CLICKED_MORE_THAN_2_CLASS)
                         } else {
@@ -43,7 +43,7 @@ impl Component for HelloWorld {
             .child(
                 e::button()
                     .id(DECREMENT_ID)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                         *ctx.counter -= 1;
                     }),
             )

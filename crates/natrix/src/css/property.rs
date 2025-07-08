@@ -205,6 +205,6 @@ support!(
 );
 
 property!(All => "all");
-// NOTE: We cant test `WideKeyword` against everything because `lightningcss` doesnt include it
+// HACK: We cant test `WideKeyword` against everything because `lightningcss` doesnt include it
 // as a option for its ast nodes.
 test_property!(All, values::WideKeyword, wide);

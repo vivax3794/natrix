@@ -1,7 +1,7 @@
 //! Implementation of guards
+#![cfg(false)] // TODO: Re-implment guards using Lens
 
-pub use super::{RenderCtx, State};
-use crate::reactivity::component::Component;
+pub use super::{Ctx, RenderCtx};
 
 // MAYBE: Can we somehow abstract over immutable vs mutable getters in a way that lets a user write
 // a provably pure getter that works for both?
@@ -14,9 +14,9 @@ use crate::reactivity::component::Component;
 /// The usecase can be seen by considering this logic:
 /// ```rust
 /// # use natrix::prelude::*;
-/// # #[derive(Component)]
-/// # struct MyComponent {value: Option<u32>}
-/// # impl Component for MyComponent {
+/// # #[derive(State)]
+/// # struct MyState {value: Option<u32>}
+/// # impl State for MyState {
 /// # type EmitMessage = NoMessages;
 /// # type ReceiveMessage = NoMessages;
 /// # fn render() -> impl Element<Self> {
@@ -33,9 +33,9 @@ use crate::reactivity::component::Component;
 /// This is where you might reach for `ctx.watch`, and in fact that works perfectly:
 /// ```rust
 /// # use natrix::prelude::*;
-/// # #[derive(Component)]
-/// # struct MyComponent {value: Option<u32>}
-/// # impl Component for MyComponent {
+/// # #[derive(State)]
+/// # struct MyState {value: Option<u32>}
+/// # impl State for MyState {
 /// # type EmitMessage = NoMessages;
 /// # type ReceiveMessage = NoMessages;
 /// # fn render() -> impl Element<Self> {
@@ -56,9 +56,9 @@ use crate::reactivity::component::Component;
 /// ```rust
 /// # use natrix::prelude::*;
 /// # use natrix::guard_option;
-/// # #[derive(Component)]
-/// # struct MyComponent {value: Option<u32>}
-/// # impl Component for MyComponent {
+/// # #[derive(State)]
+/// # struct MyState {value: Option<u32>}
+/// # impl State for MyState {
 /// # type EmitMessage = NoMessages;
 /// # type ReceiveMessage = NoMessages;
 /// # fn render() -> impl Element<Self> {
@@ -81,9 +81,9 @@ use crate::reactivity::component::Component;
 /// ```rust
 /// # use natrix::prelude::*;
 /// # use natrix::guard_option;
-/// # #[derive(Component)]
-/// # struct MyComponent {value: Option<u32>}
-/// # impl Component for MyComponent {
+/// # #[derive(State)]
+/// # struct MyState {value: Option<u32>}
+/// # impl State for MyState {
 /// # type EmitMessage = NoMessages;
 /// # type ReceiveMessage = NoMessages;
 /// # fn render() -> impl Element<Self> {
@@ -102,9 +102,9 @@ use crate::reactivity::component::Component;
 /// ```rust
 /// # use natrix::prelude::*;
 /// # use natrix::guard_option;
-/// # #[derive(Component)]
-/// # struct MyComponent {value: Option<u32>}
-/// # impl Component for MyComponent {
+/// # #[derive(State)]
+/// # struct MyState {value: Option<u32>}
+/// # impl State for MyState {
 /// # type EmitMessage = NoMessages;
 /// # type ReceiveMessage = NoMessages;
 /// # fn render() -> impl Element<Self> {
@@ -131,9 +131,9 @@ use crate::reactivity::component::Component;
 /// ```rust
 /// # use natrix::prelude::*;
 /// # use natrix::guard_option;
-/// # #[derive(Component)]
-/// # struct MyComponent {value: Option<u32>}
-/// # impl Component for MyComponent {
+/// # #[derive(State)]
+/// # struct MyState {value: Option<u32>}
+/// # impl State for MyState {
 /// # type EmitMessage = NoMessages;
 /// # type ReceiveMessage = NoMessages;
 /// # fn render() -> impl Element<Self> {
@@ -228,8 +228,8 @@ impl<F> Guard<F> {
     #[inline]
     pub fn new<C, R>(getter: F) -> Self
     where
-        F: for<'a> Fn(&'a State<C>) -> &'a R,
-        C: Component,
+        F: for<'a> Fn(&'a Ctx<C>) -> &'a R,
+        C: State,
     {
         Self { getter }
     }
@@ -238,8 +238,8 @@ impl<F> Guard<F> {
     #[inline]
     pub fn new_mut<C, R>(getter: F) -> Self
     where
-        F: for<'a> Fn(&'a mut State<C>) -> &'a mut R,
-        C: Component,
+        F: for<'a> Fn(&'a mut Ctx<C>) -> &'a mut R,
+        C: State,
     {
         Self { getter }
     }
@@ -248,14 +248,14 @@ impl<F> Guard<F> {
     #[inline]
     pub fn new_owned<C, R>(getter: F) -> Self
     where
-        F: Fn(&State<C>) -> R,
-        C: Component,
+        F: Fn(&Ctx<C>) -> R,
+        C: State,
     {
         Self { getter }
     }
 }
 
-impl<T: Component> State<T> {
+impl<T: State> Ctx<T> {
     /// Get the unwrapped data referenced by this guard
     #[inline]
     pub fn get<'s, F, R>(&'s self, guard: &Guard<F>) -> &'s R
@@ -284,12 +284,12 @@ impl<T: Component> State<T> {
     }
 }
 
-impl<C: Component> RenderCtx<'_, C> {
+impl<C: State> RenderCtx<'_, C> {
     /// Get a readonly reference from a mut guard
     #[inline]
     pub fn get_downgrade<F, R>(&mut self, guard: &Guard<F>) -> &R
     where
-        F: Fn(&mut State<C>) -> &mut R,
+        F: Fn(&mut Ctx<C>) -> &mut R,
     {
         (guard.getter)(self.ctx)
     }

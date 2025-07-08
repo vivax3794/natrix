@@ -6,8 +6,8 @@ use wasm_bindgen::intern;
 
 use super::html_elements::DeferredFunc;
 use crate::error_handling::log_or_panic;
+use crate::macro_ref::State;
 use crate::prelude::Id;
-use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::{
     ReactiveAttribute,
     SimpleReactive,
@@ -17,7 +17,7 @@ use crate::reactivity::state::RenderCtx;
 use crate::type_macros;
 
 /// The result of apply attribute
-pub(crate) enum AttributeResult<C: Component> {
+pub(crate) enum AttributeResult<C: State> {
     /// The attribute should be set
     SetIt(Option<Cow<'static, str>>),
     /// The attribute requires state
@@ -29,7 +29,7 @@ pub(crate) enum AttributeResult<C: Component> {
     message = "`{Self}` is not a valid attribute value.",
     note = "Try converting the value to a string"
 )]
-pub trait ToAttribute<C: Component>: 'static {
+pub trait ToAttribute<C: State>: 'static {
     /// The kind of attribute output this is
     type AttributeKind;
 
@@ -46,7 +46,7 @@ pub struct Float;
 /// generate a `ToAttribute` implementation for a string type
 macro_rules! attribute_string {
     ($t:ty, $cow:expr) => {
-        impl<C: Component> ToAttribute<C> for $t {
+        impl<C: State> ToAttribute<C> for $t {
             type AttributeKind = String;
 
             #[inline]
@@ -63,7 +63,7 @@ macro_rules! attribute_string {
 
 type_macros::strings!(attribute_string);
 
-impl<C: Component> ToAttribute<C> for char {
+impl<C: State> ToAttribute<C> for char {
     type AttributeKind = char;
 
     #[inline]
@@ -75,7 +75,7 @@ impl<C: Component> ToAttribute<C> for char {
 /// generate `ToAttribute` for a numeric
 macro_rules! attribute_numeric {
     ($t:ident, $fmt:ident, $name:ident) => {
-        impl<C: Component> ToAttribute<C> for $t {
+        impl<C: State> ToAttribute<C> for $t {
             type AttributeKind = $name;
 
             #[inline]
@@ -95,7 +95,7 @@ macro_rules! attribute_numeric {
 
 type_macros::numerics!(attribute_numeric);
 
-impl<C: Component> ToAttribute<C> for bool {
+impl<C: State> ToAttribute<C> for bool {
     type AttributeKind = bool;
 
     #[inline]
@@ -104,7 +104,7 @@ impl<C: Component> ToAttribute<C> for bool {
     }
 }
 
-impl<C: Component, T: ToAttribute<C>> ToAttribute<C> for Option<T> {
+impl<C: State, T: ToAttribute<C>> ToAttribute<C> for Option<T> {
     type AttributeKind = T::AttributeKind;
 
     #[inline]
@@ -117,7 +117,7 @@ impl<C: Component, T: ToAttribute<C>> ToAttribute<C> for Option<T> {
     }
 }
 
-impl<C: Component, T: ToAttribute<C, AttributeKind = K>, E: ToAttribute<C, AttributeKind = K>, K>
+impl<C: State, T: ToAttribute<C, AttributeKind = K>, E: ToAttribute<C, AttributeKind = K>, K>
     ToAttribute<C> for Result<T, E>
 {
     type AttributeKind = K;
@@ -135,7 +135,7 @@ impl<F, C, R> ToAttribute<C> for F
 where
     F: Fn(&mut RenderCtx<C>) -> R + 'static,
     R: ToAttribute<C>,
-    C: Component,
+    C: State,
 {
     type AttributeKind = R::AttributeKind;
 
@@ -197,7 +197,7 @@ macro_rules! define_attribute_enum {
                 )?
             }
 
-            impl<C: Component> ToAttribute<C> for $name {
+            impl<C: State> ToAttribute<C> for $name {
                 type AttributeKind = $name;
 
                 #[inline]
@@ -220,7 +220,7 @@ macro_rules! define_attribute_enum {
 #[macro_export]
 macro_rules! impl_to_attribute_for_vec {
     ($T:ty) => {
-        impl<C: Component> ToAttribute<C> for Vec<$T> {
+        impl<C: State> ToAttribute<C> for Vec<$T> {
             type AttributeKind = $T;
 
             #[inline]
@@ -262,7 +262,7 @@ macro_rules! define_bool_attribute {
         #[derive(Default, Copy, Clone, PartialEq, Eq, Hash)]
         pub struct $struct_name(pub bool);
 
-        impl<C: Component> ToAttribute<C> for $struct_name {
+        impl<C: State> ToAttribute<C> for $struct_name {
             type AttributeKind = $struct_name;
 
             fn calc_attribute(
@@ -615,7 +615,7 @@ define_attribute_enum! {
     }
 }
 
-impl<C: Component> ToAttribute<C> for Vec<Id> {
+impl<C: State> ToAttribute<C> for Vec<Id> {
     type AttributeKind = Vec<Id>;
 
     fn calc_attribute(self, _name: &'static str, _node: &web_sys::Element) -> AttributeResult<C> {
@@ -777,7 +777,7 @@ pub enum AutoComplete {
     },
 }
 
-impl<C: Component> ToAttribute<C> for AutoComplete {
+impl<C: State> ToAttribute<C> for AutoComplete {
     type AttributeKind = AutoComplete;
 
     #[inline]
@@ -827,7 +827,7 @@ impl<C: Component> ToAttribute<C> for AutoComplete {
     }
 }
 
-impl<C: Component> ToAttribute<C> for AutocompleteKind {
+impl<C: State> ToAttribute<C> for AutocompleteKind {
     type AttributeKind = AutoComplete;
 
     #[inline]

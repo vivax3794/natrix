@@ -4,7 +4,7 @@ use wasm_bench_runtime::Bencher;
 
 const BUTTON: Id = natrix::id!();
 
-#[derive(Component, Default)]
+#[derive(State, Default)]
 struct Buttons<const N: u32> {
     state: u32,
 }
@@ -17,8 +17,8 @@ impl<const N: u32> Component for Buttons<N> {
             res = res.child(
                 e::button()
                     .id(BUTTON)
-                    .text(|ctx: R<Self>| *ctx.state)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    .text(|ctx: RenderCtx<Self>| *ctx.state)
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                         *ctx.state += 1;
                     }),
             );
@@ -36,13 +36,13 @@ struct ToggleNode<const N: u32> {
 impl<const N: u32> Component for ToggleNode<N> {
     fn render() -> impl Element<Self> {
         let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
-            |ctx: E<Self>, _, _| {
+            |ctx: Ctx<Self>, _, _| {
                 *ctx.state = !*ctx.state;
             },
         ));
 
         for _ in 0..N {
-            res = res.child(e::div().child(|ctx: R<Self>| {
+            res = res.child(e::div().child(|ctx: RenderCtx<Self>| {
                 // NOTE: In a real application the reactivity would be on the text level
                 // But we are testing dom swapping.
                 if *ctx.state {
@@ -65,13 +65,15 @@ struct ToggleText<const N: u32> {
 impl<const N: u32> Component for ToggleText<N> {
     fn render() -> impl Element<Self> {
         let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
-            |ctx: E<Self>, _, _| {
+            |ctx: Ctx<Self>, _, _| {
                 *ctx.state = !*ctx.state;
             },
         ));
 
         for _ in 0..N {
-            res = res.child(e::div().child(|ctx: R<Self>| if *ctx.state { "ON" } else { "OFF" }));
+            res = res.child(
+                e::div().child(|ctx: RenderCtx<Self>| if *ctx.state { "ON" } else { "OFF" }),
+            );
         }
 
         res
@@ -86,13 +88,13 @@ struct ToggleAttr<const N: u32> {
 impl<const N: u32> Component for ToggleAttr<N> {
     fn render() -> impl Element<Self> {
         let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
-            |ctx: E<Self>, _, _| {
+            |ctx: Ctx<Self>, _, _| {
                 *ctx.state = !*ctx.state;
             },
         ));
 
         for _ in 0..N {
-            res = res.child(e::button().disabled(|ctx: R<Self>| *ctx.state));
+            res = res.child(e::button().disabled(|ctx: RenderCtx<Self>| *ctx.state));
         }
 
         res
@@ -110,14 +112,15 @@ struct ToggleClass<const N: u32> {
 impl<const N: u32> Component for ToggleClass<N> {
     fn render() -> impl Element<Self> {
         let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
-            |ctx: E<Self>, _, _| {
+            |ctx: Ctx<Self>, _, _| {
                 *ctx.state = !*ctx.state;
             },
         ));
 
         for _ in 0..N {
             res = res.child(
-                e::button().class(|ctx: R<Self>| if *ctx.state { CLASS_ON } else { CLASS_OFF }),
+                e::button()
+                    .class(|ctx: RenderCtx<Self>| if *ctx.state { CLASS_ON } else { CLASS_OFF }),
             );
         }
 
@@ -133,14 +136,14 @@ struct ToggleExist<const N: u32> {
 impl<const N: u32> Component for ToggleExist<N> {
     fn render() -> impl Element<Self> {
         let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
-            |ctx: E<Self>, _, _| {
+            |ctx: Ctx<Self>, _, _| {
                 *ctx.state = !*ctx.state;
             },
         ));
 
         for _ in 0..N {
             res = res.child(e::div().child(
-                |ctx: R<Self>| {
+                |ctx: RenderCtx<Self>| {
                     if *ctx.state { Some("ON") } else { None }
                 },
             ));
@@ -161,11 +164,11 @@ impl<const N: u32> Component for ToggleAtOnce<N> {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                         *ctx.state = !*ctx.state;
                     }),
             )
-            .child(|ctx: R<Self>| {
+            .child(|ctx: RenderCtx<Self>| {
                 if *ctx.state {
                     let mut res = e::div();
                     for _ in 0..N {
@@ -221,8 +224,8 @@ impl<const N: u32> Component for UpdateNested<N> {
         for _ in 0..N {
             res = e::button()
                 .id(BUTTON)
-                .text(|ctx: R<Self>| *ctx.state)
-                .on::<events::Click>(|ctx: E<Self>, _, _| {
+                .text(|ctx: RenderCtx<Self>| *ctx.state)
+                .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                     *ctx.state += 1;
                 })
                 .child(res)
@@ -331,7 +334,7 @@ fn main() {
         bencher
             .bench("deep static", 0, |_| {
                 natrix::test_utils::setup();
-                natrix::reactivity::component::mount_at(
+                natrix::reactivity::mount::mount_at(
                     DeepStatic::<1000>,
                     natrix::test_utils::MOUNT_POINT,
                 )

@@ -24,11 +24,11 @@ impl Component for Counter {
         e::button()
             .id(BUTTON_ID)
             .children(format_elements!(
-                |ctx: R<Self>| "value: {}-{}",
+                |ctx: RenderCtx<Self>| "value: {}-{}",
                 *ctx.value,
                 *ctx.value + 10
             ))
-            .on::<events::Click>(|ctx: E<Self>, _, _| ctx.increment())
+            .on::<events::Click>(|ctx: Ctx<Self>, _, _| ctx.increment())
     }
 }
 
@@ -77,8 +77,8 @@ impl Component for TwoValues {
     fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)
-            .text(|ctx: R<Self>| format!("{}-{}", *ctx.foo, *ctx.bar))
-            .on::<events::Click>(|ctx: E<Self>, _, _| {
+            .text(|ctx: RenderCtx<Self>| format!("{}-{}", *ctx.foo, *ctx.bar))
+            .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                 *ctx.foo += 1;
             })
     }

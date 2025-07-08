@@ -23,14 +23,14 @@ impl Component for StaleDepAccumulation {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                         *ctx.modified += 1;
                     })
-                    .text(|ctx: R<Self>| *ctx.modified),
+                    .text(|ctx: RenderCtx<Self>| *ctx.modified),
             )
-            .child(|ctx: R<Self>| {
+            .child(|ctx: RenderCtx<Self>| {
                 *ctx.modified;
-                |ctx: R<Self>| *ctx.read_only
+                |ctx: RenderCtx<Self>| *ctx.read_only
             })
     }
 }

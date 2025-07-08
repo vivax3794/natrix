@@ -20,15 +20,15 @@ impl Component for GuardTester {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| match &mut *ctx.value {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| match &mut *ctx.value {
                         Some(2) => *ctx.value = None,
                         Some(value) => *value += 1,
                         None => *ctx.value = Some(0),
                     }),
             )
-            .child(|ctx: R<Self>| {
+            .child(|ctx: RenderCtx<Self>| {
                 if let Some(value_guard) = guard_option!(@owned |ctx| ctx.value) {
-                    e::div().text(move |ctx: R<Self>| ctx.get_owned(&value_guard))
+                    e::div().text(move |ctx: RenderCtx<Self>| ctx.get_owned(&value_guard))
                 } else {
                     e::div().text("NO VALUE")
                 }
@@ -74,18 +74,18 @@ impl Component for GuardTesterResult {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| match &mut *ctx.value {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| match &mut *ctx.value {
                         Ok(value) => *value += 1,
                         Err(_) => *ctx.value = Ok(0),
                     }),
             )
-            .child(|ctx: R<Self>| {
+            .child(|ctx: RenderCtx<Self>| {
                 match guard_result!(@owned |ctx| ctx.value) {
                     Ok(value_guard) => {
-                        e::div().text(move |ctx: R<Self>| ctx.get_owned(&value_guard))
+                        e::div().text(move |ctx: RenderCtx<Self>| ctx.get_owned(&value_guard))
                     }
                     Err(error_guard) => {
-                        e::div().text(move |ctx: R<Self>| ctx.get_owned(&error_guard))
+                        e::div().text(move |ctx: RenderCtx<Self>| ctx.get_owned(&error_guard))
                     }
                 }
                 .id(TEXT)
@@ -126,22 +126,22 @@ impl Component for GuardTesterNested {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| match &mut *ctx.value {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| match &mut *ctx.value {
                         Some(Some(2)) => *ctx.value = None,
                         Some(Some(value)) => *value += 1,
                         Some(None) => *ctx.value = Some(Some(0)),
                         None => *ctx.value = Some(None),
                     }),
             )
-            .child(|ctx: R<Self>| {
+            .child(|ctx: RenderCtx<Self>| {
                 if let Some(value_guard) = guard_option!(@owned |ctx| ctx.value) {
-                    e::div().text(move |ctx: R<Self>| {
+                    e::div().text(move |ctx: RenderCtx<Self>| {
                         if let Some(inner_guard) =
                             guard_option!(@owned |ctx| ctx.get_owned(&value_guard))
                         {
                             e::div()
                                 .id(TEXT)
-                                .text(move |ctx: R<Self>| ctx.get_owned(&inner_guard))
+                                .text(move |ctx: RenderCtx<Self>| ctx.get_owned(&inner_guard))
                         } else {
                             e::div().text("NO VALUE INNER").id(TEXT)
                         }
@@ -195,17 +195,17 @@ impl Component for GuardSwitchProp {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                         *ctx.value = *ctx.next;
                     }),
             )
-            .child(|ctx: R<Self>| {
+            .child(|ctx: RenderCtx<Self>| {
                 if let Some(value_guard) = guard_option!(@owned |ctx| ctx.value) {
-                    e::div().text(move |ctx: R<Self>| {
+                    e::div().text(move |ctx: RenderCtx<Self>| {
                         if let Some(inner_guard) =
                             guard_option!(@owned |ctx| ctx.get_owned(&value_guard))
                         {
-                            e::div().id(TEXT).text(move |ctx: R<Self>| {
+                            e::div().id(TEXT).text(move |ctx: RenderCtx<Self>| {
                                 if ctx.get_owned(&inner_guard) {
                                     "hello"
                                 } else {
@@ -244,14 +244,14 @@ impl Component for NonCopyComponent {
             .child(
                 e::button()
                     .id(BUTTON)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                         *ctx.value = Some(NonCopy);
                     }),
             )
-            .child(|ctx: R<Self>| {
+            .child(|ctx: RenderCtx<Self>| {
                 if let Some(value_guard) = guard_option!(|ctx| ctx.value.as_ref()) {
                     e::div()
-                        .text(move |ctx: R<Self>| ctx.get(&value_guard).use_ref())
+                        .text(move |ctx: RenderCtx<Self>| ctx.get(&value_guard).use_ref())
                         .id(TEXT)
                 } else {
                     e::div().text("NO VALUE").id(TEXT)
@@ -293,7 +293,7 @@ impl Component for ReactiveOrderingEdgeCaseRegression {
         e::div().child(
             e::button()
                 .id(BUTTON)
-                .on::<events::Click>(|ctx: E<Self>, _, _| {
+                .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                     *ctx.trigger += 1;
                     if ctx.guarded_value.is_some() {
                         *ctx.guarded_value = None;
@@ -301,9 +301,9 @@ impl Component for ReactiveOrderingEdgeCaseRegression {
                         *ctx.guarded_value = Some(0);
                     }
                 })
-                .child(|ctx: R<Self>| {
+                .child(|ctx: RenderCtx<Self>| {
                     if let Some(guard) = guard_option!(@owned|ctx| (*ctx.guarded_value).clone()) {
-                        Some(e::div().id(TEXT).text(move |ctx: R<Self>| {
+                        Some(e::div().id(TEXT).text(move |ctx: RenderCtx<Self>| {
                             format!("{}-{}", *ctx.trigger, ctx.get_owned(&guard))
                         }))
                     } else {

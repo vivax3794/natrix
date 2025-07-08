@@ -5,11 +5,9 @@ use std::collections::BinaryHeap;
 
 use slotmap::SecondaryMap;
 
-use super::{HookKey, State};
+use super::{Ctx, HookKey};
 use crate::error_handling::log_or_panic;
-use crate::reactivity::component::Component;
 use crate::reactivity::render_callbacks::UpdateResult;
-use crate::reactivity::signal::SignalMethods;
 
 /// Store some data but use `O` for its `Ord` implementation
 #[derive(Debug)]
@@ -41,7 +39,7 @@ impl<T, O: Ord> Ord for OrderAssociatedData<T, O> {
 /// The queue processor of the queue
 struct HookQueue {
     /// All changed vectors
-    vectors: Vec<std::vec::IntoIter<HookKey>>,
+    vectors: Vec<indexmap::set::IntoIter<HookKey>>,
     /// The queue of the next item in each vector
     queue: BinaryHeap<OrderAssociatedData<(HookKey, usize), Reverse<u64>>>,
     /// A temporary next item
@@ -53,7 +51,7 @@ struct HookQueue {
 /// Iterate over `iter` until it finds a key in `insertion_orders`
 fn get_next_valid(
     insertion_orders: &SecondaryMap<HookKey, u64>,
-    iter: &mut std::vec::IntoIter<HookKey>,
+    iter: &mut indexmap::set::IntoIter<HookKey>,
 ) -> Option<(HookKey, u64)> {
     for hook in iter.by_ref() {
         if let Some(&order) = insertion_orders.get(hook) {
@@ -67,7 +65,7 @@ impl HookQueue {
     /// Create a new queue
     fn new(
         insertion_orders: &SecondaryMap<HookKey, u64>,
-        mut vectors: Vec<std::vec::IntoIter<HookKey>>,
+        mut vectors: Vec<indexmap::set::IntoIter<HookKey>>,
     ) -> Self {
         let mut queue = BinaryHeap::with_capacity(vectors.len());
 
@@ -111,7 +109,7 @@ impl HookQueue {
             log::trace!("current queue: {:?}", self.queue);
             let (hook, source_index) = self.queue.pop()?.data;
 
-            // NOTE: We know the `source_index` is valid, but I dont think there is a nice way in rust
+            // PERF: We know the `source_index` is valid, but I dont think there is a nice way in rust
             // to enforce that invariant (maybe something fancy with marker lifetimes)
             // Hopefully rust optimizes out the bounds check?
             if let Some(vector) = self.vectors.get_mut(source_index) {
@@ -143,69 +141,26 @@ impl HookQueue {
 }
 
 /// Trait automatically implemented on reactive structs by the derive macro.
-///
-/// This trait provides the internal interface between component data structures
-/// and the reactive system. It allows the framework to:
-/// - Access all reactive signals within a component
-/// - Capture the current state of all signals
-/// - Restore signals to a previously captured state
-///
-/// This is an internal trait not meant for direct implementation by users.
 #[doc(hidden)]
-pub trait ComponentData: Sized + 'static {
-    /// References to all reactive signals in this component.
-    ///
-    /// This is typically implemented as an array of mutable references to the component's
-    /// signal fields, allowing the reactive system to track and update them.
-    type FieldRef<'a>: IntoIterator<Item = &'a mut dyn SignalMethods>;
-
-    /// A complete snapshot of all signal values in this component.
-    ///
-    /// This type captures the entire signal state for later restoration,
-    /// typically used for nested reactive contexts such as `.watch`.
-    type SignalState;
-
-    /// Returns mutable references to all signals in this component.
-    ///
-    /// This allows the reactive system to track modifications and trigger
-    /// updates when signal values change.
-    fn signals_mut(&mut self) -> Self::FieldRef<'_>;
-
-    /// Extracts the current signal state and resets signals to their default state.
-    fn pop_signals(&mut self) -> Self::SignalState;
-
-    /// Restores all signals to a previously captured state.
-    fn set_signals(&mut self, state: Self::SignalState);
+pub trait State: Sized + 'static {
+    /// Clear reactive tracking
+    #[doc(hidden)]
+    fn clear(&mut self);
+    /// If you were read register this as a dependency
+    #[doc(hidden)]
+    fn reg_dep(&mut self, dep: HookKey);
+    /// Return a Vector of dependency lists from changed sources.
+    fn dirty_deps_lists(&mut self) -> impl Iterator<Item = indexmap::set::IntoIter<HookKey>>;
 }
 
-impl<T: Component> State<T> {
-    /// Clear all signals
-    fn clear(&mut self) {
-        for signal in self.data.signals_mut() {
-            signal.clear();
-        }
-    }
-
-    /// Register a dependency for all read signals
-    fn reg_dep(&mut self, dep: HookKey) {
-        for signal in self.data.signals_mut() {
-            signal.register_dep(dep);
-        }
-    }
-
+impl<T: State> Ctx<T> {
     /// Loop over signals and update any depdant hooks for changed signals
     /// This also drains the deferred message queue
     fn update(&mut self) {
         self.drain_message_queue();
         log::trace!("Performing update cycle for {}", std::any::type_name::<T>());
 
-        let dep_lists: Vec<_> = self
-            .data
-            .signals_mut()
-            .into_iter()
-            .filter(|signal| signal.changed())
-            .map(|signal| signal.drain_dependencies().into_iter())
-            .collect();
+        let dep_lists: Vec<_> = self.data.dirty_deps_lists().collect();
 
         log::trace!("{} signals changed", dep_lists.len());
         let mut hook_queue = HookQueue::new(&self.hooks.insertion_order, dep_lists);
@@ -250,6 +205,7 @@ impl<T: Component> State<T> {
     }
 
     /// Run the given function pop and restoring signals around it
+    #[cfg(false)]
     pub(crate) fn with_restore_signals<R>(
         &mut self,
         func: impl for<'a> FnOnce(&'a mut Self) -> R,

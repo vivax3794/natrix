@@ -379,7 +379,7 @@ impl IntoSimpleSelector for SimpleSelector {
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Class(pub &'static str);
 
-impl<C: crate::reactivity::Component> crate::dom::ToClass<C> for Class {
+impl<C: crate::reactivity::State> crate::dom::ToClass<C> for Class {
     fn calc_class(self, _node: &web_sys::Element) -> crate::dom::classes::ClassResult<C> {
         crate::dom::classes::ClassResult::SetIt(Some(self.0.into()))
     }
@@ -422,7 +422,7 @@ macro_rules! class {
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Id(pub &'static str);
 
-impl<C: crate::reactivity::Component> crate::dom::ToAttribute<C> for Id {
+impl<C: crate::reactivity::State> crate::dom::ToAttribute<C> for Id {
     type AttributeKind = Id;
 
     fn calc_attribute(

@@ -30,17 +30,17 @@ impl Component for HelloWorld {
             .child(e::h1().text(HELLO_TEXT).id(HELLO_ID))
             .child(SubComponent::new(integration_tests_dependency::DepComp))
             .child(e::button().id(PANIC_ID).text("PANIC").on::<events::Click>(
-                |_ctx: E<Self>, _, _| {
+                |_ctx: Ctx<Self>, _, _| {
                     panic!("Panic button clicked!");
                 },
             ))
             .child(
                 e::button()
                     .id(BUTTON_ID)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                         *ctx.counter += 1;
                     })
-                    .text(|ctx: R<Self>| *ctx.counter), // .class(HELLO),
+                    .text(|ctx: RenderCtx<Self>| *ctx.counter), // .class(HELLO),
             )
             .child(e::div().id(RELOAD_ID).text(reload_tests::VALUE))
             .child(

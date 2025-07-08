@@ -17,8 +17,8 @@ impl Component for Counter {
     fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)
-            .child(|ctx: R<Self>| *ctx.value)
-            .on::<events::Click>(|ctx: E<Self>, _, _| *ctx.value += 1)
+            .child(|ctx: RenderCtx<Self>| *ctx.value)
+            .on::<events::Click>(|ctx: Ctx<Self>, _, _| *ctx.value += 1)
     }
 }
 
@@ -47,9 +47,11 @@ impl Component for OnMount {
     type EmitMessage = NoMessages;
     type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
-        e::div().id(BUTTON_ID).text(|ctx: R<Self>| *ctx.value)
+        e::div()
+            .id(BUTTON_ID)
+            .text(|ctx: RenderCtx<Self>| *ctx.value)
     }
-    fn on_mount(ctx: E<Self>, _token: EventToken) {
+    fn on_mount(ctx: Ctx<Self>, _token: EventToken) {
         *ctx.value = 10;
     }
 }

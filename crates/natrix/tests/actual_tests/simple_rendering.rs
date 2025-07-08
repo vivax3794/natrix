@@ -1,46 +1,24 @@
 use natrix::prelude::*;
-use natrix::reactivity::NonReactive;
 use wasm_bindgen_test::*;
 
 wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
 const HELLO_ID: Id = natrix::id!();
 
-#[derive(Component)]
-struct HelloWorld;
-
-impl Component for HelloWorld {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::h1().id(HELLO_ID).text("Hello World!")
-    }
-}
+#[derive(State)]
+struct Empty;
 
 #[wasm_bindgen_test]
 fn renders_fine() {
-    crate::mount_test(HelloWorld);
+    crate::mount_test(Empty, e::h1().id(HELLO_ID).text("Hello World!"));
 
     let element = crate::get(HELLO_ID);
     assert_eq!(element.text_content(), Some("Hello World!".to_owned()));
 }
 
-#[derive(Component)]
-struct Render<T>(T);
-
-impl<T: Element<()> + Clone> Component for Render<T> {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::div()
-            .text(|ctx: R<Self>| NonReactive(ctx.0.clone()))
-            .id(HELLO_ID)
-    }
-}
-
 #[wasm_bindgen_test]
 fn render_option_some() {
-    crate::mount_test(Render(Some("hey")));
+    crate::mount_test(Empty, e::div().id(HELLO_ID).child(Some("hey")));
 
     let element = crate::get(HELLO_ID);
     assert_eq!(element.text_content(), Some("hey".to_owned()));

@@ -2,15 +2,18 @@
 
 use slotmap::{SecondaryMap, SlotMap, new_key_type};
 
-use super::State;
-use crate::Component;
+use super::Ctx;
 use crate::error_handling::log_or_panic;
+use crate::reactivity::State;
 use crate::reactivity::render_callbacks::ReactiveHook;
 
-new_key_type! { pub(crate) struct HookKey; }
+new_key_type! {
+    #[doc(hidden)]
+    pub struct HookKey;
+}
 
 /// A manager for storing hooks
-pub(crate) struct HookStore<T: Component> {
+pub(crate) struct HookStore<T: State> {
     /// The hooks themself
     /// NOTE: The `None` case is for yet to be initialized hooks, *not* for removed hooks.
     hooks: SlotMap<HookKey, Option<Box<dyn ReactiveHook<T>>>>,
@@ -20,7 +23,7 @@ pub(crate) struct HookStore<T: Component> {
     next_insertion_order: u64,
 }
 
-impl<T: Component> HookStore<T> {
+impl<T: State> HookStore<T> {
     /// Create a new hook store
     pub(super) fn new() -> Self {
         Self {
@@ -75,7 +78,7 @@ impl<T: Component> HookStore<T> {
     }
 }
 
-impl<T: Component> State<T> {
+impl<T: State> Ctx<T> {
     /// Remove the hook from the slotmap, runs the function on it, then puts it back.
     ///
     /// This is to allow mut access to both the hook and self, which is required by most hooks.

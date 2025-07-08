@@ -4,9 +4,9 @@ use std::borrow::Cow;
 
 use super::HtmlElement;
 use crate::error_handling::log_or_panic;
-use crate::reactivity::component::Component;
+use crate::reactivity::State;
 use crate::reactivity::render_callbacks::{ReactiveNode, RenderingState};
-use crate::reactivity::state::{RenderCtx, State};
+use crate::reactivity::state::{Ctx, RenderCtx};
 use crate::type_macros;
 
 /// A result of the rendering process.
@@ -35,7 +35,7 @@ impl ElementRenderResult {
 }
 
 /// The result of a `.render` call.
-pub enum MaybeStaticElement<C: Component> {
+pub enum MaybeStaticElement<C: State> {
     /// A already statically rendered element.
     Static(ElementRenderResult),
     /// A html element
@@ -44,11 +44,11 @@ pub enum MaybeStaticElement<C: Component> {
     Dynamic(Box<dyn DynElement<C>>),
 }
 
-impl<C: Component> MaybeStaticElement<C> {
+impl<C: State> MaybeStaticElement<C> {
     /// Convert the element into a `web_sys::Node`.
     pub(crate) fn render(
         self,
-        ctx: &mut State<C>,
+        ctx: &mut Ctx<C>,
         render_state: &mut RenderingState,
     ) -> ElementRenderResult {
         match self {
@@ -71,29 +71,29 @@ impl<C: Component> MaybeStaticElement<C> {
 
 /// A element is anything that can be rendered in the dom.
 /// This is ofc `HtmlElement`, but also strings, numerics, and even closures.
-pub trait Element<C: Component>: 'static {
+pub trait Element<C: State>: 'static {
     /// Convert the element into a `MaybeStaticElement`.
     fn render(self) -> MaybeStaticElement<C>;
 }
 
 /// A dynamic element
-pub(crate) trait DynElement<C: Component> {
+pub(crate) trait DynElement<C: State> {
     /// Render the element.
     fn render(
         self: Box<Self>,
-        ctx: &mut State<C>,
+        ctx: &mut Ctx<C>,
         render_state: &mut RenderingState,
     ) -> ElementRenderResult;
 }
 
-impl<C: Component> Element<C> for web_sys::Node {
+impl<C: State> Element<C> for web_sys::Node {
     #[inline]
     fn render(self) -> MaybeStaticElement<C> {
         MaybeStaticElement::Static(ElementRenderResult::Node(self))
     }
 }
 
-impl<C: Component, T: Element<C>> Element<C> for Option<T> {
+impl<C: State, T: Element<C>> Element<C> for Option<T> {
     #[inline]
     fn render(self) -> MaybeStaticElement<C> {
         match self {
@@ -103,7 +103,7 @@ impl<C: Component, T: Element<C>> Element<C> for Option<T> {
     }
 }
 
-impl<C: Component, T: Element<C>, E: Element<C>> Element<C> for Result<T, E> {
+impl<C: State, T: Element<C>, E: Element<C>> Element<C> for Result<T, E> {
     #[inline]
     fn render(self) -> MaybeStaticElement<C> {
         match self {
@@ -116,7 +116,7 @@ impl<C: Component, T: Element<C>, E: Element<C>> Element<C> for Result<T, E> {
 /// Generate a Element implementation for a type that can be converted to `&str`
 macro_rules! string_element {
     ($t:ty, $cow:expr) => {
-        impl<C: Component> Element<C> for $t {
+        impl<C: State> Element<C> for $t {
             #[inline]
             fn render(self) -> MaybeStaticElement<C> {
                 MaybeStaticElement::Static(ElementRenderResult::Text(($cow)(self)))
@@ -129,7 +129,7 @@ type_macros::strings!(string_element);
 /// Generate a implementation of `Element` for a specific numeric type.
 macro_rules! numeric_element {
     ($T:ident, $fmt:ident, $_name:ident) => {
-        impl<C: Component> Element<C> for $T {
+        impl<C: State> Element<C> for $T {
             #[inline]
             fn render(self) -> MaybeStaticElement<C> {
                 let mut buffer = $fmt::Buffer::new();
@@ -153,7 +153,7 @@ pub(crate) fn generate_fallback_node() -> web_sys::Node {
         .into()
 }
 
-impl<C: Component> Element<C> for MaybeStaticElement<C> {
+impl<C: State> Element<C> for MaybeStaticElement<C> {
     #[inline]
     fn render(self) -> MaybeStaticElement<C> {
         self
@@ -164,11 +164,11 @@ impl<F, C, R> DynElement<C> for F
 where
     F: Fn(&mut RenderCtx<C>) -> R + 'static,
     R: Element<C> + 'static,
-    C: Component,
+    C: State,
 {
     fn render(
         self: Box<Self>,
-        ctx: &mut State<C>,
+        ctx: &mut Ctx<C>,
         render_state: &mut RenderingState,
     ) -> ElementRenderResult {
         let this = *self;
@@ -182,7 +182,7 @@ impl<F, C, R> Element<C> for F
 where
     F: Fn(&mut RenderCtx<C>) -> R + 'static,
     R: Element<C> + 'static,
-    C: Component,
+    C: State,
 {
     #[inline]
     fn render(self) -> MaybeStaticElement<C> {

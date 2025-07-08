@@ -12,7 +12,9 @@ impl<T: ToString + 'static> Component for Generic<T> {
     type EmitMessage = NoMessages;
     type ReceiveMessage = NoMessages;
     fn render() -> impl Element<Self> {
-        e::div().id(ROOT_ID).text(|ctx: R<Self>| ctx.0.to_string())
+        e::div()
+            .id(ROOT_ID)
+            .text(|ctx: RenderCtx<Self>| ctx.0.to_string())
     }
 }
 

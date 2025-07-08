@@ -21,20 +21,23 @@ impl Component for DoubleCounter {
             .child(
                 e::button()
                     .id(BUTTON_1)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                         *ctx.value_one += 1;
                     }),
             )
             .child(
                 e::button()
                     .id(BUTTON_2)
-                    .on::<events::Click>(|ctx: E<Self>, _, _| {
+                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
                         *ctx.value_two += 1;
                     }),
             )
-            .child(|ctx: R<Self>| {
-                (*ctx.value_one >= 2)
-                    .then_some(e::div().id(TEXT).child(|ctx: R<Self>| *ctx.value_two))
+            .child(|ctx: RenderCtx<Self>| {
+                (*ctx.value_one >= 2).then_some(
+                    e::div()
+                        .id(TEXT)
+                        .child(|ctx: RenderCtx<Self>| *ctx.value_two),
+                )
             })
     }
 }

@@ -3,12 +3,12 @@
 use std::borrow::Cow;
 
 use super::html_elements::DeferredFunc;
-use crate::reactivity::Component;
+use crate::reactivity::State;
 use crate::reactivity::render_callbacks::{ReactiveClass, SimpleReactive, SimpleReactiveResult};
 use crate::reactivity::state::RenderCtx;
 
 /// The result of applying a class
-pub(crate) enum ClassResult<C: Component> {
+pub(crate) enum ClassResult<C: State> {
     /// The class should be applied immedtialy
     SetIt(Option<Cow<'static, str>>),
     /// The class needs access to state
@@ -16,12 +16,12 @@ pub(crate) enum ClassResult<C: Component> {
 }
 
 /// A trait for converting a value to a class name
-pub trait ToClass<C: Component> {
+pub trait ToClass<C: State> {
     /// Convert the value to a class name
     fn calc_class(self, node: &web_sys::Element) -> ClassResult<C>;
 }
 
-impl<C: Component, T: ToClass<C>> ToClass<C> for Option<T> {
+impl<C: State, T: ToClass<C>> ToClass<C> for Option<T> {
     fn calc_class(self, node: &web_sys::Element) -> ClassResult<C> {
         if let Some(inner) = self {
             inner.calc_class(node)
@@ -31,7 +31,7 @@ impl<C: Component, T: ToClass<C>> ToClass<C> for Option<T> {
     }
 }
 
-impl<C: Component, T: ToClass<C>, E: ToClass<C>> ToClass<C> for Result<T, E> {
+impl<C: State, T: ToClass<C>, E: ToClass<C>> ToClass<C> for Result<T, E> {
     fn calc_class(self, node: &web_sys::Element) -> ClassResult<C> {
         match self {
             Ok(inner) => inner.calc_class(node),
@@ -44,7 +44,7 @@ impl<F, C, R> ToClass<C> for F
 where
     F: Fn(&mut RenderCtx<C>) -> R + 'static,
     R: ToClass<C> + 'static,
-    C: Component,
+    C: State,
 {
     fn calc_class(self, node: &web_sys::Element) -> ClassResult<C> {
         let node = node.clone();

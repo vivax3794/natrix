@@ -2,8 +2,8 @@
 
 extern crate proc_macro;
 
-mod component_impl;
 mod formatting;
+mod state;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
@@ -23,22 +23,11 @@ pub fn format_elements(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     formatting::format_elements(input)
 }
 
-/// Derive the `ComponentBase` trait for a struct, required for implementing `Component`
-///
-/// ```ignore
-/// #[derive(Component)]
-/// struct HelloWorld;
-///
-/// impl Component for HelloWorld {
-///     fn render() -> impl Element<Self::Data> {
-///         e::h1().text("Hello World")
-///     }
-/// }
-/// ```
-#[proc_macro_derive(Component)]
-pub fn component_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+/// Derive the `State` trait for a struct
+#[proc_macro_derive(State)]
+pub fn state_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let item = syn::parse_macro_input!(item as syn::ItemStruct);
-    let result = component_impl::component_derive_implementation(item);
+    let result = state::state_derive_implementation(item);
     result.into()
 }
 

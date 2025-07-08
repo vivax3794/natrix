@@ -17,14 +17,14 @@ impl Component for Counter {
     fn render() -> impl Element<Self> {
         e::button()
             .id(BUTTON_ID)
-            .text(|ctx: R<Self>| *ctx.value)
-            .on::<events::Click>(|ctx: E<Self>, token, _| {
+            .text(|ctx: RenderCtx<Self>| *ctx.value)
+            .on::<events::Click>(|ctx: Ctx<Self>, token, _| {
                 *ctx.value += 1;
                 ctx.emit(*ctx.value, token);
             })
     }
 
-    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage, token: EventToken) {
+    fn handle_message(ctx: Ctx<Self>, msg: Self::ReceiveMessage, token: EventToken) {
         *ctx.value += msg;
         ctx.emit(*ctx.value, token);
     }
@@ -48,21 +48,25 @@ impl Component for RootOne {
         let sender_clone = sender.clone();
 
         e::div()
-            .child(child.on(|ctx: E<Self>, amount, _| {
+            .child(child.on(|ctx: Ctx<Self>, amount, _| {
                 *ctx.double = amount * 2;
             }))
-            .child(e::div().id(DOUBLE_ID).text(|ctx: R<Self>| *ctx.double))
+            .child(
+                e::div()
+                    .id(DOUBLE_ID)
+                    .text(|ctx: RenderCtx<Self>| *ctx.double),
+            )
             .child(
                 e::button()
                     .id(ADD_ID)
-                    .on::<events::Click>(move |_ctx: E<Self>, token, _| {
+                    .on::<events::Click>(move |_ctx: Ctx<Self>, token, _| {
                         sender.send(10, token);
                     }),
             )
             .child(
                 e::button()
                     .id(PARENT_ADD_ID)
-                    .on::<events::Click>(|ctx: E<Self>, token, _| {
+                    .on::<events::Click>(|ctx: Ctx<Self>, token, _| {
                         *ctx.double += 10;
                     }),
             )
@@ -143,10 +147,12 @@ impl Component for ChildTwo {
     type EmitMessage = NoMessages;
     type ReceiveMessage = u8;
     fn render() -> impl Element<Self> {
-        e::div().id(BUTTON_ID).text(|ctx: R<Self>| *ctx.value)
+        e::div()
+            .id(BUTTON_ID)
+            .text(|ctx: RenderCtx<Self>| *ctx.value)
     }
 
-    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage, _token: EventToken) {
+    fn handle_message(ctx: Ctx<Self>, msg: Self::ReceiveMessage, _token: EventToken) {
         *ctx.value = msg;
     }
 }
@@ -165,10 +171,12 @@ impl Component for RecursiveChild {
     type ReceiveMessage = u8;
 
     fn render() -> impl Element<Self> {
-        e::button().id(RC_CHILD_ID).text(|ctx: R<Self>| *ctx.value)
+        e::button()
+            .id(RC_CHILD_ID)
+            .text(|ctx: RenderCtx<Self>| *ctx.value)
     }
 
-    fn handle_message(ctx: E<Self>, msg: Self::ReceiveMessage, token: EventToken) {
+    fn handle_message(ctx: Ctx<Self>, msg: Self::ReceiveMessage, token: EventToken) {
         *ctx.value = msg;
         ctx.emit(msg, token);
     }
@@ -190,15 +198,19 @@ impl Component for RootRecursive {
         let child_sender = child.sender();
 
         e::div()
-            .child(child.on(move |ctx: E<Self>, msg, token| {
+            .child(child.on(move |ctx: Ctx<Self>, msg, token| {
                 *ctx.last = msg;
                 if msg < *ctx.max_rounds {
                     child_sender.send(msg + 1, token);
                 }
             }))
-            .child(e::div().id(RESULT_ID).text(|ctx: R<Self>| *ctx.last))
+            .child(
+                e::div()
+                    .id(RESULT_ID)
+                    .text(|ctx: RenderCtx<Self>| *ctx.last),
+            )
             .child(e::button().id(START_ID).text("Start").on::<events::Click>(
-                move |_ctx: E<Self>, token, _| {
+                move |_ctx: Ctx<Self>, token, _| {
                     sender.send(1, token);
                 },
             ))
