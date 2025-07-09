@@ -9,6 +9,7 @@ pub mod async_utils;
 pub mod css;
 pub mod dom;
 mod error_handling;
+pub mod lens;
 pub mod panics;
 pub mod reactivity;
 pub mod test_utils;
@@ -16,6 +17,7 @@ mod type_macros;
 
 pub use wasm_bindgen::intern;
 
+// TODO: Create a custom set of lints for natrix: https://github.com/trailofbits/dylint
 // TODO: Create a `natrix_unsafe` crate to encapsulate unsafe micro-optimizations.
 
 thread_local! {
@@ -71,6 +73,7 @@ pub mod prelude {
         IntoFinalizedSelector,
     };
     pub use super::dom::{Element, events, html_elements as e};
+    pub use super::lens::Lens;
     pub use super::reactivity::State;
     pub use super::reactivity::signal::Signal;
     pub use super::reactivity::state::{Ctx, RenderCtx};
@@ -90,6 +93,5 @@ pub mod macro_ref {
 
     pub use super::css;
     pub use super::dom::element::Element;
-    pub use super::reactivity::signal::{Signal, SignalState};
-    pub use super::reactivity::state::{Ctx, HookKey, State};
+    pub use super::reactivity::state::{HookKey, State};
 }

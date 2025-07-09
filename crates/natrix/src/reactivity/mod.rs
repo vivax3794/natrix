@@ -9,7 +9,7 @@ pub mod render_callbacks;
 pub mod signal;
 pub mod state;
 
-pub use state::{Ctx, EventToken, State};
+pub use state::{Ctx, EventToken, RenderCtx, State};
 
 /// for keeping specific objects alive in memory such as `Closure` and `Rc`
 pub(crate) type KeepAlive = Box<dyn std::any::Any>;

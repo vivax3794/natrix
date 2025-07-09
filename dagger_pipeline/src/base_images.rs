@@ -162,7 +162,7 @@ fn chrome(client: &Query, container: &Container) -> Container {
         .with_exec(vec!["ln", "-s", "/opt/chrome/chrome", "/bin/chrome"])
 }
 
-/// Install a tool with bininstall and return a bin folder
+/// Install a tool with binstall and return a bin folder
 // TODO: Lock version and specify hashes using a "CI Lockfile"
 pub fn binstall(client: &Query, tool: &'static str) -> Directory {
     rust(client)

@@ -31,15 +31,6 @@ pub struct Signal<T> {
     deps: IndexSet<HookKey>,
 }
 
-/// The `written` and `read` flags of a signal extracted
-#[derive(Copy, Clone)]
-pub struct SignalState {
-    /// Was the signal written to
-    written: bool,
-    /// Was the signal read
-    read: bool,
-}
-
 impl<T: std::fmt::Debug> std::fmt::Debug for Signal<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         (**self).fmt(f)
