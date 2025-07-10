@@ -1,296 +1,248 @@
 //! Implementation of guards
-#![cfg(false)] // TODO: Re-implement guards using Lens
 
-pub use super::{Ctx, RenderCtx};
+use std::marker::PhantomData;
 
-// MAYBE: Can we somehow abstract over immutable vs mutable getters in a way that lets a user write
-// a provably pure getter that works for both?
-
-/// Get a guard handle that can be used to retrieve the `Some` variant of a option without having to
-/// use `.unwrap`.
-/// Should be used to achieve find-grained reactivity (internally this uses `.watch` on `.is_some()`)
-///
-/// # Why?
-/// The usecase can be seen by considering this logic:
-/// ```rust
-/// # use natrix::prelude::*;
-/// # #[derive(State)]
-/// # struct MyState {value: Option<u32>}
-/// # impl State for MyState {
-/// # type EmitMessage = NoMessages;
-/// # type ReceiveMessage = NoMessages;
-/// # fn render() -> impl Element<Self> {
-/// # |ctx: R<Self>| {
-/// if let Some(value) = *ctx.value {
-///     e::div().text(value)
-/// } else {
-///     e::div().text("Is none")
-/// }
-/// # }}}
-/// ```
-/// The issue here is that the outer div (which might be a more expensive structure to create) is
-/// recreated everytime `value` changes, even if it is `Some(0) -> Some(1)`
-/// This is where you might reach for `ctx.watch`, and in fact that works perfectly:
-/// ```rust
-/// # use natrix::prelude::*;
-/// # #[derive(State)]
-/// # struct MyState {value: Option<u32>}
-/// # impl State for MyState {
-/// # type EmitMessage = NoMessages;
-/// # type ReceiveMessage = NoMessages;
-/// # fn render() -> impl Element<Self> {
-/// # |ctx: R<Self>| {
-/// if ctx.watch(|ctx| ctx.value.is_some()) {
-///     e::div().text(|ctx: R<Self>| ctx.value.unwrap())
-/// } else {
-///     e::div().text("Is none")
-/// }
-/// # }}}
-/// ```
-/// And this works, Now a change from `Some(0)` to `Some(1)` will only run the inner closure and
-/// the outer div is reused. but there is one downside, we need `.unwrap` because the inner closure is
-/// technically isolated, and this is ugly, and its easy to do by accident. and you might forget
-/// the outer condition.
-///
-/// This is where guards come into play:
-/// ```rust
-/// # use natrix::prelude::*;
-/// # use natrix::guard_option;
-/// # #[derive(State)]
-/// # struct MyState {value: Option<u32>}
-/// # impl State for MyState {
-/// # type EmitMessage = NoMessages;
-/// # type ReceiveMessage = NoMessages;
-/// # fn render() -> impl Element<Self> {
-/// # |ctx: R<Self>| {
-/// if let Some(value_guard) = guard_option!(|ctx| ctx.value.as_ref()) {
-///     e::div().text(move |ctx: R<Self>| *ctx.get(&value_guard))
-/// } else {
-///     e::div().text("Is none")
-/// }
-/// # }}}
-/// ```
-/// Here `value_guard` is actually not the value at all, its a lightweight value thats can be
-/// captured by child closures and basically is a way to say "I know that in this context this
-/// value is `Some`"
-///
-/// Internally this uses `ctx.watch` and `.unwrap` (which should never fail)
-///
-/// ## Mutable returns
-/// If you want to return a mutable reference to the value you can use the `@mut` version:
-/// ```rust
-/// # use natrix::prelude::*;
-/// # use natrix::guard_option;
-/// # #[derive(State)]
-/// # struct MyState {value: Option<u32>}
-/// # impl State for MyState {
-/// # type EmitMessage = NoMessages;
-/// # type ReceiveMessage = NoMessages;
-/// # fn render() -> impl Element<Self> {
-/// # |ctx: R<Self>| {
-/// if let Some(value_guard) = guard_option!(@mut |ctx| ctx.value.as_mut()) {
-///   e::button().on::<events::Click>(move |ctx: E<Self>, _, _| {
-///     *ctx.get_mut(&value_guard) += 1;
-///   }).generic()
-/// } else {
-///   e::div().text("Is none").generic()
-/// }
-/// # }}}
-/// ```
-///
-/// You can also use a mutable guard in reactive closures via `get_downgrade`
-/// ```rust
-/// # use natrix::prelude::*;
-/// # use natrix::guard_option;
-/// # #[derive(State)]
-/// # struct MyState {value: Option<u32>}
-/// # impl State for MyState {
-/// # type EmitMessage = NoMessages;
-/// # type ReceiveMessage = NoMessages;
-/// # fn render() -> impl Element<Self> {
-/// # |ctx: R<Self>| {
-/// if let Some(value_guard) = guard_option!(@mut |ctx| ctx.value.as_mut()) {
-///   e::button()
-///     .text(move |ctx: R<Self>| *ctx.get_downgrade(&value_guard))
-///     .on::<events::Click>(move |ctx: E<Self>, _, _| {
-///       *ctx.get_mut(&value_guard) += 1;
-///     })
-///     .generic()
-/// } else {
-///   e::div().text("Is none").generic()
-/// }
-/// # }}}
-/// ```
-///
-/// **IMPORTANT**: Even tho the guard closure takes a mutable reference, you should not mutate it.
-/// Instead it should be only be used to get a `&mut ...` to value you want.
-///
-/// ## Owned returns
-/// By default this macro assumes the return value is `&T`, but if you want to return an owned
-/// value you can use the `@owned` version:
-/// ```rust
-/// # use natrix::prelude::*;
-/// # use natrix::guard_option;
-/// # #[derive(State)]
-/// # struct MyState {value: Option<u32>}
-/// # impl State for MyState {
-/// # type EmitMessage = NoMessages;
-/// # type ReceiveMessage = NoMessages;
-/// # fn render() -> impl Element<Self> {
-/// # |ctx: R<Self>| {
-/// if let Some(value_guard) = guard_option!(@owned |ctx| ctx.value) {
-///    e::div().text(move |ctx: R<Self>| ctx.get_owned(&value_guard))
-/// } else {
-///    e::div().text("Is none")
-/// }
-/// # }}}
-/// ```
-#[macro_export]
-macro_rules! guard_option {
-    (| $ctx:ident | $expr:expr) => {
-        if $ctx.watch(move |$ctx| $expr.is_some()) {
-            Some($crate::macro_ref::Guard::new::<Self, _>(move |$ctx| {
-                $expr.expect("Guard used on None value")
-            }))
-        } else {
-            None
-        }
-    };
-    (@mut | $ctx:ident | $expr:expr) => {
-        if $ctx.watch_mut(move |$ctx| $expr.is_some()) {
-            Some($crate::macro_ref::Guard::new_mut::<Self, _>(move |$ctx| {
-                $expr.expect("Guard used on None value")
-            }))
-        } else {
-            None
-        }
-    };
-    (@owned | $ctx:ident | $expr:expr) => {
-        if $ctx.watch(move |$ctx| $expr.is_some()) {
-            Some($crate::macro_ref::Guard::new_owned::<Self, _>(
-                move |$ctx| $expr.expect("Guard used on None value"),
-            ))
-        } else {
-            None
-        }
-    };
-}
-
-/// Get a guard handle that can be used to retrieve the `Ok` variant of a option without having to
-/// use `.unwrap`, or the `Err` variant.
-#[macro_export]
-macro_rules! guard_result {
-    (| $ctx:ident | $expr:expr) => {
-        if $ctx.watch(move |$ctx| $expr.is_ok()) {
-            Ok($crate::macro_ref::Guard::new::<Self, _>(move |$ctx| {
-                $expr.expect("Guard used on Err value")
-            }))
-        } else {
-            Err($crate::macro_ref::Guard::new::<Self, _>(move |$ctx| {
-                $expr.expect_err("Guard used on Ok value")
-            }))
-        }
-    };
-    (@mut | $ctx:ident | $expr:expr) => {
-        if $ctx.watch_mut(move |$ctx| $expr.is_ok()) {
-            Ok($crate::macro_ref::Guard::new_mut::<Self, _>(move |$ctx| {
-                $expr.expect("Guard used on Err value")
-            }))
-        } else {
-            Err($crate::macro_ref::Guard::new_mut::<Self, _>(move |$ctx| {
-                $expr.expect_err("Guard used on Ok value")
-            }))
-        }
-    };
-    (@owned | $ctx:ident | $expr:expr) => {
-        if $ctx.watch(move |$ctx| $expr.is_ok()) {
-            Ok($crate::macro_ref::Guard::new_owned::<Self, _>(
-                move |$ctx| $expr.expect("Guard used on Err value"),
-            ))
-        } else {
-            Err($crate::macro_ref::Guard::new_owned::<Self, _>(
-                move |$ctx| $expr.expect_err("Guard used on Ok value"),
-            ))
-        }
-    };
-}
-/// This guard ensures that when it is in scope the data it was created for is `Some`
-#[cfg_attr(feature = "nightly", must_not_suspend)]
-#[derive(Clone, Copy)]
-#[must_use]
-pub struct Guard<F> {
-    /// The closure for getting the value from a ctx
-    getter: F,
-}
-
-impl<F> Guard<F> {
-    #[doc(hidden)]
-    #[inline]
-    pub fn new<C, R>(getter: F) -> Self
-    where
-        F: for<'a> Fn(&'a Ctx<C>) -> &'a R,
-        C: State,
-    {
-        Self { getter }
-    }
-
-    #[doc(hidden)]
-    #[inline]
-    pub fn new_mut<C, R>(getter: F) -> Self
-    where
-        F: for<'a> Fn(&'a mut Ctx<C>) -> &'a mut R,
-        C: State,
-    {
-        Self { getter }
-    }
-
-    #[doc(hidden)]
-    #[inline]
-    pub fn new_owned<C, R>(getter: F) -> Self
-    where
-        F: Fn(&Ctx<C>) -> R,
-        C: State,
-    {
-        Self { getter }
-    }
-}
-
-impl<T: State> Ctx<T> {
-    /// Get the unwrapped data referenced by this guard
-    #[inline]
-    pub fn get<'s, F, R>(&'s self, guard: &Guard<F>) -> &'s R
-    where
-        F: Fn(&'s Self) -> &'s R,
-    {
-        (guard.getter)(self)
-    }
-
-    /// Get the unwrapped data referenced by this guard, but owned
-    #[inline]
-    pub fn get_owned<F, R>(&self, guard: &Guard<F>) -> R
-    where
-        F: Fn(&Self) -> R,
-    {
-        (guard.getter)(self)
-    }
-
-    /// Get the unwrapped data referenced by this guard, but mut
-    #[inline]
-    pub fn get_mut<'s, F, R>(&'s mut self, guard: &Guard<F>) -> &'s mut R
-    where
-        F: Fn(&'s mut Self) -> &'s mut R,
-    {
-        (guard.getter)(self)
-    }
-}
+use super::{RenderCtx, State};
+use crate::lens::{self, Lens, LensInner};
 
 impl<C: State> RenderCtx<'_, C> {
-    /// Get a readonly reference from a mut guard
-    #[inline]
-    pub fn get_downgrade<F, R>(&mut self, guard: &Guard<F>) -> &R
+    /// Get a guard lens that can be used to retrieve the `Some` variant of a option without having to
+    /// use `.unwrap`.
+    /// Should be used to achieve find-grained reactivity (internally this uses `.watch` on `.is_some()`)
+    ///
+    /// # Why?
+    /// The usecase can be seen by considering this logic:
+    /// ```rust
+    /// # use natrix::prelude::*;
+    /// # #[derive(State)]
+    /// # struct App {value: Signal<Option<u32>>}
+    /// # fn render() -> impl Element<App> {
+    /// # |ctx: &mut RenderCtx<App>| {
+    /// if let Some(value) = *ctx.value {
+    ///     e::div().text(value)
+    /// } else {
+    ///     e::div().text("Is none")
+    /// }
+    /// # }}
+    /// ```
+    /// The issue here is that the outer div (which might be a more expensive structure to create) is
+    /// recreated everytime `value` changes, even if it is `Some(0) -> Some(1)`
+    /// This is where you might reach for `ctx.watch`, and in fact that works perfectly:
+    /// ```rust
+    /// # use natrix::prelude::*;
+    /// # #[derive(State)]
+    /// # struct App {value: Signal<Option<u32>>}
+    /// # fn render() -> impl Element<App> {
+    /// # |ctx: &mut RenderCtx<App>| {
+    /// if ctx.watch(|ctx| ctx.value.is_some()) {
+    ///     e::div().text(|ctx: &mut RenderCtx<App>| ctx.value.unwrap())
+    /// } else {
+    ///     e::div().text("Is none")
+    /// }
+    /// # }}
+    /// ```
+    /// And this works, Now a change from `Some(0)` to `Some(1)` will only run the inner closure and
+    /// the outer div is reused. but there is one downside, we need `.unwrap` because the inner closure is
+    /// technically isolated, and this is ugly, and its easy to do by accident. and you might forget
+    /// the outer condition.
+    ///
+    /// This is where guards come into play:
+    /// ```rust
+    /// # use natrix::prelude::*;
+    /// # #[derive(State)]
+    /// # struct App {value: Signal<Option<u32>>}
+    /// # fn render() -> impl Element<App> {
+    /// # |ctx: &mut RenderCtx<App>| {
+    /// if let Some(value_guard) = ctx.guard(lens!(App => .value).deref()) {
+    ///     e::div().text(move |ctx: R<Self>| *ctx.get(value_guard))
+    /// } else {
+    ///     e::div().text("Is none")
+    /// }
+    /// # }}
+    /// ```
+    /// Here `value_guard` is actually not the value at all, its a lightweight value thats can be
+    /// captured by child closures and basically is a way to say "I know that in this context this
+    /// value is `Some`"
+    ///
+    /// Internally this uses `ctx.watch` and `.unwrap` (which should never fail)
+    /// Guard also functions on `Result`
+    pub fn guard<L, G>(&mut self, lens: L) -> G::Output<L>
     where
-        F: Fn(&mut Ctx<C>) -> &mut R,
+        L: Lens<C, G> + Clone,
+        G: Guardable<C>,
     {
-        (guard.getter)(self.ctx)
+        let check_lens = lens.clone();
+        let check = self.watch(move |ctx| ctx.get(check_lens.clone()).check());
+        G::into_lens(check, lens)
+    }
+}
+
+/// A type that is guardable.
+/// This generally means types such as `Option` and `Result`
+pub trait Guardable<S>: Sized {
+    /// The result of guarding this value.
+    /// The generic is the source lens
+    type Output<L: Lens<S, Self>>;
+
+    /// The output of the `ctx.watch` call, this should indicate the variant we have
+    type WatchState: PartialEq + Clone + 'static;
+
+    /// The function that will be called in `ctx.watch`
+    fn check(&self) -> Self::WatchState;
+
+    /// Construct yourself wrapping a lens that will grab the corresponding variant data in a
+    /// paniciky way
+    fn into_lens<L>(check_result: Self::WatchState, to_you: L) -> Self::Output<L>
+    where
+        L: Lens<S, Self>;
+}
+
+/// A lens that calls `.unwrap` on a option value.
+///
+/// This lens is designed to be created by the `Guardable` trait, which ensures
+/// it is only used when the `Option` is `Some`, preventing panics.
+pub struct OptionLens<T>(PhantomData<T>);
+
+impl<T> OptionLens<T> {
+    /// Create a new one
+    #[must_use]
+    fn new() -> Self {
+        Self(PhantomData)
+    }
+}
+impl<T> Clone for OptionLens<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T> Copy for OptionLens<T> {}
+
+impl<T: 'static> LensInner for OptionLens<Option<T>> {
+    type Source = Option<T>;
+    type Target = T;
+
+    #[expect(clippy::expect_used, reason = "Only constructable by guard")]
+    fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
+        source.as_mut().expect("OptionLens used on `None`")
+    }
+}
+
+impl<S, T> Guardable<S> for Option<T>
+where
+    T: 'static,
+{
+    type Output<L: Lens<S, Self>> = Option<lens::Chain<L, OptionLens<Self>>>;
+    type WatchState = bool;
+
+    fn check(&self) -> Self::WatchState {
+        self.is_some()
+    }
+
+    fn into_lens<L>(check_result: Self::WatchState, to_you: L) -> Self::Output<L>
+    where
+        L: Lens<S, Self>,
+    {
+        if check_result {
+            Some(to_you.then(OptionLens::new()))
+        } else {
+            None
+        }
+    }
+}
+
+/// A lens that calls `.unwrap()` on a `Result` to access the `Ok` value.
+///
+/// This lens is designed to be created by the `Guardable` trait, which ensures
+/// it is only used when the `Result` is `Ok`, preventing panics.
+#[derive(Debug)]
+pub struct OkLens<R>(PhantomData<R>);
+
+impl<R> OkLens<R> {
+    /// Creates a new `OkLens`.
+    #[must_use]
+    fn new() -> Self {
+        Self(PhantomData)
+    }
+}
+impl<T> Clone for OkLens<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T> Copy for OkLens<T> {}
+
+impl<T, E> LensInner for OkLens<Result<T, E>>
+where
+    T: 'static,
+    E: 'static,
+{
+    type Source = Result<T, E>;
+    type Target = T;
+
+    #[expect(clippy::expect_used, reason = "Only constructable by guard")]
+    fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
+        // This is safe because the `Guardable` implementation only creates
+        // this lens when the source is `Ok`.
+        source.as_mut().ok().expect("OkLens used on `Err`")
+    }
+}
+
+/// A lens that calls `.unwrap_err()` on a `Result` to access the `Err` value.
+///
+/// This lens is designed to be created by the `Guardable` trait, which ensures
+/// it is only used when the `Result` is `Err`, preventing panics.
+#[derive(Debug)]
+pub struct ErrLens<R>(PhantomData<R>);
+
+impl<R> ErrLens<R> {
+    /// Creates a new `ErrLens`.
+    #[must_use]
+    fn new() -> Self {
+        Self(PhantomData)
+    }
+}
+impl<T> Clone for ErrLens<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T> Copy for ErrLens<T> {}
+
+impl<T, E> LensInner for ErrLens<Result<T, E>>
+where
+    T: 'static,
+    E: 'static,
+{
+    type Source = Result<T, E>;
+    type Target = E;
+
+    #[expect(clippy::expect_used, reason = "Only constructable by guard")]
+    fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
+        source.as_mut().err().expect("ErrLens used on `Ok`")
+    }
+}
+
+impl<S, T, E> Guardable<S> for Result<T, E>
+where
+    T: 'static,
+    E: 'static,
+{
+    type Output<L: Lens<S, Self>> =
+        Result<lens::Chain<L, OkLens<Self>>, lens::Chain<L, ErrLens<Self>>>;
+    type WatchState = bool;
+
+    fn check(&self) -> Self::WatchState {
+        self.is_ok()
+    }
+
+    fn into_lens<L>(check_result: Self::WatchState, to_you: L) -> Self::Output<L>
+    where
+        L: Lens<S, Self>,
+    {
+        if check_result {
+            Ok(to_you.then(OkLens::new()))
+        } else {
+            Err(to_you.then(ErrLens::new()))
+        }
     }
 }

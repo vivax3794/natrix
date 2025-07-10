@@ -9,6 +9,10 @@ use super::{Ctx, HookKey};
 use crate::error_handling::log_or_panic;
 use crate::reactivity::render_callbacks::UpdateResult;
 
+/// The type of iterator we use for the hook collection
+#[doc(hidden)]
+pub type HookDepListIter = indexmap::set::IntoIter<HookKey>;
+
 /// Store some data but use `O` for its `Ord` implementation
 #[derive(Debug)]
 struct OrderAssociatedData<T, O> {
@@ -39,7 +43,7 @@ impl<T, O: Ord> Ord for OrderAssociatedData<T, O> {
 /// The queue processor of the queue
 struct HookQueue {
     /// All changed vectors
-    vectors: Vec<indexmap::set::IntoIter<HookKey>>,
+    vectors: Vec<HookDepListIter>,
     /// The queue of the next item in each vector
     queue: BinaryHeap<OrderAssociatedData<(HookKey, usize), Reverse<u64>>>,
     /// A temporary next item
@@ -51,7 +55,7 @@ struct HookQueue {
 /// Iterate over `iter` until it finds a key in `insertion_orders`
 fn get_next_valid(
     insertion_orders: &SecondaryMap<HookKey, u64>,
-    iter: &mut indexmap::set::IntoIter<HookKey>,
+    iter: &mut HookDepListIter,
 ) -> Option<(HookKey, u64)> {
     for hook in iter.by_ref() {
         if let Some(&order) = insertion_orders.get(hook) {
@@ -65,7 +69,7 @@ impl HookQueue {
     /// Create a new queue
     fn new(
         insertion_orders: &SecondaryMap<HookKey, u64>,
-        mut vectors: Vec<indexmap::set::IntoIter<HookKey>>,
+        mut vectors: Vec<HookDepListIter>,
     ) -> Self {
         let mut queue = BinaryHeap::with_capacity(vectors.len());
 
@@ -140,30 +144,36 @@ impl HookQueue {
     }
 }
 
-// PERF: the Full loop over signals to check which changed is a concern.
-// In theory we could have signals hold a `Weak<RefCell<Vec<...>>>`, but having per-signal
-// Borrows is exactly what we want to avoid, and would defeat a lot of performance benefits we
-// have.
-// We could use a threading-queue? I wonder if there are any single-threaded mpsc queues.
-
 /// Trait automatically implemented on reactive structs by the derive macro.
+/// INVARIANT: On `DerefMut` `read` must also be set.
 #[doc(hidden)]
 pub trait State: Sized + 'static {
+    type SignalState;
+
     /// If you were read register this as a dependency
     /// Also should clear your read flag
     #[doc(hidden)]
     fn reg_dep(&mut self, dep: HookKey);
+
     /// Return a Vector of dependency lists from changed sources.
     /// Should also clear both flags.
-    fn dirty_deps_lists(&mut self) -> impl Iterator<Item = indexmap::set::IntoIter<HookKey>>;
-    // TODO: Method to set the state value with a `Self`.
+    #[doc(hidden)]
+    fn dirty_deps_lists(&mut self, collector: &mut Vec<indexmap::set::IntoIter<HookKey>>);
+
+    /// Pop the current signal state
+    #[doc(hidden)]
+    fn pop_state(&mut self) -> Self::SignalState;
+    /// Set the curfrent signal state
+    #[doc(hidden)]
+    fn set_state(&mut self, state: Self::SignalState);
 }
 
 impl State for () {
+    type SignalState = ();
     fn reg_dep(&mut self, _dep: HookKey) {}
-    fn dirty_deps_lists(&mut self) -> impl Iterator<Item = indexmap::set::IntoIter<HookKey>> {
-        std::iter::empty()
-    }
+    fn dirty_deps_lists(&mut self, _collector: &mut Vec<HookDepListIter>) {}
+    fn pop_state(&mut self) -> Self::SignalState {}
+    fn set_state(&mut self, _state: Self::SignalState) {}
 }
 
 impl<T: State> Ctx<T> {
@@ -172,7 +182,8 @@ impl<T: State> Ctx<T> {
     fn update(&mut self) {
         log::trace!("Performing update cycle for {}", std::any::type_name::<T>());
 
-        let dep_lists: Vec<_> = self.data.dirty_deps_lists().collect();
+        let mut dep_lists = Vec::new();
+        self.data.dirty_deps_lists(&mut dep_lists);
 
         log::trace!("{} signals changed", dep_lists.len());
         let mut hook_queue = HookQueue::new(&self.hooks.insertion_order, dep_lists);
@@ -218,14 +229,13 @@ impl<T: State> Ctx<T> {
     // PERF: This causes 2 loops of all signals, and then the end of the reactive scope is a extra
     // one.
     // I.e using `ctx.watch` makes the hook 4X more expensive to compute. (Pop, Check, Set, Check)
-    #[cfg(false)]
-    pub(crate) fn with_restore_signals<R>(
+    pub(crate) fn with_scoped_signals<R>(
         &mut self,
         func: impl for<'a> FnOnce(&'a mut Self) -> R,
     ) -> R {
-        let state = self.data.pop_signals();
+        let state = self.data.pop_state();
         let result = func(self);
-        self.data.set_signals(state);
+        self.data.set_state(state);
         result
     }
 }

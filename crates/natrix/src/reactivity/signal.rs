@@ -7,22 +7,15 @@ use indexmap::IndexSet;
 
 use crate::error_handling::{do_performance_check, performance_lint};
 use crate::prelude::State;
-use crate::reactivity::state::HookKey;
-
-pub struct SignalState {
-    written: bool,
-    read: bool,
-}
+use crate::reactivity::state::{HookDepListIter, HookKey};
 
 /// A signal tracks reads and writes to a value, as well as dependencies.
 pub struct Signal<T> {
     /// The data to be tracked.
     data: T,
-    /// The flag for whether this signal has been written to
-    written: bool,
-    /// The flag for whether this signal has been read
+    /// The flag for whether this signal has been read or written to.
     /// this is a `Cell` to allow for modification in `Deref`
-    read: Cell<bool>,
+    touched: Cell<bool>,
     /// A collection of the dependencies.
     deps: IndexSet<HookKey>,
 }
@@ -38,16 +31,17 @@ impl<T> Signal<T> {
     pub fn new(data: T) -> Self {
         Self {
             data,
-            written: false,
-            read: Cell::new(false),
+            touched: Cell::new(false),
             deps: IndexSet::new(),
         }
     }
 }
 
 impl<T: 'static> State for Signal<T> {
+    type SignalState = bool;
+
     fn reg_dep(&mut self, dep: HookKey) {
-        if self.read.take() {
+        if self.touched.take() {
             self.deps.insert(dep);
         }
 
@@ -58,16 +52,19 @@ impl<T: 'static> State for Signal<T> {
         }
     }
 
-    fn dirty_deps_lists(&mut self) -> impl Iterator<Item = indexmap::set::IntoIter<HookKey>> {
-        if self.written {
-            self.written = false;
+    fn dirty_deps_lists(&mut self, collector: &mut Vec<HookDepListIter>) {
+        if self.touched.take() {
             let mut new = IndexSet::with_capacity(self.deps.len());
             std::mem::swap(&mut new, &mut self.deps);
-            Some(new.into_iter())
-        } else {
-            None
+            collector.push(new.into_iter());
         }
-        .into_iter()
+    }
+
+    fn pop_state(&mut self) -> Self::SignalState {
+        self.touched.take()
+    }
+    fn set_state(&mut self, dirty: Self::SignalState) {
+        self.touched.set(dirty);
     }
 }
 
@@ -76,14 +73,14 @@ impl<T> Deref for Signal<T> {
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        self.read.set(true);
+        self.touched.set(true);
         &self.data
     }
 }
 impl<T> DerefMut for Signal<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.written = true;
+        self.touched.set(true);
         &mut self.data
     }
 }
@@ -105,7 +102,7 @@ mod tests {
     fn reading() {
         let foo = &Holder(Signal::new(10));
         assert_eq!(*foo.0, 10);
-        assert!(foo.0.read.get());
+        assert!(foo.0.touched.get());
     }
 
     #[test]
@@ -124,6 +121,6 @@ mod tests {
 
         assert_eq!(format!("{:?}", foo.0), format!("{data:?}"));
 
-        assert!(foo.0.read.get());
+        assert!(foo.0.touched.get());
     }
 }

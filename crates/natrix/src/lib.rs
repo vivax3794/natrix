@@ -73,7 +73,8 @@ pub mod prelude {
         IntoFinalizedSelector,
     };
     pub use super::dom::{Element, events, html_elements as e};
-    pub use super::lens::Lens;
+    pub use super::lens;
+    pub use super::lens::{Lens, LensInner};
     pub use super::reactivity::State;
     pub use super::reactivity::signal::Signal;
     pub use super::reactivity::state::{Ctx, RenderCtx};
@@ -93,5 +94,5 @@ pub mod macro_ref {
 
     pub use super::css;
     pub use super::dom::element::Element;
-    pub use super::reactivity::state::{HookKey, State};
+    pub use super::reactivity::state::{HookDepListIter, HookKey, State};
 }

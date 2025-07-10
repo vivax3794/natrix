@@ -30,10 +30,10 @@ The intent is that even if a library uses all the below features it should not b
 * `performance_lints`
 
 ### `console_log`
-Automatically sets up [`console_log`](https://crates.io/crates/console_log) on [`mount`](reactivity::component::mount).
+Automatically sets up [`console_log`](https://crates.io/crates/console_log) on [`mount`](reactivity::mount::mount).
 
 ### `async`
-Enables the use of [`ctx.use_async`](reactivity::state::State::use_async) 
+Enables the use of [`ctx.use_async`](reactivity::state::Ctx::use_async) 
 
 ### `async_utils`
 Enables the various async wrappers for browser apis in [`async_utils`](async_utils)

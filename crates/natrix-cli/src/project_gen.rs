@@ -122,15 +122,6 @@ fn generate_main_rs(src: &Path, name: &str, nightly: bool) -> Result<(), anyhow:
     } else {
         ""
     };
-    let nightly_associated_types_are_optional = if nightly {
-        ""
-    } else {
-        "
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-"
-        .trim()
-    };
     let main_rs = format!(
         r#"
 {nightly_lints}
@@ -145,18 +136,24 @@ use natrix::prelude::*;
 
 const HELLO_ID: Id = natrix::id!();
 
-#[derive(Component)]
-struct HelloWorld;
+#[derive(State, Default)]
+struct App {{
+    counter: Signal<u8>
+}}
 
-impl Component for HelloWorld {{
-    {nightly_associated_types_are_optional}
-    fn render() -> impl Element<Self> {{
-        e::h1().text("Hello {name}").id(HELLO_ID)
-    }}
+fn render_app() -> impl Element<App> {{
+    e::div()
+        .child(e::h1().text("Hello {name}").id(HELLO_ID))
+        .child(e::button()
+            .text(|ctx: &mut RenderCtx<App>| *ctx.counter) 
+            .on::<events::Click>(|ctx: &mut Ctx<App>, _, _| {{
+                *ctx.counter += 1;
+            }})
+        )
 }}
 
 fn main() {{
-    natrix::mount(HelloWorld);
+    natrix::mount(App::default(), render_app);
 }}
 
 #[cfg(test)]
@@ -170,7 +167,7 @@ mod tests {{
 
     #[wasm_bindgen_test]
     fn test() {{
-        test_utils::mount_test(HelloWorld);
+        test_utils::mount_test(HelloWorld, render_app());
         let element = test_utils::get(HELLO_ID);
         assert_eq!(element.text_content(), Some("Hello {name}".to_string()));
     }}

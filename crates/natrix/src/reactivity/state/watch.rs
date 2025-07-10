@@ -1,5 +1,4 @@
 //! Implementation of `ctx.watch`
-#![cfg(false)]
 
 use super::{HookKey, RenderCtx};
 use crate::Ctx;
@@ -46,28 +45,26 @@ impl<C: State> RenderCtx<'_, C> {
     /// # Example
     /// ```rust
     /// # use natrix::prelude::*;
-    /// # #[derive(Component)]
-    /// # struct MyComponent {value: u32}
+    /// # #[derive(State)]
+    /// # struct App {value: Signal<u32>}
     /// #
-    /// # impl Component for MyComponent {
-    /// # type EmitMessage = NoMessages;
-    /// # type ReceiveMessage = NoMessages;
-    /// # fn render() -> impl Element<Self> {
-    /// # |ctx: R<Self>| {
+    /// # fn render() -> impl Element<App> {
+    /// # |ctx: &mut RenderCtx<App>| {
     /// if ctx.watch(|ctx| *ctx.value > 2) {
-    ///     e::div().text(|ctx: R<Self>| *ctx.value)
+    ///     e::div().text(|ctx: &mut RenderCtx<App>| *ctx.value)
     /// } else {
     ///     e::div().text("Value is too low")
     /// }
-    /// # }}}
+    /// # }}
     /// ```
     #[inline]
     pub fn watch<T, F>(&mut self, func: F) -> T
     where
+        // TODO: Make this a owned lens
         F: Fn(&mut Ctx<C>) -> T + 'static,
         T: PartialEq + Clone + 'static,
     {
-        self.ctx.with_restore_signals(|ctx| {
+        self.ctx.with_scoped_signals(|ctx| {
             let me = ctx.hooks.reserve_key();
 
             let result = ctx.track_reads(me, &func);

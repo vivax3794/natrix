@@ -41,7 +41,7 @@ macro_rules! log_or_panic_assert {
 /// For example, most uses of this is in framework internals, where the entire callstack is pure
 /// natrix code. there is no library user to make a decision. so if we used `Result`/`Option` we
 /// would just push the "ignore it" decision to the top of the stack.
-/// instead panicking early gives a better pointer to the error location, as well as always for
+/// instead panicking early gives a better pointer to the error location, as well as allows for
 /// easier recovery paths in release builds.
 ///
 /// This should only be used when the error path is the result of a bug in the framework or user
@@ -55,10 +55,8 @@ macro_rules! log_or_panic_assert {
 ///
 /// *IMPORTANT:* Using this for user bugs need to be carefully thought about, failling to check
 /// user inputs for validity is *not* a bug this should catch, and should use `Option`/`Result`
-/// instead. This should only be used for stuff that is 100% a logic bug. For example we use this
-/// if user code holds onto a `RefCell` borrow across a await point, but we do not use it for the
-/// `sleep` api even tho not checking the bounds of the input is a bug, because its a bug
-/// triggerable from user input and should be communicated as such using `Option`/`Result`
+/// instead. This should only be used for stuff that is 100% a framework bug, or user doing
+/// something very cursed.
 macro_rules! log_or_panic {
     ($($msg:expr),*) => {
         $crate::error_handling::cold_path();

@@ -8,13 +8,15 @@
 mod async_state;
 mod core;
 mod data_manager;
-mod guards;
+pub mod guards;
 mod hook_manager;
 mod watch;
 
 #[cfg(feature = "async")]
 pub use self::async_state::DeferredCtx;
 pub use self::core::{Ctx, RenderCtx};
+#[doc(hidden)]
+pub use self::data_manager::HookDepListIter;
 pub use self::data_manager::State;
 #[doc(hidden)]
 pub use self::hook_manager::HookKey;

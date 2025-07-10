@@ -1,7 +1,7 @@
 # Async
 
 Async is a really important part of any web application, as it's how you do IO and talk to other services or your backend.
-Natrix provides [`DeferredCtx`](reactivity::state::DeferredCtx), via the [`.deferred_borrow`](reactivity::state::State::deferred_borrow) method, to facilitate this. as well as the [`.use_async`](reactivity::state::State::use_async) helper.
+Natrix provides [`DeferredCtx`](reactivity::state::DeferredCtx), via the [`.deferred_borrow`](reactivity::state::Ctx::deferred_borrow) method, to facilitate this. as well as the [`.use_async`](reactivity::state::Ctx::use_async) helper.
 
 ## What is a `DeferredCtx`?
 
@@ -42,7 +42,7 @@ async fn use_context(mut ctx: DeferredCtx<HelloWorld>) {
 ## `.use_async`
 
 In most cases where you have use for a [`DeferredCtx`](reactivity::state::DeferredCtx) it will be in a async function.
-The [`.use_async`](reactivity::state::State::use_async) method is a wrapper that takes a async closure and schedules it to run with a [`DeferredCtx`](reactivity::state::DeferredCtx) borrowed from the state. The closure should return `Option<()>`, This is to allow use of `?` to return early if the component is dropped.
+The [`.use_async`](reactivity::state::Ctx::use_async) method is a wrapper that takes a async closure and schedules it to run with a [`DeferredCtx`](reactivity::state::DeferredCtx) borrowed from the state. The closure should return `Option<()>`, This is to allow use of `?` to return early if the component is dropped.
 
 ```rust
 # extern crate natrix;

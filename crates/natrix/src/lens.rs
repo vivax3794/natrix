@@ -1,11 +1,12 @@
 //! Lenses provide a abstraction around getter closures.
 
 use std::marker::PhantomData;
+use std::ops::DerefMut;
 
 // TODO: Owned lens.
 
 /// A lens provides a type safe way to access a sub-section of a State
-pub trait Lens {
+pub trait LensInner: Clone + 'static {
     /// The input type to this lens
     type Source;
     /// The result of this lens
@@ -13,26 +14,19 @@ pub trait Lens {
 
     /// Execute this lens
     fn resolve(self, source: &mut Self::Source) -> &mut Self::Target;
+}
 
-    /// Chain a lens
-    #[inline]
-    fn then<L>(self, other: L) -> Chain<Self, L>
-    where
-        Self: Sized,
-        L: Lens<Source = Self::Target>,
-    {
-        Chain(self, other)
+impl<S: crate::reactivity::State> crate::reactivity::Ctx<S> {
+    /// Execute a lens on this state
+    pub fn get<L: LensInner<Source = S>>(&mut self, lens: L) -> &mut L::Target {
+        lens.resolve(&mut self.data)
     }
+}
 
-    /// Map a function on the lens
-    /// You should generally prefer the `.then` method + the `lens!` macro.
-    #[inline]
-    fn map<F, S>(self, func: F) -> Chain<Self, Direct<F, Self::Target, S>>
-    where
-        Self: Sized,
-        F: Fn(&mut Self::Target) -> &mut S,
-    {
-        Chain(self, Direct::new(func))
+impl<S: crate::reactivity::State> crate::reactivity::RenderCtx<'_, S> {
+    /// Execute a lens on this state
+    pub fn get<L: LensInner<Source = S>>(&mut self, lens: L) -> &L::Target {
+        lens.resolve(&mut self.ctx.data)
     }
 }
 
@@ -70,9 +64,12 @@ where
     }
 }
 
-impl<S, T, F> Lens for Direct<F, S, T>
+impl<S, T, F> LensInner for Direct<F, S, T>
 where
     F: Fn(&mut S) -> &mut T,
+    F: Clone + 'static,
+    S: 'static,
+    T: 'static,
 {
     type Source = S;
     type Target = T;
@@ -87,10 +84,10 @@ where
 #[derive(Clone, Copy)]
 pub struct Chain<L1, L2>(pub L1, pub L2);
 
-impl<L1, L2> Lens for Chain<L1, L2>
+impl<L1, L2> LensInner for Chain<L1, L2>
 where
-    L1: Lens,
-    L2: Lens<Source = L1::Target>,
+    L1: LensInner,
+    L2: LensInner<Source = L1::Target>,
     L1::Target: 'static,
 {
     type Source = L1::Source;
@@ -102,23 +99,70 @@ where
     }
 }
 
-impl<S: crate::reactivity::State> crate::reactivity::Ctx<S> {
-    /// Execute a lens on this state
-    pub fn get<L: Lens<Source = S>>(&mut self, lens: L) -> &mut L::Target {
-        lens.resolve(&mut self.data)
+/// A Lens that calls `.deref` on the value
+pub struct DerefLens<T>(pub PhantomData<T>);
+
+impl<T> Copy for DerefLens<T> {}
+impl<T> Clone for DerefLens<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T> Default for DerefLens<T> {
+    fn default() -> Self {
+        Self(PhantomData)
     }
 }
 
-impl<S: crate::reactivity::State> crate::reactivity::RenderCtx<'_, S> {
-    /// Execute a lens on this state
-    pub fn get<L: Lens<Source = S>>(&mut self, lens: L) -> &L::Target {
-        lens.resolve(&mut self.ctx.data)
+impl<T> LensInner for DerefLens<T>
+where
+    T: DerefMut + 'static,
+    T::Target: Sized,
+{
+    type Source = T;
+    type Target = T::Target;
+
+    fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
+        &mut *source
     }
 }
+
+/// A lens provides a type safe way to access a sub-section of a State
+pub trait Lens<S, T>: LensInner<Source = S, Target = T> {
+    /// Chain a lens
+    #[inline]
+    fn then<L>(self, other: L) -> Chain<Self, L>
+    where
+        Self: Sized,
+        L: LensInner<Source = Self::Target>,
+    {
+        Chain(self, other)
+    }
+
+    /// Map a function on the lens
+    /// You should generally prefer the `.then` method + the `lens!` macro.
+    #[inline]
+    fn map<F, R>(self, func: F) -> Chain<Self, Direct<F, Self::Target, R>>
+    where
+        Self: Sized,
+        F: Fn(&mut Self::Target) -> &mut R,
+    {
+        Chain(self, Direct::new(func))
+    }
+
+    /// Deref the value the lens is pointing at, this is often required as the final step for
+    /// getting at a signal.
+    #[inline]
+    fn deref(self) -> Chain<Self, DerefLens<T>> {
+        Chain(self, DerefLens::default())
+    }
+}
+
+impl<S, T, Ty> Lens<S, T> for Ty where Ty: LensInner<Source = S, Target = T> {}
 
 /// A `Direct` lens to access a specific field, or sub-field
 #[macro_export]
-macro_rules! access_lens {
+macro_rules! lens {
     ($source:ty => $(. $field:ident)+) => {
         $crate::lens::Direct::new(|value: &mut $source|
             &mut value$(.$field)+
@@ -128,8 +172,8 @@ macro_rules! access_lens {
 
 #[cfg(test)]
 mod tests {
-    use super::Lens;
-    use crate::access_lens;
+    use super::*;
+    use crate::lens;
 
     struct Book {
         title: String,
@@ -154,7 +198,7 @@ mod tests {
     #[test]
     fn test_direct() {
         let mut books = test_data();
-        let lens = access_lens!(Books => .rust.title);
+        let lens = lens!(Books => .rust.title);
         assert_eq!(lens.resolve(&mut books), "The rust book");
     }
 
@@ -162,9 +206,9 @@ mod tests {
     fn test_then() {
         let mut books = test_data();
 
-        let title_lens = access_lens!(Book => .title);
-        let rust_lens = access_lens!(Books => .rust);
-        let natrix_lens = access_lens!(Books => .natrix);
+        let title_lens = lens!(Book => .title);
+        let rust_lens = lens!(Books => .rust);
+        let natrix_lens = lens!(Books => .natrix);
 
         assert_eq!(
             rust_lens.then(title_lens).resolve(&mut books),

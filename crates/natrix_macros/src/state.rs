@@ -1,7 +1,7 @@
 //! Implementation of the `Component` derive macro
 
 use proc_macro2::TokenStream;
-use quote::{ToTokens, quote};
+use quote::{ToTokens, format_ident, quote};
 use syn::{ItemStruct, parse_quote};
 
 /// A abstract representation of a struct field
@@ -35,10 +35,16 @@ pub(crate) fn state_derive_implementation(item: ItemStruct) -> TokenStream {
 
     let mut reg_dep = quote!();
     let mut dirty_deps_lists = quote!();
+    let mut signal_state = quote!();
+    let mut pop_state = quote!();
+    let mut set_state_calls = quote!();
+    let mut set_state_unpack = quote!();
 
     for field in &fields {
         let type_ = &field.type_;
         let access = &field.access;
+
+        let prefixed = format_ident!("a_{access}");
 
         where_clause = quote!(#where_clause #type_: ::natrix::macro_ref::State ,);
         reg_dep = quote!(
@@ -47,22 +53,42 @@ pub(crate) fn state_derive_implementation(item: ItemStruct) -> TokenStream {
         );
         dirty_deps_lists = quote!(
             #dirty_deps_lists
-            deps.extend(
-                ::natrix::macro_ref::State::dirty_deps_lists(&mut self.#access)
-            );
+            ::natrix::macro_ref::State::dirty_deps_lists(&mut self.#access, collector);
+        );
+        signal_state = quote!(
+            #signal_state
+            <#type_ as ::natrix::macro_ref::State>::SignalState,
+        );
+        pop_state = quote!(
+            #pop_state
+            ::natrix::macro_ref::State::pop_state(&mut self.#access),
+        );
+        set_state_calls = quote!(
+            #set_state_calls
+            ::natrix::macro_ref::State::set_state(&mut self.#access, #prefixed);
+        );
+        set_state_unpack = quote!(
+            #set_state_unpack
+            #prefixed,
         );
     }
 
     quote! {
         #[automatically_derived]
         impl #impl_generics ::natrix::macro_ref::State for #name #type_generics #where_clause {
+            type SignalState = (#signal_state);
             fn reg_dep(&mut self, key: ::natrix::macro_ref::HookKey) {
                 #reg_dep
             }
-            fn dirty_deps_lists(&mut self) -> impl Iterator<Item = ::natrix::macro_ref::indexmap::set::IntoIter<::natrix::macro_ref::HookKey>> {
-                let mut deps = Vec::new();
+            fn dirty_deps_lists(&mut self, collector: &mut ::std::vec::Vec<::natrix::macro_ref::HookDepListIter>) {
                 #dirty_deps_lists
-                deps.into_iter()
+            }
+            #[allow(clippy::unused_unit)]
+            fn pop_state(&mut self) -> Self::SignalState {
+                (#pop_state)
+            }
+            fn set_state(&mut self, (#set_state_unpack): Self::SignalState) {
+                #set_state_calls
             }
         }
     }

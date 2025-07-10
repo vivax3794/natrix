@@ -17,7 +17,6 @@ pub(crate) struct RenderingState<'s> {
     /// The hooks that are a child of this
     pub(crate) hooks: &'s mut Vec<HookKey>,
     /// The parent render context, can be used to register it as a dependency of yourself
-    #[expect(dead_code, reason = "Needed for watch")]
     pub(crate) parent_dep: HookKey,
 }
 

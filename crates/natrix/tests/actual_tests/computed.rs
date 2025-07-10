@@ -1,5 +1,3 @@
-#![cfg(false)]
-
 use natrix::prelude::*;
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
@@ -36,7 +34,12 @@ fn render_counter() -> impl Element<Counter> {
 
 #[wasm_bindgen_test]
 fn works() {
-    crate::mount_test(Counter { value: 0 }, render_counter());
+    crate::mount_test(
+        Counter {
+            value: Signal::new(0),
+        },
+        render_counter(),
+    );
 
     let button = crate::get(BUTTON_ID);
 

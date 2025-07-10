@@ -1,7 +1,4 @@
-#![cfg(false)]
-
 use natrix::prelude::*;
-use natrix::{guard_option, guard_result};
 use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
@@ -9,39 +6,40 @@ wasm_bindgen_test_configure!(run_in_browser);
 const BUTTON: Id = natrix::id!();
 const TEXT: Id = natrix::id!();
 
-#[derive(Component)]
-struct GuardTester {
-    value: Option<u8>,
+#[derive(State)]
+struct TestOption {
+    value: Signal<Option<u8>>,
 }
 
-impl Component for GuardTester {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::div()
-            .child(
-                e::button()
-                    .id(BUTTON)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| match &mut *ctx.value {
-                        Some(2) => *ctx.value = None,
-                        Some(value) => *value += 1,
-                        None => *ctx.value = Some(0),
-                    }),
-            )
-            .child(|ctx: RenderCtx<Self>| {
-                if let Some(value_guard) = guard_option!(@owned |ctx| ctx.value) {
-                    e::div().text(move |ctx: RenderCtx<Self>| ctx.get_owned(&value_guard))
-                } else {
-                    e::div().text("NO VALUE")
-                }
-                .id(TEXT)
-            })
-    }
+fn render_test_option() -> impl Element<TestOption> {
+    e::div()
+        .child(
+            e::button()
+                .id(BUTTON)
+                .on::<events::Click>(|ctx: &mut Ctx<TestOption>, _, _| match &mut *ctx.value {
+                    Some(2) => *ctx.value = None,
+                    Some(value) => *value += 1,
+                    None => *ctx.value = Some(0),
+                }),
+        )
+        .child(|ctx: &mut RenderCtx<TestOption>| {
+            if let Some(value_guard) = ctx.guard(lens!(TestOption => .value).deref()) {
+                e::div().text(move |ctx: &mut RenderCtx<TestOption>| *ctx.get(value_guard))
+            } else {
+                e::div().text("NO VALUE")
+            }
+            .id(TEXT)
+        })
 }
 
 #[wasm_bindgen_test]
 fn guard_works() {
-    crate::mount_test(GuardTester { value: None });
+    crate::mount_test(
+        TestOption {
+            value: Signal::new(None),
+        },
+        render_test_option(),
+    );
 
     let button = crate::get(BUTTON);
 
@@ -63,41 +61,42 @@ fn guard_works() {
     assert_eq!(text.text_content(), Some("NO VALUE".to_owned()));
 }
 
-#[derive(Component)]
-struct GuardTesterResult {
-    value: Result<u8, u8>,
+#[derive(State)]
+struct TestResult {
+    value: Signal<Result<u8, u8>>,
 }
 
-impl Component for GuardTesterResult {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::div()
-            .child(
-                e::button()
-                    .id(BUTTON)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| match &mut *ctx.value {
-                        Ok(value) => *value += 1,
-                        Err(_) => *ctx.value = Ok(0),
-                    }),
-            )
-            .child(|ctx: RenderCtx<Self>| {
-                match guard_result!(@owned |ctx| ctx.value) {
-                    Ok(value_guard) => {
-                        e::div().text(move |ctx: RenderCtx<Self>| ctx.get_owned(&value_guard))
-                    }
-                    Err(error_guard) => {
-                        e::div().text(move |ctx: RenderCtx<Self>| ctx.get_owned(&error_guard))
-                    }
+fn render_test_result() -> impl Element<TestResult> {
+    e::div()
+        .child(
+            e::button()
+                .id(BUTTON)
+                .on::<events::Click>(|ctx: &mut Ctx<TestResult>, _, _| match &mut *ctx.value {
+                    Ok(value) => *value += 1,
+                    Err(_) => *ctx.value = Ok(0),
+                }),
+        )
+        .child(|ctx: &mut RenderCtx<TestResult>| {
+            match ctx.guard(lens!(TestResult => .value).deref()) {
+                Ok(value_guard) => {
+                    e::div().text(move |ctx: &mut RenderCtx<TestResult>| *ctx.get(value_guard))
                 }
-                .id(TEXT)
-            })
-    }
+                Err(error_guard) => {
+                    e::div().text(move |ctx: &mut RenderCtx<TestResult>| *ctx.get(error_guard))
+                }
+            }
+            .id(TEXT)
+        })
 }
 
 #[wasm_bindgen_test]
 fn guard_result() {
-    crate::mount_test(GuardTesterResult { value: Err(100) });
+    crate::mount_test(
+        TestResult {
+            value: Signal::new(Err(100)),
+        },
+        render_test_result(),
+    );
 
     let button = crate::get(BUTTON);
 
@@ -115,49 +114,48 @@ fn guard_result() {
     assert_eq!(text.text_content(), Some("2".to_owned()));
 }
 
-#[derive(Component)]
-struct GuardTesterNested {
-    value: Option<Option<u8>>,
+#[derive(State)]
+struct Nested {
+    value: Signal<Option<Option<u8>>>,
 }
 
-impl Component for GuardTesterNested {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::div()
-            .child(
-                e::button()
-                    .id(BUTTON)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| match &mut *ctx.value {
-                        Some(Some(2)) => *ctx.value = None,
-                        Some(Some(value)) => *value += 1,
-                        Some(None) => *ctx.value = Some(Some(0)),
-                        None => *ctx.value = Some(None),
-                    }),
-            )
-            .child(|ctx: RenderCtx<Self>| {
-                if let Some(value_guard) = guard_option!(@owned |ctx| ctx.value) {
-                    e::div().text(move |ctx: RenderCtx<Self>| {
-                        if let Some(inner_guard) =
-                            guard_option!(@owned |ctx| ctx.get_owned(&value_guard))
-                        {
-                            e::div()
-                                .id(TEXT)
-                                .text(move |ctx: RenderCtx<Self>| ctx.get_owned(&inner_guard))
-                        } else {
-                            e::div().text("NO VALUE INNER").id(TEXT)
-                        }
-                    })
-                } else {
-                    e::div().text("NO VALUE").id(TEXT)
-                }
-            })
-    }
+fn render_nested() -> impl Element<Nested> {
+    e::div()
+        .child(
+            e::button().id(BUTTON).on::<events::Click>(
+                |ctx: &mut Ctx<Nested>, _, _| match &mut *ctx.value {
+                    Some(Some(2)) => *ctx.value = None,
+                    Some(Some(value)) => *value += 1,
+                    Some(None) => *ctx.value = Some(Some(0)),
+                    None => *ctx.value = Some(None),
+                },
+            ),
+        )
+        .child(|ctx: &mut RenderCtx<Nested>| {
+            if let Some(value_guard) = ctx.guard(lens!(Nested => .value).deref()) {
+                e::div().text(move |ctx: &mut RenderCtx<Nested>| {
+                    if let Some(inner_guard) = ctx.guard(value_guard) {
+                        e::div()
+                            .id(TEXT)
+                            .text(move |ctx: &mut RenderCtx<Nested>| *ctx.get(inner_guard))
+                    } else {
+                        e::div().text("NO VALUE INNER").id(TEXT)
+                    }
+                })
+            } else {
+                e::div().text("NO VALUE").id(TEXT)
+            }
+        })
 }
 
 #[wasm_bindgen_test]
 fn guard_nested() {
-    crate::mount_test(GuardTesterNested { value: None });
+    crate::mount_test(
+        Nested {
+            value: Signal::new(None),
+        },
+        render_nested(),
+    );
 
     let button = crate::get(BUTTON);
 
@@ -183,145 +181,55 @@ fn guard_nested() {
     assert_eq!(text.text_content(), Some("NO VALUE".to_owned()));
 }
 
-#[derive(Component)]
-struct GuardSwitchProp {
-    value: Option<Option<bool>>,
-    next: Option<Option<bool>>,
-}
-
-impl Component for GuardSwitchProp {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::div()
-            .child(
-                e::button()
-                    .id(BUTTON)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                        *ctx.value = *ctx.next;
-                    }),
-            )
-            .child(|ctx: RenderCtx<Self>| {
-                if let Some(value_guard) = guard_option!(@owned |ctx| ctx.value) {
-                    e::div().text(move |ctx: RenderCtx<Self>| {
-                        if let Some(inner_guard) =
-                            guard_option!(@owned |ctx| ctx.get_owned(&value_guard))
-                        {
-                            e::div().id(TEXT).text(move |ctx: RenderCtx<Self>| {
-                                if ctx.get_owned(&inner_guard) {
-                                    "hello"
-                                } else {
-                                    "world"
-                                }
-                            })
-                        } else {
-                            e::div().text("NO VALUE INNER").id(TEXT)
-                        }
-                    })
-                } else {
-                    e::div().text("NO VALUE").id(TEXT)
-                }
-            })
-    }
-}
-
-struct NonCopy;
-
-impl NonCopy {
-    fn use_ref(&self) -> &'static str {
-        "hello"
-    }
-}
-
-#[derive(Component)]
-struct NonCopyComponent {
-    value: Option<NonCopy>,
-}
-
-impl Component for NonCopyComponent {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-    fn render() -> impl Element<Self> {
-        e::div()
-            .child(
-                e::button()
-                    .id(BUTTON)
-                    .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                        *ctx.value = Some(NonCopy);
-                    }),
-            )
-            .child(|ctx: RenderCtx<Self>| {
-                if let Some(value_guard) = guard_option!(|ctx| ctx.value.as_ref()) {
-                    e::div()
-                        .text(move |ctx: RenderCtx<Self>| ctx.get(&value_guard).use_ref())
-                        .id(TEXT)
-                } else {
-                    e::div().text("NO VALUE").id(TEXT)
-                }
-            })
-    }
-}
-
-#[wasm_bindgen_test]
-fn guard_non_copy() {
-    crate::mount_test(NonCopyComponent { value: None });
-
-    let button = crate::get(BUTTON);
-
-    let text = crate::get(TEXT);
-    assert_eq!(text.text_content(), Some("NO VALUE".to_owned()));
-
-    button.click();
-    let text = crate::get(TEXT);
-    assert_eq!(text.text_content(), Some("hello".to_owned()));
-}
-
 // NOTE: This tests for a re-ordering bug in the reactive runtime, where the internal ordering of
 // signal dependencies generally covered up that the update cycle was reading hooks in the wrong
 // order.
 // This test is specically setup to have the first read hook be in the wrong order.
 // Cruically the order of the fields in this definition is crucial for triggering the bug
-#[derive(Component)]
+#[derive(State)]
 struct ReactiveOrderingEdgeCaseRegression {
-    trigger: u8,
-    guarded_value: Option<u8>,
+    trigger: Signal<u8>,
+    guarded_value: Signal<Option<u8>>,
 }
 
-impl Component for ReactiveOrderingEdgeCaseRegression {
-    type EmitMessage = NoMessages;
-    type ReceiveMessage = NoMessages;
-
-    fn render() -> impl Element<Self> {
-        e::div().child(
-            e::button()
-                .id(BUTTON)
-                .on::<events::Click>(|ctx: Ctx<Self>, _, _| {
-                    *ctx.trigger += 1;
-                    if ctx.guarded_value.is_some() {
-                        *ctx.guarded_value = None;
-                    } else {
-                        *ctx.guarded_value = Some(0);
-                    }
-                })
-                .child(|ctx: RenderCtx<Self>| {
-                    if let Some(guard) = guard_option!(@owned|ctx| (*ctx.guarded_value).clone()) {
-                        Some(e::div().id(TEXT).text(move |ctx: RenderCtx<Self>| {
-                            format!("{}-{}", *ctx.trigger, ctx.get_owned(&guard))
-                        }))
-                    } else {
-                        None
-                    }
-                }),
-        )
-    }
+fn render_edge_case() -> impl Element<ReactiveOrderingEdgeCaseRegression> {
+    e::div().child(
+        e::button()
+            .id(BUTTON)
+            .on::<events::Click>(|ctx: &mut Ctx<ReactiveOrderingEdgeCaseRegression>, _, _| {
+                *ctx.trigger += 1;
+                if ctx.guarded_value.is_some() {
+                    *ctx.guarded_value = None;
+                } else {
+                    *ctx.guarded_value = Some(0);
+                }
+            })
+            .child(|ctx: &mut RenderCtx<ReactiveOrderingEdgeCaseRegression>| {
+                if let Some(guard) =
+                    ctx.guard(lens!(ReactiveOrderingEdgeCaseRegression => .guarded_value).deref())
+                {
+                    Some(e::div().id(TEXT).text(
+                        move |ctx: &mut RenderCtx<ReactiveOrderingEdgeCaseRegression>| {
+                            let trigger = *ctx.trigger;
+                            format!("{}-{}", trigger, *ctx.get(guard))
+                        },
+                    ))
+                } else {
+                    None
+                }
+            }),
+    )
 }
 
 #[wasm_bindgen_test]
 fn reactive_ordering_edge_case_regression() {
-    crate::mount_test(ReactiveOrderingEdgeCaseRegression {
-        trigger: 0,
-        guarded_value: None,
-    });
+    crate::mount_test(
+        ReactiveOrderingEdgeCaseRegression {
+            trigger: Signal::new(0),
+            guarded_value: Signal::new(None),
+        },
+        render_edge_case(),
+    );
 
     let button = crate::get(BUTTON);
 

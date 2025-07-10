@@ -105,8 +105,8 @@ async fn main() -> Result<()> {
     dagger_sdk::connect(async move |client| {
         match arguments {
             Cli::Tests(arguments) => {
-                let reports = report::run_all_tests(&client, arguments).await?;
-                let report = report::generate_report(&client, reports)?;
+                let reports = report::run_all_tests(&client, &arguments).await?;
+                let report = report::generate_report(&client, reports, &arguments)?;
                 report::serve_report(&client, report).await?;
             }
             Cli::Fix => {

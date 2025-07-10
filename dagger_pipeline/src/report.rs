@@ -10,7 +10,7 @@ use crate::prelude::*;
 use crate::targets::IntegrationTestMode;
 
 /// Run all tests and return a directory of allure reports
-pub async fn run_all_tests(client: &Query, arguments: TestCommand) -> Result<Directory> {
+pub async fn run_all_tests(client: &Query, arguments: &TestCommand) -> Result<Directory> {
     let mut tasks: Vec<Pin<Box<dyn Future<Output = _>>>> = vec![
         Box::pin(crate::targets::native_tests(client)),
         Box::pin(crate::targets::wasm_unit_tests(client, "nightly")),
@@ -39,17 +39,17 @@ pub async fn run_all_tests(client: &Query, arguments: TestCommand) -> Result<Dir
             Box::pin(crate::targets::integration_test(
                 client,
                 IntegrationTestMode::Dev,
-                &arguments,
+                arguments,
             )),
             Box::pin(crate::targets::integration_test(
                 client,
                 IntegrationTestMode::Release,
-                &arguments,
+                arguments,
             )),
             Box::pin(crate::targets::integration_test(
                 client,
                 IntegrationTestMode::Build,
-                &arguments,
+                arguments,
             )),
         ]);
     }
@@ -68,12 +68,19 @@ pub async fn run_all_tests(client: &Query, arguments: TestCommand) -> Result<Dir
 }
 
 /// Generate the final report
-pub fn generate_report(client: &Query, reports: Directory) -> Result<Directory> {
+pub fn generate_report(
+    client: &Query,
+    reports: Directory,
+    arguments: &TestCommand,
+) -> Result<Directory> {
     let result = client
         .container()
         .from("andgineer/allure")
         .with_directory("/reports", reports)
-        .with_mounted_cache("/history-cache/", client.cache_volume("allure-history"))
+        .with_mounted_cache(
+            "/history-cache/",
+            client.cache_volume(format!("allure-history-quick-{}", arguments.quick)),
+        )
         .with_exec_opts(
             vec!["mv", "-v", "/history-cache/history", "/reports/history"],
             ContainerWithExecOptsBuilder::default()
