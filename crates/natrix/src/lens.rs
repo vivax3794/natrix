@@ -133,7 +133,6 @@ mod tests {
 
     struct Book {
         title: String,
-        author: String,
     }
 
     struct Books {
@@ -145,11 +144,9 @@ mod tests {
         Books {
             rust: Book {
                 title: String::from("The rust book"),
-                author: String::from("Rust Contributors"),
             },
             natrix: Book {
                 title: String::from("Natrix Guide"),
-                author: String::from("Viv"),
             },
         }
     }

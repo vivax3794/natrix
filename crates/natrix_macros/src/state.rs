@@ -1,7 +1,7 @@
 //! Implementation of the `Component` derive macro
 
 use proc_macro2::TokenStream;
-use quote::{ToTokens, format_ident, quote};
+use quote::{ToTokens, quote};
 use syn::{ItemStruct, parse_quote};
 
 /// A abstract representation of a struct field
@@ -33,7 +33,6 @@ pub(crate) fn state_derive_implementation(item: ItemStruct) -> TokenStream {
         quote! {where}
     };
 
-    let mut clear = quote!();
     let mut reg_dep = quote!();
     let mut dirty_deps_lists = quote!();
 
@@ -42,10 +41,6 @@ pub(crate) fn state_derive_implementation(item: ItemStruct) -> TokenStream {
         let access = &field.access;
 
         where_clause = quote!(#where_clause #type_: ::natrix::macro_ref::State ,);
-        clear = quote!(
-            #clear
-            ::natrix::macro_ref::State::clear(&mut self.#access);
-        );
         reg_dep = quote!(
             #reg_dep
             ::natrix::macro_ref::State::reg_dep(&mut self.#access, key);
@@ -61,9 +56,6 @@ pub(crate) fn state_derive_implementation(item: ItemStruct) -> TokenStream {
     quote! {
         #[automatically_derived]
         impl #impl_generics ::natrix::macro_ref::State for #name #type_generics #where_clause {
-            fn clear(&mut self) {
-                #clear
-            }
             fn reg_dep(&mut self, key: ::natrix::macro_ref::HookKey) {
                 #reg_dep
             }

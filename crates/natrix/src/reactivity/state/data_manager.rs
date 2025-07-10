@@ -140,24 +140,36 @@ impl HookQueue {
     }
 }
 
+// PERF: the Full loop over signals to check which changed is a concern.
+// In theory we could have signals hold a `Weak<RefCell<Vec<...>>>`, but having per-signal
+// Borrows is exactly what we want to avoid, and would defeat a lot of performance benefits we
+// have.
+// We could use a threading-queue? I wonder if there are any single-threaded mpsc queues.
+
 /// Trait automatically implemented on reactive structs by the derive macro.
 #[doc(hidden)]
 pub trait State: Sized + 'static {
-    /// Clear reactive tracking
-    #[doc(hidden)]
-    fn clear(&mut self);
     /// If you were read register this as a dependency
+    /// Also should clear your read flag
     #[doc(hidden)]
     fn reg_dep(&mut self, dep: HookKey);
     /// Return a Vector of dependency lists from changed sources.
+    /// Should also clear both flags.
     fn dirty_deps_lists(&mut self) -> impl Iterator<Item = indexmap::set::IntoIter<HookKey>>;
+    // TODO: Method to set the state value with a `Self`.
+}
+
+impl State for () {
+    fn reg_dep(&mut self, _dep: HookKey) {}
+    fn dirty_deps_lists(&mut self) -> impl Iterator<Item = indexmap::set::IntoIter<HookKey>> {
+        std::iter::empty()
+    }
 }
 
 impl<T: State> Ctx<T> {
     /// Loop over signals and update any depdant hooks for changed signals
     /// This also drains the deferred message queue
     fn update(&mut self) {
-        self.drain_message_queue();
         log::trace!("Performing update cycle for {}", std::any::type_name::<T>());
 
         let dep_lists: Vec<_> = self.data.dirty_deps_lists().collect();
@@ -185,7 +197,6 @@ impl<T: State> Ctx<T> {
     /// Run the given method and track the reactive modifications done in it.
     /// and call initiate the update cycle afterwards.
     pub(crate) fn track_changes<R>(&mut self, func: impl FnOnce(&mut Self) -> R) -> R {
-        self.clear();
         let result = func(self);
         self.update();
         result
@@ -198,13 +209,15 @@ impl<T: State> Ctx<T> {
         hook: HookKey,
         func: impl for<'a> FnOnce(&'a mut Self) -> R,
     ) -> R {
-        self.clear();
         let result = func(self);
         self.reg_dep(hook);
         result
     }
 
     /// Run the given function pop and restoring signals around it
+    // PERF: This causes 2 loops of all signals, and then the end of the reactive scope is a extra
+    // one.
+    // I.e using `ctx.watch` makes the hook 4X more expensive to compute. (Pop, Check, Set, Check)
     #[cfg(false)]
     pub(crate) fn with_restore_signals<R>(
         &mut self,

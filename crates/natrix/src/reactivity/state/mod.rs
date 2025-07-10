@@ -10,7 +10,6 @@ mod core;
 mod data_manager;
 mod guards;
 mod hook_manager;
-pub(crate) mod messages;
 mod watch;
 
 #[cfg(feature = "async")]

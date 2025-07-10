@@ -9,10 +9,10 @@ use crate::error_handling::{do_performance_check, performance_lint};
 use crate::prelude::State;
 use crate::reactivity::state::HookKey;
 
-// TODO: Make the transformation of component structs into per-field signals a more generic
-// process, and allow nesting signals in a smart way. for example you can annotate your `Book`
-// struct with some macro, and when you use `Book` as a field of your component you actually get
-// reactivity on the level of the books fields and not the whole book struct.
+pub struct SignalState {
+    written: bool,
+    read: bool,
+}
 
 /// A signal tracks reads and writes to a value, as well as dependencies.
 pub struct Signal<T> {
@@ -23,11 +23,7 @@ pub struct Signal<T> {
     /// The flag for whether this signal has been read
     /// this is a `Cell` to allow for modification in `Deref`
     read: Cell<bool>,
-    /// A vector of the dependencies.
-    ///
-    /// Actually calling said dependencies is the responsibility of the `State` struct.
-    /// Dependencies are also lazily removed by the `State` struct, and hence might contain stale
-    /// pointers.
+    /// A collection of the dependencies.
     deps: IndexSet<HookKey>,
 }
 
@@ -50,14 +46,8 @@ impl<T> Signal<T> {
 }
 
 impl<T: 'static> State for Signal<T> {
-    #[inline]
-    fn clear(&mut self) {
-        self.written = false;
-        self.read.set(false);
-    }
-
     fn reg_dep(&mut self, dep: HookKey) {
-        if self.read.get() {
+        if self.read.take() {
             self.deps.insert(dep);
         }
 
@@ -70,6 +60,7 @@ impl<T: 'static> State for Signal<T> {
 
     fn dirty_deps_lists(&mut self) -> impl Iterator<Item = indexmap::set::IntoIter<HookKey>> {
         if self.written {
+            self.written = false;
             let mut new = IndexSet::with_capacity(self.deps.len());
             std::mem::swap(&mut new, &mut self.deps);
             Some(new.into_iter())

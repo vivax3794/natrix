@@ -21,10 +21,6 @@ fn render_counter() -> impl Element<Counter> {
             *ctx.value += 1;
         })
 }
-
-fn main() {
-    natrix::mount(Counter { value: Signal::new(0) }, render_counter());
-}
 ```
 > See the [book](https://vivax3794.github.io/natrix/) for more information
 

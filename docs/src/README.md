@@ -27,7 +27,7 @@ fn render_counter() -> impl Element<Counter> {
 }
 #
 # fn main() {
-#    natrix::mount(Counter { value: Signal::new(0) }, render_counter());
+#    natrix::mount(Counter { value: Signal::new(0) }, render_counter);
 # }
 ```
 

@@ -21,7 +21,7 @@ pub trait Event {
 /// ```
 /// # use natrix::prelude::*;
 /// # use natrix::dom::EventHandler;
-/// fn my_button<C: Component>(click: impl EventHandler<C, events::Click>) -> impl Element<C> {
+/// fn my_button<C: State>(click: impl EventHandler<C, events::Click>) -> impl Element<C> {
 ///     e::button().on::<events::Click>(click)
 /// }
 /// ```

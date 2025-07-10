@@ -114,16 +114,13 @@ impl<C: State, T> HtmlElement<C, T> {
     /// # use natrix::prelude::*;
     /// # #[derive(State)]
     /// # struct MyState {
-    /// #     some_value: i32,
+    /// #     some_value: Signal<i32>,
     /// # }
-    /// # impl State for MyState {
-    /// # type EmitMessage = NoMessages;
-    /// # type ReceiveMessage = NoMessages;
-    /// # fn render() -> impl Element<Self> {
-    /// e::button().on::<events::Click>(|ctx: E<Self>, _, _| {
+    /// # fn render() -> impl Element<MyState> {
+    /// e::button().on::<events::Click>(|ctx: &mut Ctx<MyState>, _, _| {
     ///     *ctx.some_value += 1;
     /// })
-    /// # }}
+    /// # }
     /// ```
     /// For more information see [Reactivity](https://vivax3794.github.io/natrix/reactivity.html) in the book.
     #[inline]
@@ -175,22 +172,19 @@ impl<C: State, T> HtmlElement<C, T> {
     /// # use natrix::prelude::*;
     /// # #[derive(State)]
     /// # struct MyState {
-    /// #     toggle: bool,
+    /// #     toggle: Signal<bool>,
     /// # }
-    /// # impl State for MyState {
-    /// # type EmitMessage = NoMessages;
-    /// # type ReceiveMessage = NoMessages;
-    /// # fn render() -> impl Element<Self> {
+    /// # fn render() -> impl Element<MyState> {
     /// e::div()
     ///     .child(e::h1().text("Wow!"))
-    ///     .child(|ctx: R<Self>| {
+    ///     .child(|ctx: &mut RenderCtx<MyState>| {
     ///         if *ctx.toggle {
     ///             "Hello"
     ///         } else {
     ///             "World"
     ///         }
     ///     })
-    /// # }}
+    /// # }
     /// ```
     // SPEC: Some html elements are only allowed inside specific other ones.
     // SPEC: Some html elements only allow specific other elements

@@ -10,7 +10,6 @@ const RELOAD_ID: Id = natrix::id!();
 const IMG_ID: Id = natrix::id!();
 
 #[derive(State)]
-#[expect(dead_code, reason = "literally here to test DCE")]
 struct NotUsed;
 
 #[expect(dead_code, reason = "literally here to test DCE")]

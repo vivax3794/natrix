@@ -3,18 +3,11 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::dom::element::{
-    DynElement,
-    Element,
-    ElementRenderResult,
-    MaybeStaticElement,
-    generate_fallback_node,
-};
-use crate::error_handling::log_or_panic;
+use crate::dom::element::Element;
 use crate::get_document;
 use crate::reactivity::KeepAlive;
 use crate::reactivity::render_callbacks::RenderingState;
-use crate::reactivity::state::{Ctx, EventToken, HookKey, State, messages};
+use crate::reactivity::state::{Ctx, HookKey, State};
 
 // TODO: Allow storing sub component senders on the state.
 // We would need derive macro support to mark a field as non-reactive.

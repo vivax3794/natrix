@@ -18,8 +18,6 @@ pub struct Ctx<T: State> {
     pub(crate) this: Weak<RefCell<Self>>,
     /// Reactive hooks
     pub(crate) hooks: HookStore<T>,
-    /// Messages gotten while we were borrowed
-    pub(super) deferred_messages: Rc<super::messages::DeferredMessageQueue>,
 }
 
 impl<T: State> Deref for Ctx<T> {
@@ -47,7 +45,6 @@ impl<T: State> Ctx<T> {
             data,
             this: Weak::new(),
             hooks: HookStore::new(),
-            deferred_messages: Rc::default(),
         }
     }
 
