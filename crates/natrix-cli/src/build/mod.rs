@@ -119,14 +119,13 @@ pub(crate) fn generate_html(
     };
 
     let js_reload = if let Some(port) = config.live_reload {
-        // BUG: This doesnt respect when the hostname is different.
         format!(
-            r#"
-            const reload_ws = new WebSocket("ws://localhost:{port}");
+            "
+            const reload_ws = new WebSocket(`ws://${{window.location.hostname}}:{port}`);
             reload_ws.onmessage = (event) => {{
                 location.reload();
             }};
-            "#
+            "
         )
     } else {
         String::new()

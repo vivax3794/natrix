@@ -987,12 +987,21 @@ pub async fn integration_test(
 
 /// Run benchmarks
 // TODO: This doesnt run with the full natrix optimization settings.
+// TODO: Make benchmarks more stable (limit cpu?)
 pub async fn benchmark(client: &Query) -> Result<String> {
     let result = crate::base_images::wasm(client)
         .with_exec(vec!["rustup", "default", "nightly"])
         .with_workspace(client)
         .with_workdir("./ci/benchmark")
         .with_env_variable("WASM_BINDGEN_TEST_TIMEOUT", "120")
+        .with_exec(vec![
+            "cargo",
+            "build",
+            "--tests",
+            "--release",
+            "--target",
+            "wasm32-unknown-unknown",
+        ])
         .with_exec_any(vec![
             "cargo",
             "test",
