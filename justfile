@@ -13,3 +13,7 @@ fix:
 # Open mdbook
 book:
     dagger --quiet run cargo run -p dagger_pipeline -- book
+
+# Run benchmarks 
+bench:
+    dagger --quiet run cargo run -p dagger_pipeline -- bench

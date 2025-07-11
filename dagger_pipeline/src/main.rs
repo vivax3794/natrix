@@ -31,6 +31,8 @@ enum Cli {
     Fix,
     /// Build and open the mdbook
     Book,
+    /// Run benchmark
+    Bench,
 }
 
 /// Common items
@@ -132,6 +134,10 @@ async fn main() -> Result<()> {
                     .with_exec(vec!["mdbook", "build"])
                     .directory("./book");
                 report::serve_dist(&client, book).await?;
+            }
+            Cli::Bench => {
+                let result = targets::benchmark(&client).await?;
+                print!("{result}");
             }
         }
         Ok(())
