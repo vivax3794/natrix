@@ -2,8 +2,9 @@
 
 use super::{HookKey, RenderCtx};
 use crate::Ctx;
-use crate::reactivity::State;
+use crate::error_handling::log_or_panic;
 use crate::reactivity::render_callbacks::{ReactiveHook, UpdateResult};
+use crate::reactivity::{State, statics};
 
 /// The wather hook / signal
 struct WatchState<F, T> {
@@ -68,10 +69,14 @@ impl<C: State> RenderCtx<'_, C> {
 
         let result = self.ctx.track_reads(me, &func);
 
+        let Some(dep) = statics::current_hook() else {
+            log_or_panic!("`ctx.watch` called from outside a hook");
+            return result;
+        };
         let hook = WatchState {
             calc_value: Box::new(func),
             last_value: result.clone(),
-            dep: self.render_state.parent_dep,
+            dep,
         };
         self.ctx.hooks.set_hook(me, Box::new(hook));
         self.render_state.hooks.push(me);

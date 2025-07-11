@@ -12,6 +12,7 @@
 - [Render Functions](render-functions.md)
 - [State](state.md)
 - [Reactivity](reactivity.md)
+- [Lenses](lens.md)
 - [Html](html.md)
 - [Async](async-components.md)
 - [Css](css.md)

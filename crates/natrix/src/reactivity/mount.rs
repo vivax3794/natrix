@@ -7,10 +7,7 @@ use crate::dom::element::Element;
 use crate::get_document;
 use crate::reactivity::KeepAlive;
 use crate::reactivity::render_callbacks::RenderingState;
-use crate::reactivity::state::{Ctx, HookKey, State};
-
-// TODO: Allow storing sub component senders on the state.
-// We would need derive macro support to mark a field as non-reactive.
+use crate::reactivity::state::{Ctx, State};
 
 /// The result of rendering a component
 ///
@@ -108,7 +105,6 @@ pub fn render_component<C: State>(
     let mut state = RenderingState {
         keep_alive: &mut keep_alive,
         hooks: &mut hooks,
-        parent_dep: HookKey::default(),
     };
     let node = tree
         .render()

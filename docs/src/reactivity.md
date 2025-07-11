@@ -3,7 +3,7 @@
 ## Callbacks
 
 You have already seen `|ctx: &mut RenderCtx<App>| ...` used in the varying examples in the book.
-Lets go into some more detail about what this does.
+Lets go into some more detail about what this does. Both `RenderCtx` and `Ctx` implement `Deref` to your `App` (and `DerefMut` as well for `Ctx`)
 
 > ![TIP]
 > You can define type aliases for the two context types specialized on your type
@@ -83,3 +83,135 @@ fn render_counter() -> impl Element<Counter> {
 ```
 
 The reactivity system automatically tracks when `ctx.value` is accessed and will re-run the text callback whenever the value changes.
+
+## Computed values
+What if you have something that depends on a computed value? if you did `if *ctx.value > 2` then that reactive closure would re-run whenever `.value` changes.
+This is where [`ctx.watch`](prelude::RenderCtx::watch) comes in, this caches the result of the computation and only re-runs the parent closure if the calculated value changes.
+
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+# #[derive(State)]
+# struct App {value: Signal<u32>}
+#
+# fn render() -> impl Element<App> {
+# |ctx: &mut RenderCtx<App>| {
+if ctx.watch(|ctx| *ctx.value > 2) {
+    e::button().text(|ctx: &mut RenderCtx<App>| *ctx.value).generic()
+} else {
+    e::h1().text("Value is too low").generic()
+}
+# }}
+```
+
+Here the `*ctx.value > 2` will re-run whenever `ctx.value` changes, *but* the if-block itself will only-run if the condition flips, which in practice means we arent swapping out dom-nodes all the time.
+
+## Guards - Handling `Option`/`Result`
+
+Guards provide a way to safely access the inner value of `Option` or `Result` types while maintaining fine-grained reactivity. They solve a common problem when working with optional values in reactive contexts.
+
+### The Problem with Optional Values
+
+Consider this common pattern when working with optional values:
+
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+#[derive(State)]
+struct App {
+    value: Signal<Option<u32>>,
+}
+
+fn render() -> impl Element<App> {
+    |ctx: &mut RenderCtx<App>| {
+        if let Some(value) = *ctx.value {
+            e::div().text(value)
+        } else {
+            e::div().text("Is none")
+        }
+    }
+}
+```
+
+**The issue:** The outer div gets recreated every time `value` changes, even when it's just the inner value changing like `Some(0) -> Some(1)`. This happens because the entire expression is reactive to any change in `ctx.value`.
+
+### First Attempt: Using `ctx.watch`
+
+You might reach for `ctx.watch` to solve this, and it actually works perfectly:
+
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+# #[derive(State)]
+# struct App {value: Signal<Option<u32>>}
+# fn render() -> impl Element<App> {
+# |ctx: &mut RenderCtx<App>| {
+if ctx.watch(|ctx| ctx.value.is_some()) {
+    e::div().text(|ctx: &mut RenderCtx<App>| ctx.value.unwrap())
+} else {
+    e::div().text("Is none")
+}
+# }}
+```
+
+Now a change from `Some(0)` to `Some(1)` will only run the inner closure, and the outer div is reused.
+
+**But there's a downside:** We need `.unwrap()` because the inner closure is technically isolated from the outer condition. This is:
+- Ugly and error-prone
+- Easy to forget the outer condition exists
+- Creates a potential panic point
+
+### Enter Guards
+
+Guards provide an elegant solution to this exact problem:
+
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+# #[derive(State)]
+# struct App {value: Signal<Option<u32>>}
+# fn render() -> impl Element<App> {
+# |ctx: &mut RenderCtx<App>| {
+if let Some(value_guard) = ctx.guard(lens!(App => .value).deref()) {
+    e::div().text(move |ctx: &mut RenderCtx<App>| *ctx.get(value_guard))
+} else {
+    e::div().text("Is none")
+}
+# }}
+```
+
+Here `value_guard` is **not** the actual value—it's a [lens](lens.md) that can be captured by child closures.
+Specifically `ctx.guard(...)` on a lens for `Option<T>` will return a `Option<impl Lens<..., T>>`.
+
+### How Guards Work
+
+Guards use [`ctx.watch`](prelude::RenderCtx::watch) internally to track when the condition changes (like `.is_some()`), but they provide a safe way to access the inner value without `.unwrap()`.
+
+When you use `ctx.get(value_guard)`, you get the inner value safely because the guard guarantees it exists.
+
+> [!NOTE]
+> Internally, guards do use `.unwrap()`, but it should never fail because the guard's existence guarantees the value is `Some`.
+
+### Guards with Results
+
+Guards also work with `Result<T, E>` types:
+
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+# #[derive(State)]
+# struct App {operation: Signal<Result<u32, String>>}
+# fn render() -> impl Element<App> {
+# |ctx: &mut RenderCtx<App>| {
+match ctx.guard(lens!(App => .operation).deref()) {
+    Ok(success_guard) => {
+        e::div()
+            .text(move |ctx: &mut RenderCtx<App>| *ctx.get(success_guard))
+    }
+    Err(error_guard) => {
+        e::div()
+            .text(move |ctx: &mut RenderCtx<App>| ctx.get(error_guard).clone())
+    }
+}
+# }}
+```

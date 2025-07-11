@@ -16,8 +16,6 @@ pub(crate) struct RenderingState<'s> {
     pub(crate) keep_alive: &'s mut Vec<KeepAlive>,
     /// The hooks that are a child of this
     pub(crate) hooks: &'s mut Vec<HookKey>,
-    /// The parent render context, can be used to register it as a dependency of yourself
-    pub(crate) parent_dep: HookKey,
 }
 
 /// All reactive hooks will implement this trait to allow them to be stored as `dyn` objects.
@@ -70,7 +68,6 @@ impl<C: State> ReactiveNode<C> {
                 render_state: RenderingState {
                     keep_alive: &mut self.keep_alive,
                     hooks: &mut self.hooks,
-                    parent_dep: you,
                 },
             })
         });
@@ -78,7 +75,6 @@ impl<C: State> ReactiveNode<C> {
         let mut state = RenderingState {
             keep_alive: &mut self.keep_alive,
             hooks: &mut self.hooks,
-            parent_dep: you,
         };
         element.render(ctx, &mut state)
     }
@@ -198,7 +194,6 @@ impl<C: State, K: ReactiveValue> ReactiveHook<C> for SimpleReactive<C, K> {
                     render_state: RenderingState {
                         keep_alive: &mut self.keep_alive,
                         hooks: &mut self.hooks,
-                        parent_dep: you,
                     },
                 },
                 &self.node,
@@ -214,7 +209,6 @@ impl<C: State, K: ReactiveValue> ReactiveHook<C> for SimpleReactive<C, K> {
                 &mut RenderingState {
                     keep_alive: &mut self.keep_alive,
                     hooks: &mut self.hooks,
-                    parent_dep: you,
                 },
             ),
         }

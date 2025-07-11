@@ -83,6 +83,7 @@ impl<C: State> RenderCtx<'_, C> {
 
 /// A type that is guardable.
 /// This generally means types such as `Option` and `Result`
+// TODO: Make this derivable
 pub trait Guardable<S>: Sized {
     /// The result of guarding this value.
     /// The generic is the source lens

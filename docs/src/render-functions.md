@@ -169,10 +169,6 @@ fn render_app() -> impl Element<App> {
 ```
 The amazing thing is that since the helper is still concrete (`impl Element<App>`), you can still access any field directly, if you said had a `theme` field, the `counter` function could access that directly without needing lenses.
 
-> [!TIP]
-> All lenses are `Clone`, but you can require them to be `Copy` for ergonomics if you know the lenses you use are `Copy`.
-> (Only lenses that capture non-`Copy` data in closure via say [`.map`](lens::Lens::map) are not `Copy`)
-
 ## Generic State Store
 If you are writing a component library you naturally wont know the state, then you can simply use a generic:
 ```rust

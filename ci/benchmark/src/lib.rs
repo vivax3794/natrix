@@ -1,3 +1,5 @@
+#![feature(custom_inner_attributes)]
+#![rust_analyzer::skip] // The macros in here make it slow
 #![allow(dead_code, reason = "test")]
 
 use natrix::class;
