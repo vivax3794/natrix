@@ -4,14 +4,19 @@ use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
 use slotmap::SecondaryMap;
+use smallvec::SmallVec;
 
 use super::{Ctx, HookKey};
 use crate::error_handling::log_or_panic;
 use crate::reactivity::render_callbacks::UpdateResult;
+use crate::reactivity::statics;
 
 /// The type of iterator we use for the hook collection
 #[doc(hidden)]
 pub type HookDepListIter = indexmap::set::IntoIter<HookKey>;
+
+/// The type that will be used to hold the dirty lists.
+pub(crate) type HookDepListHolder = SmallVec<[HookDepListIter; 2]>;
 
 /// Store some data but use `O` for its `Ord` implementation
 #[derive(Debug)]
@@ -43,7 +48,7 @@ impl<T, O: Ord> Ord for OrderAssociatedData<T, O> {
 /// The queue processor of the queue
 struct HookQueue {
     /// All changed vectors
-    vectors: Vec<HookDepListIter>,
+    vectors: HookDepListHolder,
     /// The queue of the next item in each vector
     queue: BinaryHeap<OrderAssociatedData<(HookKey, usize), Reverse<u64>>>,
     /// A temporary next item
@@ -67,10 +72,7 @@ fn get_next_valid(
 
 impl HookQueue {
     /// Create a new queue
-    fn new(
-        insertion_orders: &SecondaryMap<HookKey, u64>,
-        mut vectors: Vec<HookDepListIter>,
-    ) -> Self {
+    fn new(insertion_orders: &SecondaryMap<HookKey, u64>, mut vectors: HookDepListHolder) -> Self {
         let mut queue = BinaryHeap::with_capacity(vectors.len());
 
         let first_items = vectors
@@ -145,45 +147,16 @@ impl HookQueue {
 }
 
 /// Trait automatically implemented on reactive structs by the derive macro.
-/// INVARIANT: On `DerefMut` `read` must also be set.
+/// This is in fact just a marker trait to prevent using non-reactive state.
 #[doc(hidden)]
-pub trait State: Sized + 'static {
-    type SignalState;
-
-    /// If you were read register this as a dependency
-    /// Also should clear your read flag
-    #[doc(hidden)]
-    fn reg_dep(&mut self, dep: HookKey);
-
-    /// Return a Vector of dependency lists from changed sources.
-    /// Should also clear both flags.
-    #[doc(hidden)]
-    fn dirty_deps_lists(&mut self, collector: &mut Vec<indexmap::set::IntoIter<HookKey>>);
-
-    /// Pop the current signal state
-    #[doc(hidden)]
-    fn pop_state(&mut self) -> Self::SignalState;
-    /// Set the curfrent signal state
-    #[doc(hidden)]
-    fn set_state(&mut self, state: Self::SignalState);
-}
-
-impl State for () {
-    type SignalState = ();
-    fn reg_dep(&mut self, _dep: HookKey) {}
-    fn dirty_deps_lists(&mut self, _collector: &mut Vec<HookDepListIter>) {}
-    fn pop_state(&mut self) -> Self::SignalState {}
-    fn set_state(&mut self, _state: Self::SignalState) {}
-}
+pub trait State: Sized + 'static {}
+impl State for () {}
 
 impl<T: State> Ctx<T> {
     /// Loop over signals and update any depdant hooks for changed signals
     /// This also drains the deferred message queue
-    fn update(&mut self) {
+    fn update(&mut self, dep_lists: HookDepListHolder) {
         log::trace!("Performing update cycle for {}", std::any::type_name::<T>());
-
-        let mut dep_lists = Vec::new();
-        self.data.dirty_deps_lists(&mut dep_lists);
 
         log::trace!("{} signals changed", dep_lists.len());
         let mut hook_queue = HookQueue::new(&self.hooks.insertion_order, dep_lists);
@@ -208,8 +181,8 @@ impl<T: State> Ctx<T> {
     /// Run the given method and track the reactive modifications done in it.
     /// and call initiate the update cycle afterwards.
     pub(crate) fn track_changes<R>(&mut self, func: impl FnOnce(&mut Self) -> R) -> R {
-        let result = func(self);
-        self.update();
+        let (dirty_list, result) = statics::with_dirty_tracking(|| func(self));
+        self.update(dirty_list);
         result
     }
 
@@ -220,22 +193,6 @@ impl<T: State> Ctx<T> {
         hook: HookKey,
         func: impl for<'a> FnOnce(&'a mut Self) -> R,
     ) -> R {
-        let result = func(self);
-        self.reg_dep(hook);
-        result
-    }
-
-    /// Run the given function pop and restoring signals around it
-    // PERF: This causes 2 loops of all signals, and then the end of the reactive scope is a extra
-    // one.
-    // I.e using `ctx.watch` makes the hook 4X more expensive to compute. (Pop, Check, Set, Check)
-    pub(crate) fn with_scoped_signals<R>(
-        &mut self,
-        func: impl for<'a> FnOnce(&'a mut Self) -> R,
-    ) -> R {
-        let state = self.data.pop_state();
-        let result = func(self);
-        self.data.set_state(state);
-        result
+        statics::with_hook(hook, || func(self))
     }
 }

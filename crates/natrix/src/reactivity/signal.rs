@@ -1,23 +1,21 @@
 //! Signals for tracking reactive dependencies and modifications.
 
-use std::cell::Cell;
+use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
 
 use indexmap::IndexSet;
 
-use crate::error_handling::{do_performance_check, performance_lint};
+use crate::error_handling::{do_performance_check, log_or_panic, performance_lint};
 use crate::prelude::State;
-use crate::reactivity::state::{HookDepListIter, HookKey};
+use crate::reactivity::state::HookKey;
+use crate::reactivity::statics;
 
 /// A signal tracks reads and writes to a value, as well as dependencies.
 pub struct Signal<T> {
     /// The data to be tracked.
     data: T,
-    /// The flag for whether this signal has been read or written to.
-    /// this is a `Cell` to allow for modification in `Deref`
-    touched: Cell<bool>,
     /// A collection of the dependencies.
-    deps: IndexSet<HookKey>,
+    deps: RefCell<IndexSet<HookKey>>,
 }
 
 impl<T: std::fmt::Debug> std::fmt::Debug for Signal<T> {
@@ -31,56 +29,52 @@ impl<T> Signal<T> {
     pub fn new(data: T) -> Self {
         Self {
             data,
-            touched: Cell::new(false),
-            deps: IndexSet::new(),
+            deps: RefCell::new(IndexSet::new()),
         }
     }
 }
 
-impl<T: 'static> State for Signal<T> {
-    type SignalState = bool;
-
-    fn reg_dep(&mut self, dep: HookKey) {
-        if self.touched.take() {
-            self.deps.insert(dep);
-        }
-
-        if do_performance_check() {
-            if self.deps.len() > 20 {
-                performance_lint!("Signal dep list is {}", self.deps.len());
-            }
-        }
-    }
-
-    fn dirty_deps_lists(&mut self, collector: &mut Vec<HookDepListIter>) {
-        if self.touched.take() {
-            let mut new = IndexSet::with_capacity(self.deps.len());
-            std::mem::swap(&mut new, &mut self.deps);
-            collector.push(new.into_iter());
-        }
-    }
-
-    fn pop_state(&mut self) -> Self::SignalState {
-        self.touched.take()
-    }
-    fn set_state(&mut self, dirty: Self::SignalState) {
-        self.touched.set(dirty);
-    }
-}
+impl<T: 'static> State for Signal<T> {}
 
 impl<T> Deref for Signal<T> {
     type Target = T;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        self.touched.set(true);
+        if let Some(hook) = statics::current_hook() {
+            if let Ok(mut deps) = self.deps.try_borrow_mut() {
+                deps.insert(hook);
+                if deps.len() > 20 {
+                    performance_lint!("Signal deps list over 20");
+                }
+            } else {
+                log_or_panic!("Signal deps list already borrowed");
+            }
+        }
+
         &self.data
     }
 }
 impl<T> DerefMut for Signal<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.touched.set(true);
+        if let Some(hook) = statics::current_hook() {
+            self.deps.get_mut().insert(hook);
+
+            if do_performance_check() {
+                if self.deps.get_mut().len() > 20 {
+                    performance_lint!("Signal deps list over 20");
+                }
+            }
+        }
+
+        statics::reg_dirty_list(|| {
+            let deps = self.deps.get_mut();
+            let mut new = IndexSet::with_capacity(deps.len());
+            std::mem::swap(&mut new, deps);
+            new.into_iter()
+        });
+
         &mut self.data
     }
 }
@@ -88,39 +82,5 @@ impl<T> DerefMut for Signal<T> {
 impl<T: Default> Default for Signal<T> {
     fn default() -> Self {
         Self::new(T::default())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Signal;
-    // We put signals in a struct to simulate the real usage pattern where they are always fields
-    // in a &ref
-    struct Holder<T>(Signal<T>);
-
-    #[test]
-    fn reading() {
-        let foo = &Holder(Signal::new(10));
-        assert_eq!(*foo.0, 10);
-        assert!(foo.0.touched.get());
-    }
-
-    #[test]
-    fn modify() {
-        let foo = &mut Holder(Signal::new(10));
-        *foo.0 = 20;
-
-        assert!(foo.0.touched.get());
-        assert_eq!(*foo.0, 20);
-    }
-
-    #[test]
-    fn debug() {
-        let data = "Hello World";
-        let foo = &Holder(Signal::new(data));
-
-        assert_eq!(format!("{:?}", foo.0), format!("{data:?}"));
-
-        assert!(foo.0.touched.get());
     }
 }

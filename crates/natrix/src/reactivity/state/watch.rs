@@ -64,20 +64,18 @@ impl<C: State> RenderCtx<'_, C> {
         F: Fn(&mut Ctx<C>) -> T + 'static,
         T: PartialEq + Clone + 'static,
     {
-        self.ctx.with_scoped_signals(|ctx| {
-            let me = ctx.hooks.reserve_key();
+        let me = self.ctx.hooks.reserve_key();
 
-            let result = ctx.track_reads(me, &func);
+        let result = self.ctx.track_reads(me, &func);
 
-            let hook = WatchState {
-                calc_value: Box::new(func),
-                last_value: result.clone(),
-                dep: self.render_state.parent_dep,
-            };
-            ctx.hooks.set_hook(me, Box::new(hook));
-            self.render_state.hooks.push(me);
+        let hook = WatchState {
+            calc_value: Box::new(func),
+            last_value: result.clone(),
+            dep: self.render_state.parent_dep,
+        };
+        self.ctx.hooks.set_hook(me, Box::new(hook));
+        self.render_state.hooks.push(me);
 
-            result
-        })
+        result
     }
 }
