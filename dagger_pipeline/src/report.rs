@@ -106,11 +106,11 @@ pub fn generate_report(
 }
 
 /// Serve the report
-pub async fn serve_report(client: &Query, report: Directory) -> Result<()> {
+pub async fn serve_dist(client: &Query, dist: Directory) -> Result<()> {
     let container = client
         .container()
         .from("nginx:alpine")
-        .with_directory("/usr/share/nginx/html", report)
+        .with_directory("/usr/share/nginx/html", dist)
         .with_exposed_port(80);
     container.sync().await?;
     let service = container.as_service();
@@ -139,7 +139,7 @@ pub async fn serve_report(client: &Query, report: Directory) -> Result<()> {
     };
 
     let handle = tokio::spawn(server);
-    println!("=========== REPORT GENERATED ============");
+    println!("=========== RESULT GENERATED ============");
     println!("VISIT ABOVE LINK TO SEE");
     let _ = handle.await;
 

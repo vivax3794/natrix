@@ -9,3 +9,7 @@ quick jobs="1":
 # Apply automatic fixes
 fix:
     dagger --quiet run cargo run -p dagger_pipeline -- fix
+
+# Open mdbook
+book:
+    dagger --quiet run cargo run -p dagger_pipeline -- book

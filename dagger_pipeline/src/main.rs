@@ -29,6 +29,8 @@ enum Cli {
     Tests(TestCommand),
     /// Apply various fixes
     Fix,
+    /// Build and open the mdbook
+    Book,
 }
 
 /// Common items
@@ -107,7 +109,7 @@ async fn main() -> Result<()> {
             Cli::Tests(arguments) => {
                 let reports = report::run_all_tests(&client, &arguments).await?;
                 let report = report::generate_report(&client, reports, &arguments)?;
-                report::serve_report(&client, report).await?;
+                report::serve_dist(&client, report).await?;
             }
             Cli::Fix => {
                 let source = client.host().directory_opts(
@@ -122,6 +124,14 @@ async fn main() -> Result<()> {
                 let source = fix::fmt(&client, source);
                 let source = fix::snapshots(&client, source);
                 source.export(".").await?;
+            }
+            Cli::Book => {
+                let book = base_images::book(&client)
+                    .with_workspace(&client)
+                    .with_workdir("./docs")
+                    .with_exec(vec!["mdbook", "build"])
+                    .directory("./book");
+                report::serve_dist(&client, book).await?;
             }
         }
         Ok(())
