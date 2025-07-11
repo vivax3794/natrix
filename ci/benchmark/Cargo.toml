@@ -9,6 +9,7 @@ natrix = { path="../../crates/natrix", features = ["nightly", "test_utils", "asy
 log = {version = "0.4", features = ["release_max_level_off"]}
 wasm-bindgen-test = "0.3.50"
 web-sys = {version="0.3.77", features=["Performance"]}
+pastey = "0.1.0"
 
 [package.metadata.natrix]
 ssg = false

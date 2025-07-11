@@ -6,6 +6,7 @@ use natrix::prelude::*;
 mod runtime;
 
 const BUTTON: Id = natrix::id!();
+const BUTTON2: Id = natrix::id!();
 
 #[derive(State, Default)]
 struct Buttons<const N: u32> {
@@ -170,7 +171,7 @@ fn render_toggle_at_once<const N: u32>() -> impl Element<ToggleAtOnce<N>> {
 }
 
 macro_rules! define_large_fields {
-    ($($field:ident),*) => {
+    ($($field:ident),* $(,)?) => {
         #[derive(State, Default)]
         struct LargeFields {
             $(
@@ -180,6 +181,9 @@ macro_rules! define_large_fields {
 
         fn render_large_fields() -> impl Element<LargeFields> {
             e::div()
+                .child(e::button().id(BUTTON2).on::<events::Click>(
+                    |ctx: &mut Ctx<LargeFields>, _, _| {*ctx.a1 += 1;}
+                ))
                 .child(e::button().id(BUTTON).on::<events::Click>(
                     |ctx: &mut Ctx<LargeFields>, _, _| {
                         $(
@@ -193,18 +197,46 @@ macro_rules! define_large_fields {
         }
     };
 }
-define_large_fields!(
-    a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, a1, b1, c1, d1, e1,
-    f1, g1, h1, i1, j1, k1, l1, m1, n1, o1, p1, q1, r1, s1, t1, u1, v1, w1, x1, y1, a2, b2, c2, d2,
-    e2, f2, g2, h2, i2, j2, k2, l2, m2, n2, o2, p2, q2, r2, s2, t2, u2, v2, w2, x2, y2, a3, b3, c3,
-    d3, e3, f3, g3, h3, i3, j3, k3, l3, m3, n3, o3, p3, q3, r3, s3, t3, u3, v3, w3, x3, y3, a4, b4,
-    c4, d4, e4, f4, g4, h4, i4, j4, k4, l4, m4, n4, o4, p4, q4, r4, s4, t4, u4, v4, w4, x4, y4, a5,
-    b5, c5, d5, e5, f5, g5, h5, i5, j5, k5, l5, m5, n5, o5, p5, q5, r5, s5, t5, u5, v5, w5, x5, y5,
-    a6, b6, c6, d6, e6, f6, g6, h6, i6, j6, k6, l6, m6, n6, o6, p6, q6, r6, s6, t6, u6, v6, w6, x6,
-    y6, a7, b7, c7, d7, e7, f7, g7, h7, i7, j7, k7, l7, m7, n7, o7, p7, q7, r7, s7, t7, u7, v7, w7,
-    x7, y7, a8, b8, c8, d8, e8, f8, g8, h8, i8, j8, k8, l8, m8, n8, o8, p8, q8, r8, s8, t8, u8, v8,
-    w8, x8, y8, a9, b9, c9, d9, e9, f9, g9, h9, i9, j9, k9, l9, m9, n9, o9, p9, q9, r9, s9, t9, u9,
-    v9, w9, x9, y9
+
+macro_rules! large_fields_matrix {
+    ($($suffix:literal),*) => {
+        pastey::paste! {
+            define_large_fields!(
+                $(
+                    [< a $suffix >],
+                    [< b $suffix >],
+                    [< c $suffix >],
+                    [< d $suffix >],
+                    [< e $suffix >],
+                    [< f $suffix >],
+                    [< g $suffix >],
+                    [< h $suffix >],
+                    [< j $suffix >],
+                    [< l $suffix >],
+                    [< m $suffix >],
+                    [< n $suffix >],
+                    [< o $suffix >],
+                    [< p $suffix >],
+                    [< q $suffix >],
+                    [< r $suffix >],
+                    [< s $suffix >],
+                    [< t $suffix >],
+                    [< u $suffix >],
+                    [< v $suffix >],
+                    [< w $suffix >],
+                    [< x $suffix >],
+                    [< y $suffix >],
+                )*
+            );
+        }
+    };
+}
+
+large_fields_matrix!(
+    1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 29,
+    30, 31, 32, 33, 34, 35, 36, 37, 39, 40, 41, 42, 43, 44, 45, 46, 47, 49, 50, 51, 52, 53, 54, 55,
+    56, 57, 59, 60, 61, 62, 63, 64, 65, 66, 67, 69, 70, 71, 72, 73, 74, 75, 76, 77, 79, 80, 81, 82,
+    83, 84, 85, 86, 87, 89, 90, 91, 92, 93, 94, 95, 96, 97, 09, 100
 );
 
 #[derive(State, Default)]
@@ -332,6 +364,12 @@ async fn run_benchmarks() {
     bencher
         .bench("update large fields", 0, |_| {
             let button = natrix::test_utils::get(BUTTON.0);
+            button.click();
+        })
+        .await;
+    bencher
+        .bench("update one on large fields", 0, |_| {
+            let button = natrix::test_utils::get(BUTTON2.0);
             button.click();
         })
         .await;
