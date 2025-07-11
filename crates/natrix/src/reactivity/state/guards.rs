@@ -54,7 +54,7 @@ impl<C: State> RenderCtx<'_, C> {
     /// # fn render() -> impl Element<App> {
     /// # |ctx: &mut RenderCtx<App>| {
     /// if let Some(value_guard) = ctx.guard(lens!(App => .value).deref()) {
-    ///     e::div().text(move |ctx: R<Self>| *ctx.get(value_guard))
+    ///     e::div().text(move |ctx: &mut RenderCtx<App>| *ctx.get(value_guard))
     /// } else {
     ///     e::div().text("Is none")
     /// }
@@ -66,13 +66,17 @@ impl<C: State> RenderCtx<'_, C> {
     ///
     /// Internally this uses `ctx.watch` and `.unwrap` (which should never fail)
     /// Guard also functions on `Result`
+    #[inline]
     pub fn guard<L, G>(&mut self, lens: L) -> G::Output<L>
     where
         L: Lens<C, G> + Clone,
         G: Guardable<C>,
     {
         let check_lens = lens.clone();
-        let check = self.watch(move |ctx| ctx.get(check_lens.clone()).check());
+        let check = self.watch(
+            #[inline]
+            move |ctx| ctx.get(check_lens.clone()).check(),
+        );
         G::into_lens(check, lens)
     }
 }
@@ -101,6 +105,7 @@ pub trait Guardable<S>: Sized {
 ///
 /// This lens is designed to be created by the `Guardable` trait, which ensures
 /// it is only used when the `Option` is `Some`, preventing panics.
+#[cfg_attr(feature = "nightly", must_not_suspend)]
 pub struct OptionLens<T>(PhantomData<T>);
 
 impl<T> OptionLens<T> {
@@ -122,6 +127,7 @@ impl<T: 'static> LensInner for OptionLens<Option<T>> {
     type Target = T;
 
     #[expect(clippy::expect_used, reason = "Only constructable by guard")]
+    #[inline]
     fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
         source.as_mut().expect("OptionLens used on `None`")
     }
@@ -154,7 +160,7 @@ where
 ///
 /// This lens is designed to be created by the `Guardable` trait, which ensures
 /// it is only used when the `Result` is `Ok`, preventing panics.
-#[derive(Debug)]
+#[cfg_attr(feature = "nightly", must_not_suspend)]
 pub struct OkLens<R>(PhantomData<R>);
 
 impl<R> OkLens<R> {
@@ -179,10 +185,10 @@ where
     type Source = Result<T, E>;
     type Target = T;
 
-    #[expect(clippy::expect_used, reason = "Only constructable by guard")]
+    // HACK: https://github.com/rust-lang/rust-clippy/pull/15253
+    // #[expect(clippy::expect_used, reason = "Only constructable by guard")]
+    #[inline]
     fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
-        // This is safe because the `Guardable` implementation only creates
-        // this lens when the source is `Ok`.
         source.as_mut().ok().expect("OkLens used on `Err`")
     }
 }
@@ -191,7 +197,7 @@ where
 ///
 /// This lens is designed to be created by the `Guardable` trait, which ensures
 /// it is only used when the `Result` is `Err`, preventing panics.
-#[derive(Debug)]
+#[cfg_attr(feature = "nightly", must_not_suspend)]
 pub struct ErrLens<R>(PhantomData<R>);
 
 impl<R> ErrLens<R> {
@@ -216,7 +222,9 @@ where
     type Source = Result<T, E>;
     type Target = E;
 
-    #[expect(clippy::expect_used, reason = "Only constructable by guard")]
+    // HACK: https://github.com/rust-lang/rust-clippy/pull/15253
+    // #[expect(clippy::expect_used, reason = "Only constructable by guard")]
+    #[inline]
     fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
         source.as_mut().err().expect("ErrLens used on `Ok`")
     }
@@ -231,10 +239,12 @@ where
         Result<lens::Chain<L, OkLens<Self>>, lens::Chain<L, ErrLens<Self>>>;
     type WatchState = bool;
 
+    #[inline]
     fn check(&self) -> Self::WatchState {
         self.is_ok()
     }
 
+    #[inline]
     fn into_lens<L>(check_result: Self::WatchState, to_you: L) -> Self::Output<L>
     where
         L: Lens<S, Self>,

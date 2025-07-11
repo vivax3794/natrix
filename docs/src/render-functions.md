@@ -4,9 +4,9 @@ Render functions are the core of how you build UI in Natrix. They are functions 
 
 ## Basic Render Functions
 
-Every Natrix application starts with a render function. The function is generic over the state type it will work with:
+Every Natrix application starts with a render function. Elements are generic over the state type it will work with:
 
-```rust
+```rust,no_run
 # extern crate natrix;
 # use natrix::prelude::*;
 
@@ -22,29 +22,7 @@ fn render_my_app() -> impl Element<MyApp> {
 }
 
 fn main() {
-    natrix::mount(MyApp { count: Signal::new(0) }, render_my_app());
-}
-```
-
-## Reusable Render Functions
-
-You can create reusable render functions by making them generic over the state type. This allows you to use the same UI component with different state types:
-
-```rust
-# extern crate natrix;
-# use natrix::prelude::*;
-
-fn hello<T: State>() -> impl Element<T> {
-    e::h1().text("Hello World")
-}
-
-#[derive(State)]
-struct MyApp;
-
-fn render_my_app() -> impl Element<MyApp> {
-    e::div()
-        .child(hello())
-        .child(e::p().text("Welcome to Natrix"))
+    natrix::mount(MyApp { count: Signal::new(0) }, render_my_app);
 }
 ```
 
@@ -56,13 +34,14 @@ Since render functions are just regular Rust functions, they can take arguments:
 # extern crate natrix;
 # use natrix::prelude::*;
 
-fn greeting<T: State>(name: &str) -> impl Element<T> {
-    e::h1().text("Hello ").text(name)
-}
 
 #[derive(State)]
 struct MyApp {
     user_name: Signal<String>,
+}
+
+fn greeting(name: &'static str) -> impl Element<MyApp> {
+    e::h1().text("Hello ").text(name)
 }
 
 fn render_my_app() -> impl Element<MyApp> {
@@ -80,13 +59,14 @@ For reactive content, pass `impl Element<T>` as arguments instead of raw values.
 # extern crate natrix;
 # use natrix::prelude::*;
 
-fn greeting<T: State>(name: impl Element<T>) -> impl Element<T> {
-    e::h1().text("Hello ").child(name)
-}
 
 #[derive(State)]
 struct MyApp {
     user_name: Signal<String>,
+}
+
+fn greeting(name: impl Element<MyApp>) -> impl Element<MyApp> {
+    e::h1().text("Hello ").child(name)
 }
 
 fn render_my_app() -> impl Element<MyApp> {
@@ -106,96 +86,151 @@ You can pass event handlers to render functions using the [`EventHandler`](dom::
 # use natrix::prelude::*;
 use natrix::dom::EventHandler;
 
-fn fancy_button<T: State>(
-    text: &str,
-    on_click: impl EventHandler<T, events::Click>,
-) -> impl Element<T> {
+
+#[derive(State)]
+struct App {
+    counter: Signal<i32>,
+}
+
+fn fancy_button(
+    text: &'static str,
+    on_click: impl EventHandler<App, events::Click>,
+) -> impl Element<App> {
     e::button()
         .text(text)
         .on(on_click)
 }
 
-#[derive(State)]
-struct Counter {
-    value: Signal<i32>,
-}
-
-fn render_counter() -> impl Element<Counter> {
+fn render_counter() -> impl Element<App> {
     e::div()
-        .child(e::p().text(|ctx: &mut RenderCtx<Counter>| *ctx.value))
-        .child(fancy_button("Increment", |ctx: &mut Ctx<Counter>, _, _| {
-            *ctx.value += 1;
+        .child(e::p().text(|ctx: &mut RenderCtx<App>| *ctx.counter))
+        .child(fancy_button("Increment", |ctx: &mut Ctx<App>, _, _| {
+            *ctx.counter += 1;
         }))
 }
 ```
 
-## State-Specific Render Functions
-
-You can also write render functions that are specific to a particular state type. This is useful for complex components:
+## Direct state access
+Since render functions are specialized on the state type, you can access the fields directly.
 
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
 
 #[derive(State)]
-struct Counter {
-    value: Signal<i32>,
+struct App {
+    username: Signal<String>,
 }
 
-fn increment_button(delta: i32) -> impl Element<Counter> {
-    e::button()
-        .text(format!("{:+}", delta))
-        .on::<events::Click>(move |ctx: &mut Ctx<Counter>, _, _| {
-            *ctx.value += delta;
-        })
+fn greeting() -> impl Element<App> {
+    e::h1()
+        .text("Hello ")
+        .text(|ctx: &mut RenderCtx<App>| ctx.username.clone())
 }
 
-fn render_counter() -> impl Element<Counter> {
+fn render_app() -> impl Element<App> {
     e::div()
-        .child(increment_button(-10))
-        .child(increment_button(-1))
-        .child(e::span().text(|ctx: &mut RenderCtx<Counter>| *ctx.value))
-        .child(increment_button(1))
-        .child(increment_button(10))
+        .child(greeting())
+        .child(e::p().text("Cool right?"))
 }
 ```
 
-## Composing Render Functions
-
-You can compose render functions together to build complex UIs:
+## Generic state access.
+What if you want a more reusable component, lets say a slider?
+For that we have lenses, the primary api for lenses is the `lens!` macro and [`Lens`](lens::Lens) trait methods.
+The signature for a lens is `Lens<Source, Target>`.
 
 ```rust
 # extern crate natrix;
 # use natrix::prelude::*;
 
-fn header<T: State>() -> impl Element<T> {
-    e::header()
-        .child(e::h1().text("My App"))
-        .child(e::nav().text("Navigation"))
-}
-
-fn footer<T: State>() -> impl Element<T> {
-    e::footer()
-        .child(e::p().text("© 2024 My App"))
-}
-
 #[derive(State)]
-struct MyApp {
-    content: Signal<String>,
+struct App {
+    first: Signal<u8>,
+    second: Signal<u8>,
 }
 
-fn render_my_app() -> impl Element<MyApp> {
+fn counter(value: impl Lens<App, u8> + Copy) -> impl Element<App> {
     e::div()
-        .child(header())
-        .child(e::main().text(|ctx: &mut RenderCtx<MyApp>| ctx.content.clone()))
-        .child(footer())
+        .child(e::button().text("-").on::<events::Click>(move |ctx: &mut Ctx<App>, _, _| {
+            *ctx.get(value) -= 1;
+        }))
+        .text(move |ctx: &mut RenderCtx<App>| *ctx.get(value))
+        .child(e::button().text("+").on::<events::Click>(move |ctx: &mut Ctx<App>, _, _| {
+            *ctx.get(value) += 1;
+        }))
+}
+
+fn render_app() -> impl Element<App> {
+    e::div()
+        .child(counter(lens!(App => .first).deref()))
+        .child(counter(lens!(App => .second).deref()))
+}
+```
+The amazing thing is that since the helper is still concrete (`impl Element<App>`), you can still access any field directly, if you said had a `theme` field, the `counter` function could access that directly without needing lenses.
+
+> [!TIP]
+> All lenses are `Clone`, but you can require them to be `Copy` for ergonomics if you know the lenses you use are `Copy`.
+> (Only lenses that capture non-`Copy` data in closure via say [`.map`](lens::Lens::map) are not `Copy`)
+
+## Generic State Store
+If you are writing a component library you naturally wont know the state, then you can simply use a generic:
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+
+fn counter<S: State>(value: impl Lens<S, u8> + Copy) -> impl Element<S> {
+    e::div()
+        .child(e::button().text("-").on::<events::Click>(move |ctx: &mut Ctx<S>, _, _| {
+            *ctx.get(value) -= 1;
+        }))
+        .text(move |ctx: &mut RenderCtx<S>| *ctx.get(value))
+        .child(e::button().text("+").on::<events::Click>(move |ctx: &mut Ctx<S>, _, _| {
+            *ctx.get(value) += 1;
+        }))
 }
 ```
 
-## Best Practices
+## Trait bound on state.
+What if you want the nice feature of always having access to global state, but in a generic component library? well you can use traits!
+```rust
+# extern crate natrix;
+use natrix::prelude::*;
 
-1. **Keep render functions pure**: They should only depend on their arguments and not have side effects.
-2. **Use generic functions for reusability**: Make functions generic over `T: State` when they don't need specific state.
-3. **Pass reactive content as `impl Element<T>`**: This enables fine-grained reactivity.
-4. **Use descriptive names**: Function names should clearly indicate what UI they create.
-5. **Break down complex UIs**: Split large render functions into smaller, composable pieces.
+mod my_library {
+    use natrix::prelude::*;
+    pub trait HasLanguage {
+        fn get_language(&self) -> &'static str;
+    }
+
+    pub fn greeting<S>(name: impl Lens<S, String>) -> impl Element<S>
+        where S: State + HasLanguage
+    {
+        e::div()
+            .text(|ctx: &mut RenderCtx<S>| {
+                match ctx.get_language() {
+                    "NO" => "Hallo ",
+                    "EN" | _ => "Greetins "
+                }
+            })
+            .text(move |ctx: &mut RenderCtx<S>| ctx.get(name.clone()).clone())
+    }
+}
+
+#[derive(State)]
+struct App {
+    lang: Signal<&'static str>,
+    author_name: Signal<String>,
+}
+
+impl my_library::HasLanguage for App {
+    fn get_language(&self) -> &'static str {
+        &self.lang
+    }
+}
+
+fn render_app() -> impl Element<App> {
+    e::div()
+        .child(my_library::greeting(lens!(App => .author_name).deref()))
+}
+```

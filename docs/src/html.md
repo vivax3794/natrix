@@ -60,11 +60,11 @@ e::div()
     .child(e::button()
         .text("Click me!")
         .on::<events::Click>(|ctx: &mut Ctx<MyComponent>, _, _| {
-            *ctx.is_active.write() = !*ctx.is_active.read();
+            *ctx.is_active = !*ctx.is_active;
         })
     )
     .child(|ctx: &mut RenderCtx<MyComponent>| {
-        if *ctx.is_active.read() {
+        if *ctx.is_active {
             Some(e::p().text("Active!"))
         } else {
             None
@@ -86,9 +86,10 @@ You can use the [`format_elements`](format_elements) macro to get `format!` like
 # }
 #
 # fn render(ctx: &mut RenderCtx<MyComponent>) -> impl Element<MyComponent> {
-e::h1().children(
-    natrix::format_elements!(|ctx: &mut RenderCtx<MyComponent>| "Counter is {}, just {} clicks left!", *ctx.counter.read(), *ctx.target.read() - *ctx.counter.read())
-)
+e::h1().children(natrix::format_elements!(
+    |ctx: &mut RenderCtx<MyComponent>| "Counter is {}, just {} clicks left!", 
+    *ctx.counter, *ctx.target - *ctx.counter
+))
 # }
 ```
 Which expands to effectively:
@@ -105,9 +106,9 @@ Which expands to effectively:
 # fn render(ctx: &mut RenderCtx<MyComponent>) -> impl Element<MyComponent> {
 e::h1()
     .text("Counter is ")
-    .child(|ctx: &mut RenderCtx<MyComponent>| *ctx.counter.read())
+    .child(|ctx: &mut RenderCtx<MyComponent>| *ctx.counter)
     .text(", just ")
-    .child(|ctx: &mut RenderCtx<MyComponent>| *ctx.target.read() - *ctx.counter.read())
+    .child(|ctx: &mut RenderCtx<MyComponent>| *ctx.target - *ctx.counter)
     .text(" clicks left!")
 # }
 ```
@@ -172,10 +173,10 @@ Attributes can also be reactive as closures implement the [`ToAttribute`](dom::T
 #
 # fn render(ctx: &mut RenderCtx<MyComponent>) -> impl Element<MyComponent> {
 e::button()
-    .disabled(|ctx: &mut RenderCtx<MyComponent>| !*ctx.is_active.read())
+    .disabled(|ctx: &mut RenderCtx<MyComponent>| !*ctx.is_active)
     .text("Click me!")
     .on::<events::Click>(|ctx: &mut Ctx<MyComponent>, _, _| {
-        *ctx.is_active.write() = !*ctx.is_active.read();
+        *ctx.is_active = !*ctx.is_active;
     })
 # }
 ```
@@ -224,7 +225,7 @@ const ACTIVE: Class = natrix::class!();
 # fn render(ctx: &mut RenderCtx<MyComponent>) -> impl Element<MyComponent> {
 e::div()
     .class(|ctx: &mut RenderCtx<MyComponent>| {
-        if *ctx.is_active.read() {
+        if *ctx.is_active {
             Some(ACTIVE)
         } else {
             None
@@ -233,7 +234,7 @@ e::div()
     .child(e::button()
         .text("Click me!")
         .on::<events::Click>(|ctx: &mut Ctx<MyComponent>, _, _| {
-            *ctx.is_active.write() = !*ctx.is_active.read();
+            *ctx.is_active = !*ctx.is_active;
         })
     )
 # }

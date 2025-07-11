@@ -18,6 +18,7 @@ pub trait LensInner: Clone + 'static {
 
 impl<S: crate::reactivity::State> crate::reactivity::Ctx<S> {
     /// Execute a lens on this state
+    #[inline]
     pub fn get<L: LensInner<Source = S>>(&mut self, lens: L) -> &mut L::Target {
         lens.resolve(&mut self.data)
     }
@@ -25,6 +26,7 @@ impl<S: crate::reactivity::State> crate::reactivity::Ctx<S> {
 
 impl<S: crate::reactivity::State> crate::reactivity::RenderCtx<'_, S> {
     /// Execute a lens on this state
+    #[inline]
     pub fn get<L: LensInner<Source = S>>(&mut self, lens: L) -> &L::Target {
         lens.resolve(&mut self.ctx.data)
     }
@@ -122,6 +124,7 @@ where
     type Source = T;
     type Target = T::Target;
 
+    #[inline]
     fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
         &mut *source
     }
@@ -164,8 +167,9 @@ impl<S, T, Ty> Lens<S, T> for Ty where Ty: LensInner<Source = S, Target = T> {}
 #[macro_export]
 macro_rules! lens {
     ($source:ty => $(. $field:ident)+) => {
-        $crate::lens::Direct::new(|value: &mut $source|
-            &mut value$(.$field)+
+        $crate::lens::Direct::new(
+            #[inline]
+            |value: &mut $source| &mut value$(.$field)+
         )
     };
 }

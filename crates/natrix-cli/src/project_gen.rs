@@ -167,7 +167,7 @@ mod tests {{
 
     #[wasm_bindgen_test]
     fn test() {{
-        test_utils::mount_test(HelloWorld, render_app());
+        test_utils::mount_test(App::default(), render_app());
         let element = test_utils::get(HELLO_ID);
         assert_eq!(element.text_content(), Some("Hello {name}".to_string()));
     }}

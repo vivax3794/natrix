@@ -173,7 +173,8 @@ version = "0.1.0"
 dependencies = [
  "log",
  "natrix",
- "wasm_bench_runtime",
+ "wasm-bindgen-test",
+ "web-sys",
 ]
 
 [[package]]
@@ -1106,25 +1107,6 @@ dependencies = [
  "log",
  "regex-automata",
  "regex-syntax",
-]
-
-[[package]]
-name = "gloo"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d15282ece24eaf4bd338d73ef580c6714c8615155c4190c781290ee3fa0fd372"
-dependencies = [
- "gloo-render",
-]
-
-[[package]]
-name = "gloo-render"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56008b6744713a8e8d98ac3dcb7d06543d5662358c9c805b4ce2167ad4649833"
-dependencies = [
- "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]
@@ -4129,18 +4111,6 @@ dependencies = [
  "futures-util",
  "js-sys",
  "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
-name = "wasm_bench_runtime"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e9ab1dfe1e964009e54c3a2034288da36f995d8e7b6584bb583ab756582a307"
-dependencies = [
- "futures",
- "gloo",
  "wasm-bindgen-futures",
  "web-sys",
 ]

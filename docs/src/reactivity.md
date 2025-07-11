@@ -2,8 +2,19 @@
 
 ## Callbacks
 
-You have already seen `|ctx: &mut RenderCtx<Self>| ...` used in the varying examples in the book.
+You have already seen `|ctx: &mut RenderCtx<App>| ...` used in the varying examples in the book.
 Lets go into some more detail about what this does.
+
+> ![TIP]
+> You can define type aliases for the two context types specialized on your type
+> ```rust
+> # extern crate natrix;
+> # use natrix::prelude::*;
+> #[derive(State)]
+> struct App { /* ... */ }
+> type C = Ctx<App>;
+> type R<'s> = RenderCtx<'s, App>;
+> ```
 
 The callbacks return a value that implements [`Element`](dom::element::Element), internally the framework will register which fields you accessed.
 And when those fields change, the framework will recall the callback and update the element with the result.

@@ -39,8 +39,3 @@ natrix dev
 ```
 
 This will start a local server that auto reloads on changes. Try changing the text in `src/main.rs` to see the changes live.
-
-## Further Reading
-
-- [Render Functions](render-functions.md) - Render functions are the core of natrix, and are the most important part of the framework.
-- [Html](html.md) - This goes over the [`html_elements`](dom::html_elements) module and how to use it.

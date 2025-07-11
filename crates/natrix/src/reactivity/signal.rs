@@ -110,7 +110,7 @@ mod tests {
         let foo = &mut Holder(Signal::new(10));
         *foo.0 = 20;
 
-        assert!(foo.0.written);
+        assert!(foo.0.touched.get());
         assert_eq!(*foo.0, 20);
     }
 

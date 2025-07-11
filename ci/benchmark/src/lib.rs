@@ -1,6 +1,9 @@
+#![expect(dead_code, reason = "This is a test only crate")]
+
 use natrix::class;
 use natrix::prelude::*;
-use wasm_bench_runtime::Bencher;
+
+mod runtime;
 
 const BUTTON: Id = natrix::id!();
 
@@ -229,120 +232,122 @@ fn render_deep_static<const N: u32>() -> impl Element<DeepStatic<N>> {
     res
 }
 
-fn main() {
-    Bencher::start(async |mut bencher| {
-        bencher
-            .bench("mount_large", 0, |_| {
-                natrix::test_utils::mount_test(
-                    Buttons::<10000>::default(),
-                    render_buttons::<10000>(),
-                );
-            })
-            .await;
+wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-        natrix::test_utils::mount_test(Buttons::<10000>::default(), render_buttons::<10000>());
-        bencher
-            .bench("update large", 0, |_| {
-                let button = natrix::test_utils::get(BUTTON.0);
-                button.click();
-            })
-            .await;
+#[wasm_bindgen_test::wasm_bindgen_test]
+async fn run_benchmarks() {
+    let mut bencher = runtime::Bencher::new();
 
-        natrix::test_utils::mount_test(
-            ToggleNode::<10000>::default(),
-            render_toggle_node::<10000>(),
-        );
-        bencher
-            .bench("toggle nodes", 0, |_| {
-                let button = natrix::test_utils::get(BUTTON.0);
-                button.click();
-            })
-            .await;
+    bencher
+        .bench("mount_large", 0, |_| {
+            natrix::test_utils::mount_test(Buttons::<10000>::default(), render_buttons::<10000>());
+        })
+        .await;
 
-        natrix::test_utils::mount_test(
-            ToggleText::<10000>::default(),
-            render_toggle_text::<10000>(),
-        );
-        bencher
-            .bench("toggle text", 0, |_| {
-                let button = natrix::test_utils::get(BUTTON.0);
-                button.click();
-            })
-            .await;
+    natrix::test_utils::mount_test(Buttons::<10000>::default(), render_buttons::<10000>());
+    bencher
+        .bench("update large", 0, |_| {
+            let button = natrix::test_utils::get(BUTTON.0);
+            button.click();
+        })
+        .await;
 
-        natrix::test_utils::mount_test(
-            ToggleAttr::<10000>::default(),
-            render_toggle_attr::<10000>(),
-        );
-        bencher
-            .bench("toggle attribute", 0, |_| {
-                let button = natrix::test_utils::get(BUTTON.0);
-                button.click();
-            })
-            .await;
+    natrix::test_utils::mount_test(
+        ToggleNode::<10000>::default(),
+        render_toggle_node::<10000>(),
+    );
+    bencher
+        .bench("toggle nodes", 0, |_| {
+            let button = natrix::test_utils::get(BUTTON.0);
+            button.click();
+        })
+        .await;
 
-        natrix::test_utils::mount_test(
-            ToggleClass::<10000>::default(),
-            render_toggle_class::<10000>(),
-        );
-        bencher
-            .bench("toggle class", 0, |_| {
-                let button = natrix::test_utils::get(BUTTON.0);
-                button.click();
-            })
-            .await;
+    natrix::test_utils::mount_test(
+        ToggleText::<10000>::default(),
+        render_toggle_text::<10000>(),
+    );
+    bencher
+        .bench("toggle text", 0, |_| {
+            let button = natrix::test_utils::get(BUTTON.0);
+            button.click();
+        })
+        .await;
 
-        natrix::test_utils::mount_test(
-            ToggleExist::<10000>::default(),
-            render_toggle_exist::<10000>(),
-        );
-        bencher
-            .bench("toggle exist", 0, |_| {
-                let button = natrix::test_utils::get(BUTTON.0);
-                button.click();
-            })
-            .await;
+    natrix::test_utils::mount_test(
+        ToggleAttr::<10000>::default(),
+        render_toggle_attr::<10000>(),
+    );
+    bencher
+        .bench("toggle attribute", 0, |_| {
+            let button = natrix::test_utils::get(BUTTON.0);
+            button.click();
+        })
+        .await;
 
-        natrix::test_utils::mount_test(
-            ToggleAtOnce::<10000>::default(),
-            render_toggle_at_once::<10000>(),
-        );
-        bencher
-            .bench("toggle at once", 0, |_| {
-                let button = natrix::test_utils::get(BUTTON.0);
-                button.click();
-            })
-            .await;
+    natrix::test_utils::mount_test(
+        ToggleClass::<10000>::default(),
+        render_toggle_class::<10000>(),
+    );
+    bencher
+        .bench("toggle class", 0, |_| {
+            let button = natrix::test_utils::get(BUTTON.0);
+            button.click();
+        })
+        .await;
 
-        natrix::test_utils::mount_test(LargeFields::default(), render_large_fields());
-        bencher
-            .bench("update large fields", 0, |_| {
-                let button = natrix::test_utils::get(BUTTON.0);
-                button.click();
-            })
-            .await;
+    natrix::test_utils::mount_test(
+        ToggleExist::<10000>::default(),
+        render_toggle_exist::<10000>(),
+    );
+    bencher
+        .bench("toggle exist", 0, |_| {
+            let button = natrix::test_utils::get(BUTTON.0);
+            button.click();
+        })
+        .await;
 
-        natrix::test_utils::mount_test(
-            UpdateNested::<300>::default(),
-            render_update_nested::<300>(),
-        );
-        bencher
-            .bench("update nested", 0, |_| {
-                let button = natrix::test_utils::get(BUTTON.0);
-                button.click();
-            })
-            .await;
+    natrix::test_utils::mount_test(
+        ToggleAtOnce::<10000>::default(),
+        render_toggle_at_once::<10000>(),
+    );
+    bencher
+        .bench("toggle at once", 0, |_| {
+            let button = natrix::test_utils::get(BUTTON.0);
+            button.click();
+        })
+        .await;
 
-        bencher
-            .bench("deep static", 0, |_| {
-                natrix::test_utils::setup();
-                natrix::reactivity::mount::mount_at(
-                    DeepStatic::<1000>,
-                    render_deep_static::<1000>(),
-                    natrix::test_utils::MOUNT_POINT,
-                )
-                .unwrap();
-            })
-            .await;
-    });
+    natrix::test_utils::mount_test(LargeFields::default(), render_large_fields());
+    bencher
+        .bench("update large fields", 0, |_| {
+            let button = natrix::test_utils::get(BUTTON.0);
+            button.click();
+        })
+        .await;
+
+    natrix::test_utils::mount_test(
+        UpdateNested::<300>::default(),
+        render_update_nested::<300>(),
+    );
+    bencher
+        .bench("update nested", 0, |_| {
+            let button = natrix::test_utils::get(BUTTON.0);
+            button.click();
+        })
+        .await;
+
+    bencher
+        .bench("deep static", 0, |_| {
+            natrix::test_utils::setup();
+            natrix::reactivity::mount::mount_at(
+                DeepStatic::<1000>,
+                render_deep_static::<1000>(),
+                natrix::test_utils::MOUNT_POINT,
+            )
+            .unwrap();
+        })
+        .await;
+
+    bencher.done();
 }

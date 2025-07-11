@@ -70,6 +70,29 @@ enum LabelType {
     /// Sub-suite label
     #[serde(rename = "subSuite")]
     SubSuite(String),
+    /// The severity of the test
+    #[serde(rename = "severity")]
+    Severity(Severity),
+}
+
+/// The severity of the test
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "lowercase")]
+#[expect(
+    dead_code,
+    reason = "This represents the full range of valid values of the format."
+)]
+enum Severity {
+    /// This is very simple to fix
+    Trivial,
+    /// This is just a minor issue
+    Minor,
+    /// This is specific feature not working
+    Normal,
+    /// This is a core component not working
+    Critical,
+    /// You cant commit without this
+    Blocker,
 }
 
 /// Lib test output
@@ -277,7 +300,10 @@ async fn run_linter(client: &Query, config: LinterConfig) -> Result<Directory> {
             TestStatus::Failed
         },
         status_details: status,
-        labels: vec![LabelType::Suite(LINTERS.to_string())],
+        labels: vec![
+            LabelType::Suite(LINTERS.to_string()),
+            LabelType::Severity(Severity::Minor),
+        ],
         steps: None,
     };
 
@@ -318,6 +344,7 @@ pub async fn native_tests(client: &Query) -> Result<Directory> {
         &[
             LabelType::Suite(UNIT_TESTS.to_string()),
             LabelType::SubSuite("Native".to_string()),
+            LabelType::Severity(Severity::Normal),
         ],
         "natrix::natrix$",
     )?;
@@ -434,6 +461,7 @@ fn parse_wasmbindgen_test_output(
                     labels: vec![
                         LabelType::Suite(UNIT_TESTS.to_string()),
                         LabelType::SubSuite(format!("Web {toolchain}")),
+                        LabelType::Severity(Severity::Normal),
                     ],
                     steps: None,
                 };
@@ -699,7 +727,10 @@ pub async fn test_project_gen(client: &Query, toolchain: &'static str) -> Result
             TestStatus::Failed
         },
         status_details: None,
-        labels: vec![LabelType::Suite(END_TO_END_TESTS.to_string())],
+        labels: vec![
+            LabelType::Suite(END_TO_END_TESTS.to_string()),
+            LabelType::Severity(Severity::Critical),
+        ],
         steps: Some(steps),
     };
 
@@ -732,6 +763,7 @@ pub async fn test_docs(client: &Query) -> Result<Directory> {
         &[
             LabelType::Suite(UNIT_TESTS.to_string()),
             LabelType::SubSuite("Documentation".to_string()),
+            LabelType::Severity(Severity::Minor),
         ],
         "",
     )
@@ -811,7 +843,10 @@ pub async fn test_book_examples(client: &Query) -> Result<Directory> {
         },
         name: "Book Examples".to_string(),
         status_details: status,
-        labels: vec![LabelType::Suite(UNIT_TESTS.to_string())],
+        labels: vec![
+            LabelType::Suite(UNIT_TESTS.to_string()),
+            LabelType::Severity(Severity::Normal),
+        ],
         steps: None,
     };
     result.into_file(client)
@@ -944,6 +979,7 @@ pub async fn integration_test(
         &[
             LabelType::Suite(END_TO_END_TESTS.to_string()),
             LabelType::SubSuite(format!("Integration {mode:?}")),
+            LabelType::Severity(Severity::Critical),
         ],
         "integration_tests::integration_tests$",
     )
