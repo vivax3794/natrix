@@ -7,7 +7,7 @@ use wasm_bindgen::JsCast;
 use crate::dom::element::{ElementRenderResult, MaybeStaticElement, generate_fallback_node};
 use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::get_document;
-use crate::reactivity::state::{Ctx, HookKey, RenderCtx};
+use crate::reactivity::state::{HookKey, InnerCtx, RenderCtx};
 use crate::reactivity::{KeepAlive, State};
 
 /// State passed to rendering callbacks
@@ -25,15 +25,13 @@ pub(crate) trait ReactiveHook<C: State> {
     /// Hooks should recall `ctx.reg_dep` with the you parameter to re-register any potential
     /// dependencies as the update method uses `.drain(..)` on dependencies (this is also to ensure
     /// reactive state that is only accessed in some conditions is recorded).
-    fn update(&mut self, _ctx: &mut Ctx<C>, _you: HookKey) -> UpdateResult;
+    fn update(&mut self, _ctx: &mut InnerCtx<C>, _you: HookKey) -> UpdateResult;
     /// Return the list of hooks that should be dropped
     fn drop_us(self: Box<Self>) -> Vec<HookKey>;
 }
 
 /// The result of update
 pub(crate) enum UpdateResult {
-    /// Do nothing extra
-    Nothing,
     /// Drop the given hooks
     DropHooks(Vec<HookKey>),
     /// Run this hook after this one
@@ -41,7 +39,7 @@ pub(crate) enum UpdateResult {
     /// hook could also be run (i.e you are acting as a pre-hook check, such as with `.watch`).
     /// As this hook is ran instantly if this is used to run a hook before a parent may have
     /// invalidated it, that might lead to panics if said hook uses features such as Guards.
-    RunHook(HookKey),
+    RunHook(HookKey, Vec<HookKey>),
 }
 
 /// Reactive hook for swapping out a entire dom node.
@@ -61,7 +59,7 @@ impl<C: State> ReactiveNode<C> {
     ///
     /// INVARIANT: This function works with the assumption what it returns will be put in its
     /// `target_node` field. This function is split out to facilitate `Self::create_initial`
-    fn render(&mut self, ctx: &mut Ctx<C>, you: HookKey) -> ElementRenderResult {
+    fn render(&mut self, ctx: &mut InnerCtx<C>, you: HookKey) -> ElementRenderResult {
         let element = ctx.track_reads(you, |ctx| {
             (self.callback)(&mut RenderCtx {
                 ctx,
@@ -83,7 +81,7 @@ impl<C: State> ReactiveNode<C> {
     /// `HookKey` for it and the initial node (Which should be inserted in the dom)
     pub(crate) fn create_initial(
         callback: Box<dyn Fn(&mut RenderCtx<C>) -> MaybeStaticElement<C>>,
-        ctx: &mut Ctx<C>,
+        ctx: &mut InnerCtx<C>,
     ) -> (HookKey, web_sys::Node) {
         let me = ctx.hooks.reserve_key();
 
@@ -108,7 +106,7 @@ impl<C: State> ReactiveNode<C> {
 }
 
 impl<C: State> ReactiveHook<C> for ReactiveNode<C> {
-    fn update(&mut self, ctx: &mut Ctx<C>, you: HookKey) -> UpdateResult {
+    fn update(&mut self, ctx: &mut InnerCtx<C>, you: HookKey) -> UpdateResult {
         let this = &mut *self;
         let hooks = std::mem::take(&mut this.hooks);
         let new_node = this.render(ctx, you);
@@ -159,7 +157,7 @@ pub(crate) enum SimpleReactiveResult<C: State, K> {
     /// Apply the value
     Apply(K),
     /// Call the inner reactive function
-    Call(Box<dyn FnOnce(&mut Ctx<C>, &mut RenderingState)>),
+    Call(Box<dyn FnOnce(&mut InnerCtx<C>, &mut RenderingState)>),
 }
 
 /// A common wrapper for simple reactive operations to deduplicate dependency tracking code
@@ -182,7 +180,7 @@ impl<C: State, K: ReactiveValue> ReactiveHook<C> for SimpleReactive<C, K> {
         self.hooks
     }
 
-    fn update(&mut self, ctx: &mut Ctx<C>, you: HookKey) -> UpdateResult {
+    fn update(&mut self, ctx: &mut InnerCtx<C>, you: HookKey) -> UpdateResult {
         let hooks = std::mem::take(&mut self.hooks);
 
         self.keep_alive.clear();
@@ -223,7 +221,7 @@ impl<C: State, K: ReactiveValue + 'static> SimpleReactive<C, K> {
     pub(crate) fn init_new(
         callback: Box<dyn Fn(&mut RenderCtx<C>, &web_sys::Element) -> SimpleReactiveResult<C, K>>,
         node: web_sys::Element,
-        ctx: &mut Ctx<C>,
+        ctx: &mut InnerCtx<C>,
     ) -> HookKey {
         let me = ctx.hooks.reserve_key();
 

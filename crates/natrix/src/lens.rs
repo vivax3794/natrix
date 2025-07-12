@@ -16,15 +16,15 @@ pub trait LensInner: Clone + 'static {
     fn resolve(self, source: &mut Self::Source) -> &mut Self::Target;
 }
 
-impl<S: crate::reactivity::State> crate::reactivity::Ctx<S> {
+impl<S: crate::reactivity::State> crate::reactivity::EventCtx<'_, S> {
     /// Execute a lens on this state
     #[inline]
     pub fn get<L: LensInner<Source = S>>(&mut self, lens: L) -> &mut L::Target {
-        lens.resolve(&mut self.data)
+        lens.resolve(&mut self.0.data)
     }
 }
 
-impl<S: crate::reactivity::State> crate::reactivity::RenderCtx<'_, S> {
+impl<S: crate::reactivity::State> crate::reactivity::RenderCtx<'_, '_, S> {
     /// Execute a lens on this state
     #[inline]
     pub fn get<L: LensInner<Source = S>>(&mut self, lens: L) -> &L::Target {

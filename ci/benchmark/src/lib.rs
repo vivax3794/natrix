@@ -23,7 +23,7 @@ fn render_buttons<const N: u32>() -> impl Element<Buttons<N>> {
             e::button()
                 .id(BUTTON)
                 .text(|ctx: &mut RenderCtx<Buttons<N>>| *ctx.state)
-                .on::<events::Click>(|ctx: &mut Ctx<Buttons<N>>, _, _| {
+                .on::<events::Click>(|mut ctx: EventCtx<Buttons<N>>, _, _| {
                     *ctx.state += 1;
                 }),
         );
@@ -39,7 +39,7 @@ struct ToggleNode<const N: u32> {
 
 fn render_toggle_node<const N: u32>() -> impl Element<ToggleNode<N>> {
     let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
-        |ctx: &mut Ctx<ToggleNode<N>>, _, _| {
+        |mut ctx: EventCtx<ToggleNode<N>>, _, _| {
             *ctx.state = !*ctx.state;
         },
     ));
@@ -66,7 +66,7 @@ struct ToggleText<const N: u32> {
 
 fn render_toggle_text<const N: u32>() -> impl Element<ToggleText<N>> {
     let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
-        |ctx: &mut Ctx<ToggleText<N>>, _, _| {
+        |mut ctx: EventCtx<ToggleText<N>>, _, _| {
             *ctx.state = !*ctx.state;
         },
     ));
@@ -88,7 +88,7 @@ struct ToggleAttr<const N: u32> {
 
 fn render_toggle_attr<const N: u32>() -> impl Element<ToggleAttr<N>> {
     let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
-        |ctx: &mut Ctx<ToggleAttr<N>>, _, _| {
+        |mut ctx: EventCtx<ToggleAttr<N>>, _, _| {
             *ctx.state = !*ctx.state;
         },
     ));
@@ -110,7 +110,7 @@ struct ToggleClass<const N: u32> {
 
 fn render_toggle_class<const N: u32>() -> impl Element<ToggleClass<N>> {
     let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
-        |ctx: &mut Ctx<ToggleClass<N>>, _, _| {
+        |mut ctx: EventCtx<ToggleClass<N>>, _, _| {
             *ctx.state = !*ctx.state;
         },
     ));
@@ -131,7 +131,7 @@ struct ToggleExist<const N: u32> {
 
 fn render_toggle_exist<const N: u32>() -> impl Element<ToggleExist<N>> {
     let mut res = e::div().child(e::button().id(BUTTON).on::<events::Click>(
-        |ctx: &mut Ctx<ToggleExist<N>>, _, _| {
+        |mut ctx: EventCtx<ToggleExist<N>>, _, _| {
             *ctx.state = !*ctx.state;
         },
     ));
@@ -155,7 +155,7 @@ struct ToggleAtOnce<const N: u32> {
 fn render_toggle_at_once<const N: u32>() -> impl Element<ToggleAtOnce<N>> {
     e::div()
         .child(e::button().id(BUTTON).on::<events::Click>(
-            |ctx: &mut Ctx<ToggleAtOnce<N>>, _, _| {
+            |mut ctx: EventCtx<ToggleAtOnce<N>>, _, _| {
                 *ctx.state = !*ctx.state;
             },
         ))
@@ -184,10 +184,10 @@ macro_rules! define_large_fields {
         fn render_large_fields() -> impl Element<LargeFields> {
             e::div()
                 .child(e::button().id(BUTTON2).on::<events::Click>(
-                    |ctx: &mut Ctx<LargeFields>, _, _| {*ctx.a1 += 1;}
+                    |mut ctx: EventCtx<LargeFields>, _, _| {*ctx.a1 += 1;}
                 ))
                 .child(e::button().id(BUTTON).on::<events::Click>(
-                    |ctx: &mut Ctx<LargeFields>, _, _| {
+                    |mut ctx: EventCtx<LargeFields>, _, _| {
                         $(
                             *ctx.$field += 1;
                         )*
@@ -253,7 +253,7 @@ fn render_update_nested<const N: u32>() -> impl Element<UpdateNested<N>> {
         res = e::button()
             .id(BUTTON)
             .text(|ctx: &mut RenderCtx<UpdateNested<N>>| *ctx.state)
-            .on::<events::Click>(|ctx: &mut Ctx<UpdateNested<N>>, _, _| {
+            .on::<events::Click>(|mut ctx: EventCtx<UpdateNested<N>>, _, _| {
                 *ctx.state += 1;
             })
             .child(res)

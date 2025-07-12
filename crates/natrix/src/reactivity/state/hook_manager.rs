@@ -2,7 +2,7 @@
 
 use slotmap::{SecondaryMap, SlotMap, new_key_type};
 
-use super::Ctx;
+use super::InnerCtx;
 use crate::error_handling::log_or_panic;
 use crate::reactivity::State;
 use crate::reactivity::render_callbacks::ReactiveHook;
@@ -78,7 +78,7 @@ impl<T: State> HookStore<T> {
     }
 }
 
-impl<T: State> Ctx<T> {
+impl<T: State> InnerCtx<T> {
     /// Remove the hook from the slotmap, runs the function on it, then puts it back.
     ///
     /// This is to allow mut access to both the hook and self, which is required by most hooks.

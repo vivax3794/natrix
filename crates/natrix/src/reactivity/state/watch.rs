@@ -1,10 +1,10 @@
 //! Implementation of `ctx.watch`
 
 use super::{HookKey, RenderCtx};
-use crate::Ctx;
 use crate::error_handling::log_or_panic;
-use crate::reactivity::render_callbacks::{ReactiveHook, UpdateResult};
-use crate::reactivity::{State, statics};
+use crate::reactivity::render_callbacks::{ReactiveHook, RenderingState, UpdateResult};
+use crate::reactivity::state::InnerCtx;
+use crate::reactivity::{KeepAlive, State, statics};
 
 /// The wather hook / signal
 struct WatchState<F, T> {
@@ -14,21 +14,37 @@ struct WatchState<F, T> {
     last_value: T,
     /// The dependency that owns us.
     dep: HookKey,
+    /// Keepalive
+    keep_alive: Vec<KeepAlive>,
+    /// Child hooks
+    hooks: Vec<HookKey>,
 }
 
 impl<C, F, T> ReactiveHook<C> for WatchState<F, T>
 where
     C: State,
     T: PartialEq,
-    F: Fn(&mut Ctx<C>) -> T,
+    F: Fn(&mut RenderCtx<C>) -> T,
 {
-    fn update(&mut self, ctx: &mut Ctx<C>, you: HookKey) -> UpdateResult {
-        let new_value = ctx.track_reads(you, &self.calc_value);
+    fn update(&mut self, ctx: &mut InnerCtx<C>, you: HookKey) -> UpdateResult {
+        self.keep_alive.clear();
+        let hooks = std::mem::take(&mut self.hooks);
+
+        let new_value = ctx.track_reads(you, |ctx| {
+            let mut render = RenderCtx {
+                ctx,
+                render_state: RenderingState {
+                    keep_alive: &mut self.keep_alive,
+                    hooks: &mut self.hooks,
+                },
+            };
+            (self.calc_value)(&mut render)
+        });
 
         if new_value == self.last_value {
-            UpdateResult::Nothing
+            UpdateResult::DropHooks(hooks)
         } else {
-            UpdateResult::RunHook(self.dep)
+            UpdateResult::RunHook(self.dep, hooks)
         }
     }
 
@@ -37,7 +53,7 @@ where
     }
 }
 
-impl<C: State> RenderCtx<'_, C> {
+impl<C: State> RenderCtx<'_, '_, C> {
     /// Calculate the value using the function and cache it using `clone`.
     /// Then whenever any signals read in the function are modified re-run the function and check
     /// if the new result is different.
@@ -62,12 +78,26 @@ impl<C: State> RenderCtx<'_, C> {
     pub fn watch<T, F>(&mut self, func: F) -> T
     where
         // TODO: Make this a owned lens
-        F: Fn(&mut Ctx<C>) -> T + 'static,
+        F: for<'c, 's> Fn(&mut RenderCtx<'c, 's, C>) -> T + 'static,
         T: PartialEq + Clone + 'static,
     {
         let me = self.ctx.hooks.reserve_key();
+        let mut hooks = Vec::new();
+        let mut keep_alive = Vec::new();
 
-        let result = self.ctx.track_reads(me, &func);
+        let keep_alive_borrow = &mut keep_alive;
+        let hooks_borrow = &mut hooks;
+
+        let result = self.ctx.track_reads(me, |ctx| {
+            let mut render = RenderCtx {
+                ctx,
+                render_state: RenderingState {
+                    keep_alive: keep_alive_borrow,
+                    hooks: hooks_borrow,
+                },
+            };
+            func(&mut render)
+        });
 
         let Some(dep) = statics::current_hook() else {
             log_or_panic!("`ctx.watch` called from outside a hook");
@@ -77,6 +107,8 @@ impl<C: State> RenderCtx<'_, C> {
             calc_value: Box::new(func),
             last_value: result.clone(),
             dep,
+            keep_alive,
+            hooks,
         };
         self.ctx.hooks.set_hook(me, Box::new(hook));
         self.render_state.hooks.push(me);

@@ -10,7 +10,7 @@ use crate::reactivity::render_callbacks::RenderingState;
 use crate::reactivity::state::hook_manager::HookStore;
 
 /// The core component state, stores all framework data
-pub struct Ctx<T: State> {
+pub(crate) struct InnerCtx<T: State> {
     /// The user (macro) defined reactive struct
     pub(crate) data: T,
     /// A weak reference to ourself, so that event handlers can easially get a weak reference
@@ -20,23 +20,7 @@ pub struct Ctx<T: State> {
     pub(crate) hooks: HookStore<T>,
 }
 
-impl<T: State> Deref for Ctx<T> {
-    type Target = T;
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.data
-    }
-}
-
-impl<T: State> DerefMut for Ctx<T> {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.data
-    }
-}
-
-impl<T: State> Ctx<T> {
+impl<T: State> InnerCtx<T> {
     /// Create a minimal instance of this without wrapping in Self
     ///
     /// Warning the `Weak` reference is not set up yet
@@ -70,18 +54,36 @@ impl<T: State> Ctx<T> {
 /// Wrapper around a mutable state that only allows read-only access
 ///
 /// This holds a mutable state to facilitate a few rendering features such as `.watch`
-pub struct RenderCtx<'c, C: State> {
+pub struct RenderCtx<'c, 's, C: State> {
     /// The inner context
-    pub(crate) ctx: &'c mut Ctx<C>,
+    pub(crate) ctx: &'c mut InnerCtx<C>,
     /// The render state for this state
-    pub(crate) render_state: RenderingState<'c>,
+    pub(crate) render_state: RenderingState<'s>,
 }
 
-impl<C: State> Deref for RenderCtx<'_, C> {
-    type Target = Ctx<C>;
+impl<C: State> Deref for RenderCtx<'_, '_, C> {
+    type Target = C;
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        self.ctx
+        &self.ctx.data
+    }
+}
+
+/// A event ctx.
+pub struct EventCtx<'c, C: State>(pub(crate) &'c mut InnerCtx<C>);
+
+impl<C: State> Deref for EventCtx<'_, C> {
+    type Target = C;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.0.data
+    }
+}
+impl<C: State> DerefMut for EventCtx<'_, C> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0.data
     }
 }

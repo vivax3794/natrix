@@ -14,7 +14,8 @@ mod watch;
 
 #[cfg(feature = "async")]
 pub use self::async_state::DeferredCtx;
-pub use self::core::{Ctx, RenderCtx};
+pub(crate) use self::core::InnerCtx;
+pub use self::core::{EventCtx, RenderCtx};
 pub(crate) use self::data_manager::HookDepListHolder;
 #[doc(hidden)]
 pub use self::data_manager::HookDepListIter;

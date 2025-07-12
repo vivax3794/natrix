@@ -4,7 +4,7 @@
 
 use wasm_bindgen::JsCast;
 
-use crate::reactivity::state::{Ctx, EventToken};
+use crate::reactivity::state::{EventCtx, EventToken};
 
 /// Trait for converting a struct to needed event info.
 pub trait Event {
@@ -27,10 +27,10 @@ pub trait Event {
 /// ```
 pub trait EventHandler<C, E: Event> {
     /// Return self, but constrained to the expected typez
-    fn func(self) -> impl Fn(&mut Ctx<C>, EventToken, E::JsEvent) + 'static;
+    fn func(self) -> impl Fn(EventCtx<C>, EventToken, E::JsEvent) + 'static;
 }
-impl<C, E: Event, F: Fn(&mut Ctx<C>, EventToken, E::JsEvent) + 'static> EventHandler<C, E> for F {
-    fn func(self) -> impl Fn(&mut Ctx<C>, EventToken, E::JsEvent) + 'static {
+impl<C, E: Event, F: Fn(EventCtx<C>, EventToken, E::JsEvent) + 'static> EventHandler<C, E> for F {
+    fn func(self) -> impl Fn(EventCtx<C>, EventToken, E::JsEvent) + 'static {
         self
     }
 }

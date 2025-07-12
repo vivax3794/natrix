@@ -29,14 +29,14 @@ use crate::dom::element::{Element, MaybeStaticElement, generate_fallback_node};
 use crate::dom::events::{Event, EventHandler};
 use crate::dom::{ToAttribute, ToClass, attributes};
 use crate::error_handling::{log_or_panic, log_or_panic_result};
-use crate::get_document;
 use crate::prelude::Id;
 use crate::reactivity::State;
 use crate::reactivity::render_callbacks::RenderingState;
-use crate::reactivity::state::{Ctx, EventToken};
+use crate::reactivity::state::{EventToken, InnerCtx};
+use crate::{EventCtx, get_document};
 
 /// A deferred function to do something once state is available
-pub(crate) type DeferredFunc<C> = Box<dyn FnOnce(&mut Ctx<C>, &mut RenderingState)>;
+pub(crate) type DeferredFunc<C> = Box<dyn FnOnce(&mut InnerCtx<C>, &mut RenderingState)>;
 
 /// Indicates the given element is allowed to children
 /// This will catch errors such as:
@@ -117,7 +117,7 @@ impl<C: State, T> HtmlElement<C, T> {
     /// #     some_value: Signal<i32>,
     /// # }
     /// # fn render() -> impl Element<MyState> {
-    /// e::button().on::<events::Click>(|ctx: &mut Ctx<MyState>, _, _| {
+    /// e::button().on::<events::Click>(|mut ctx: EventCtx<MyState>, _, _| {
     ///     *ctx.some_value += 1;
     /// })
     /// # }
@@ -150,7 +150,7 @@ impl<C: State, T> HtmlElement<C, T> {
                 };
 
                 ctx.track_changes(|ctx| {
-                    function(ctx, EventToken::new(), event);
+                    function(EventCtx(ctx), EventToken::new(), event);
                 });
             });
             let closure = Closure::wrap(callback);

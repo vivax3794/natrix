@@ -6,7 +6,7 @@ use std::collections::BinaryHeap;
 use slotmap::SecondaryMap;
 use smallvec::SmallVec;
 
-use super::{Ctx, HookKey};
+use super::{HookKey, InnerCtx};
 use crate::error_handling::log_or_panic;
 use crate::reactivity::render_callbacks::UpdateResult;
 use crate::reactivity::statics;
@@ -152,7 +152,7 @@ impl HookQueue {
 pub trait State: Sized + 'static {}
 impl State for () {}
 
-impl<T: State> Ctx<T> {
+impl<T: State> InnerCtx<T> {
     /// Loop over signals and update any depdant hooks for changed signals
     /// This also drains the deferred message queue
     fn update(&mut self, dep_lists: HookDepListHolder) {
@@ -164,9 +164,11 @@ impl<T: State> Ctx<T> {
         while let Some(hook_key) = hook_queue.pop(&self.hooks.insertion_order) {
             log::trace!("Updating hook {hook_key:?}");
             self.run_with_hook_and_self(hook_key, |ctx, hook| match hook.update(ctx, hook_key) {
-                UpdateResult::Nothing => {}
-                UpdateResult::RunHook(dep) => {
+                UpdateResult::RunHook(dep, drop) => {
                     hook_queue.push_next(dep);
+                    for dep in drop {
+                        ctx.hooks.drop_hook(dep);
+                    }
                 }
                 UpdateResult::DropHooks(deps) => {
                     for dep in deps {

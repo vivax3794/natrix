@@ -3,7 +3,7 @@
 ## Callbacks
 
 You have already seen `|ctx: &mut RenderCtx<App>| ...` used in the varying examples in the book.
-Lets go into some more detail about what this does. Both `RenderCtx` and `Ctx` implement `Deref` to your `App` (and `DerefMut` as well for `Ctx`)
+Lets go into some more detail about what this does. Both `RenderCtx` and `EventCtx` implement `Deref` to your `App` (and `DerefMut` as well for `EventCtx`)
 
 > ![TIP]
 > You can define type aliases for the two context types specialized on your type
@@ -12,8 +12,8 @@ Lets go into some more detail about what this does. Both `RenderCtx` and `Ctx` i
 > # use natrix::prelude::*;
 > #[derive(State)]
 > struct App { /* ... */ }
-> type C = Ctx<App>;
-> type R<'s> = RenderCtx<'s, App>;
+> type E<'s> = EventCtx<'s, App>;
+> type R<'s, 'r> = RenderCtx<'s, 'r, App>;
 > ```
 
 The callbacks return a value that implements [`Element`](dom::element::Element), internally the framework will register which fields you accessed.
@@ -76,7 +76,7 @@ fn render_counter() -> impl Element<Counter> {
     e::div()
         .child(e::button()
             .text(|ctx: &mut RenderCtx<Counter>| *ctx.value)
-            .on::<events::Click>(|ctx: &mut Ctx<Counter>, _, _| {
+            .on::<events::Click>(|mut ctx: EventCtx<Counter>, _, _| {
                 *ctx.value += 1;
             }))
 }

@@ -19,7 +19,7 @@ fn render_hello_world() -> impl Element<HelloWorld> {
         .child(
             e::button()
                 .id(BUTTON_ID)
-                .on::<events::Click>(|ctx: &mut Ctx<HelloWorld>, _, _| {
+                .on::<events::Click>(|mut ctx: EventCtx<HelloWorld>, _, _| {
                     *ctx.counter += 1;
                 })
                 .class(|ctx: &mut RenderCtx<HelloWorld>| {
@@ -38,7 +38,7 @@ fn render_hello_world() -> impl Element<HelloWorld> {
                 }),
         )
         .child(e::button().id(DECREMENT_ID).on::<events::Click>(
-            |ctx: &mut Ctx<HelloWorld>, _, _| {
+            |mut ctx: EventCtx<HelloWorld>, _, _| {
                 *ctx.counter -= 1;
             },
         ))

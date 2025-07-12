@@ -25,7 +25,7 @@ fn render_counter() -> impl Element<Counter> {
             *ctx.value,
             *ctx.value + 10
         ))
-        .on::<events::Click>(|ctx: &mut Ctx<Counter>, _, _| ctx.increment())
+        .on::<events::Click>(|mut ctx: EventCtx<Counter>, _, _| ctx.increment())
 }
 
 #[wasm_bindgen_test]
@@ -85,7 +85,7 @@ fn render_two() -> impl Element<TwoValues> {
     e::button()
         .id(BUTTON_ID)
         .text(|ctx: &mut RenderCtx<TwoValues>| format!("{}-{}", *ctx.foo, *ctx.bar))
-        .on::<events::Click>(|ctx: &mut Ctx<TwoValues>, _, _| {
+        .on::<events::Click>(|mut ctx: EventCtx<TwoValues>, _, _| {
             *ctx.foo += 1;
         })
 }

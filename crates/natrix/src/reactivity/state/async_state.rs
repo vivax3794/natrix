@@ -1,18 +1,20 @@
 //! Implementation of core async features
 
 use std::cell::RefCell;
+use std::ops::{Deref, DerefMut};
 use std::rc::Weak;
 
-pub use super::{Ctx, EventToken};
+use super::{EventToken, InnerCtx};
+use crate::EventCtx;
 use crate::error_handling::log_or_panic;
 use crate::reactivity::State;
 
-impl<T: State> Ctx<T> {
+impl<T: State> EventCtx<'_, T> {
     /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
     /// framework assumptions.
     pub fn deferred_borrow(&self, _token: EventToken) -> DeferredCtx<T> {
         DeferredCtx {
-            inner: self.this.clone(),
+            inner: self.0.this.clone(),
         }
     }
 
@@ -59,12 +61,34 @@ impl<F: Future> Future for PanicCheckFuture<F> {
     }
 }
 
+/// A ctx for async context.
+pub struct AsyncCtx<'s, S: State>(pub(crate) &'s mut InnerCtx<S>);
+impl<S: State> Deref for AsyncCtx<'_, S> {
+    type Target = S;
+    fn deref(&self) -> &Self::Target {
+        &self.0.data
+    }
+}
+impl<S: State> DerefMut for AsyncCtx<'_, S> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0.data
+    }
+}
+
 /// A combiend `Weak` and `RefCell` that facilities upgrading and borrowing as a shared
 /// operation
 #[must_use]
 pub struct DeferredCtx<T: State> {
     /// The `Weak<RefCell<T>>` in question
-    inner: Weak<RefCell<Ctx<T>>>,
+    inner: Weak<RefCell<InnerCtx<T>>>,
+}
+
+impl<T: State> Clone for DeferredCtx<T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
 }
 
 impl<T: State> DeferredCtx<T> {
@@ -74,7 +98,7 @@ impl<T: State> DeferredCtx<T> {
     /// Calling this function clears the internal reactive flags.
     /// Once this value is dropped it will trigger a reactive update for any changed fields.
     #[must_use]
-    pub fn update<R>(&self, func: impl FnOnce(&mut Ctx<T>) -> R) -> Option<R> {
+    pub fn update<R>(&self, func: impl FnOnce(AsyncCtx<T>) -> R) -> Option<R> {
         let rc = self.inner.upgrade()?;
         let Ok(mut borrow) = rc.try_borrow_mut() else {
             log_or_panic!(
@@ -83,7 +107,7 @@ impl<T: State> DeferredCtx<T> {
             return None;
         };
 
-        let result = borrow.track_changes(func);
+        let result = borrow.track_changes(|ctx| func(AsyncCtx(ctx)));
         Some(result)
     }
 }

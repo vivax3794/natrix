@@ -7,7 +7,7 @@ This does mean one pays for this with monophorzation
 ## Using lenses
 Lenses will generally use the [`Lens`](lens::Lens) trait, the first generic is the source type, and the second is the target.
 Generally the source will be global state type, but can also be other structs when composing lenses.
-Lenses are usually best defined using `impl Lens<...>`, and access using [`ctx.get`](prelude::Ctx::get).
+Lenses are usually best defined using `impl Lens<...>`, and access using [`ctx.get`](prelude::EventCtx::get).
 
 such as:
 ```rust

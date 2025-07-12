@@ -60,18 +60,16 @@ impl<T> Deref for Signal<T> {
 impl<T> DerefMut for Signal<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
+        let deps = self.deps.get_mut();
         if let Some(hook) = statics::current_hook() {
-            self.deps.get_mut().insert(hook);
+            deps.insert(hook);
 
             if do_performance_check() {
-                if self.deps.get_mut().len() > 20 {
+                if deps.len() > 20 {
                     performance_lint!("Signal deps list over 20");
                 }
             }
-        }
-
-        let deps = self.deps.get_mut();
-        if !deps.is_empty() {
+        } else if !deps.is_empty() {
             statics::reg_dirty_list(|| {
                 let mut new = IndexSet::with_capacity(deps.len());
                 std::mem::swap(&mut new, deps);

@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 use super::{RenderCtx, State};
 use crate::lens::{self, Lens, LensInner};
 
-impl<C: State> RenderCtx<'_, C> {
+impl<C: State> RenderCtx<'_, '_, C> {
     /// Get a guard lens that can be used to retrieve the `Some` variant of a option without having to
     /// use `.unwrap`.
     /// Should be used to achieve find-grained reactivity (internally this uses `.watch` on `.is_some()`)
@@ -75,7 +75,7 @@ impl<C: State> RenderCtx<'_, C> {
         let check_lens = lens.clone();
         let check = self.watch(
             #[inline]
-            move |ctx| ctx.get(check_lens.clone()).check(),
+            move |ctx| check_lens.clone().resolve(&mut ctx.ctx.data).check(),
         );
         G::into_lens(check, lens)
     }

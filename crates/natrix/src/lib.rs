@@ -77,13 +77,13 @@ pub mod prelude {
     pub use super::lens::{Lens, LensInner};
     pub use super::reactivity::State;
     pub use super::reactivity::signal::Signal;
-    pub use super::reactivity::state::{Ctx, RenderCtx};
+    pub use super::reactivity::state::{EventCtx, RenderCtx};
 }
 
 pub use dom::Element;
 pub use natrix_macros::{State, asset, data, format_elements};
 pub use reactivity::mount::mount;
-pub use reactivity::state::{Ctx, RenderCtx};
+pub use reactivity::state::{EventCtx, RenderCtx};
 
 /// Public exports of internal data structures for `natrix_macros` (and `macro_rules`) to use in generated code.
 #[doc(hidden)]

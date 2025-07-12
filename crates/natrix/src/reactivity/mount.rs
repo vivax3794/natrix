@@ -7,7 +7,7 @@ use crate::dom::element::Element;
 use crate::get_document;
 use crate::reactivity::KeepAlive;
 use crate::reactivity::render_callbacks::RenderingState;
-use crate::reactivity::state::{Ctx, State};
+use crate::reactivity::state::{InnerCtx, State};
 
 /// The result of rendering a component
 ///
@@ -19,7 +19,7 @@ use crate::reactivity::state::{Ctx, State};
 )]
 pub struct RenderResult<C: State> {
     /// The component data
-    data: Rc<RefCell<Ctx<C>>>,
+    data: Rc<RefCell<InnerCtx<C>>>,
     /// The various things that need to be kept alive
     keep_alive: Vec<KeepAlive>,
 }
@@ -95,7 +95,7 @@ pub fn render_component<C: State>(
         "Mounting root component {} at #{target_id}",
         std::any::type_name::<C>()
     );
-    let data = Ctx::new(component);
+    let data = InnerCtx::new(component);
 
     let mut borrow_data = data.borrow_mut();
 

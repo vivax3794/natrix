@@ -19,10 +19,10 @@ fn render_async_component() -> impl Element<AsyncComponent> {
     e::button()
         .id(BUTTON_ID)
         .text(|ctx: &mut RenderCtx<AsyncComponent>| *ctx.data)
-        .on::<events::Click>(|ctx: &mut Ctx<AsyncComponent>, token, _| {
+        .on::<events::Click>(|mut ctx: EventCtx<AsyncComponent>, token, _| {
             ctx.use_async(token, async |ctx| {
                 async_utils::sleep_milliseconds(10).await;
-                ctx.update(|ctx| {
+                ctx.update(|mut ctx| {
                     *ctx.data += 10;
                 })?;
                 Some(())

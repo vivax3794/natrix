@@ -16,11 +16,13 @@ fn render_test_option() -> impl Element<TestOption> {
         .child(
             e::button()
                 .id(BUTTON)
-                .on::<events::Click>(|ctx: &mut Ctx<TestOption>, _, _| match &mut *ctx.value {
-                    Some(2) => *ctx.value = None,
-                    Some(value) => *value += 1,
-                    None => *ctx.value = Some(0),
-                }),
+                .on::<events::Click>(
+                    |mut ctx: EventCtx<TestOption>, _, _| match &mut *ctx.value {
+                        Some(2) => *ctx.value = None,
+                        Some(value) => *value += 1,
+                        None => *ctx.value = Some(0),
+                    },
+                ),
         )
         .child(|ctx: &mut RenderCtx<TestOption>| {
             if let Some(value_guard) = ctx.guard(lens!(TestOption => .value).deref()) {
@@ -71,10 +73,12 @@ fn render_test_result() -> impl Element<TestResult> {
         .child(
             e::button()
                 .id(BUTTON)
-                .on::<events::Click>(|ctx: &mut Ctx<TestResult>, _, _| match &mut *ctx.value {
-                    Ok(value) => *value += 1,
-                    Err(_) => *ctx.value = Ok(0),
-                }),
+                .on::<events::Click>(
+                    |mut ctx: EventCtx<TestResult>, _, _| match &mut *ctx.value {
+                        Ok(value) => *value += 1,
+                        Err(_) => *ctx.value = Ok(0),
+                    },
+                ),
         )
         .child(|ctx: &mut RenderCtx<TestResult>| {
             match ctx.guard(lens!(TestResult => .value).deref()) {
@@ -122,14 +126,14 @@ struct Nested {
 fn render_nested() -> impl Element<Nested> {
     e::div()
         .child(
-            e::button().id(BUTTON).on::<events::Click>(
-                |ctx: &mut Ctx<Nested>, _, _| match &mut *ctx.value {
+            e::button()
+                .id(BUTTON)
+                .on::<events::Click>(|mut ctx: EventCtx<Nested>, _, _| match &mut *ctx.value {
                     Some(Some(2)) => *ctx.value = None,
                     Some(Some(value)) => *value += 1,
                     Some(None) => *ctx.value = Some(Some(0)),
                     None => *ctx.value = Some(None),
-                },
-            ),
+                }),
         )
         .child(|ctx: &mut RenderCtx<Nested>| {
             if let Some(value_guard) = ctx.guard(lens!(Nested => .value).deref()) {
@@ -196,14 +200,16 @@ fn render_edge_case() -> impl Element<ReactiveOrderingEdgeCaseRegression> {
     e::div().child(
         e::button()
             .id(BUTTON)
-            .on::<events::Click>(|ctx: &mut Ctx<ReactiveOrderingEdgeCaseRegression>, _, _| {
-                *ctx.trigger += 1;
-                if ctx.guarded_value.is_some() {
-                    *ctx.guarded_value = None;
-                } else {
-                    *ctx.guarded_value = Some(0);
-                }
-            })
+            .on::<events::Click>(
+                |mut ctx: EventCtx<ReactiveOrderingEdgeCaseRegression>, _, _| {
+                    *ctx.trigger += 1;
+                    if ctx.guarded_value.is_some() {
+                        *ctx.guarded_value = None;
+                    } else {
+                        *ctx.guarded_value = Some(0);
+                    }
+                },
+            )
             .child(|ctx: &mut RenderCtx<ReactiveOrderingEdgeCaseRegression>| {
                 if let Some(guard) =
                     ctx.guard(lens!(ReactiveOrderingEdgeCaseRegression => .guarded_value).deref())

@@ -6,7 +6,7 @@ use super::HtmlElement;
 use crate::error_handling::log_or_panic;
 use crate::reactivity::State;
 use crate::reactivity::render_callbacks::{ReactiveNode, RenderingState};
-use crate::reactivity::state::{Ctx, RenderCtx};
+use crate::reactivity::state::{InnerCtx, RenderCtx};
 use crate::type_macros;
 
 /// A result of the rendering process.
@@ -48,7 +48,7 @@ impl<C: State> MaybeStaticElement<C> {
     /// Convert the element into a `web_sys::Node`.
     pub(crate) fn render(
         self,
-        ctx: &mut Ctx<C>,
+        ctx: &mut InnerCtx<C>,
         render_state: &mut RenderingState,
     ) -> ElementRenderResult {
         match self {
@@ -81,7 +81,7 @@ pub(crate) trait DynElement<C: State> {
     /// Render the element.
     fn render(
         self: Box<Self>,
-        ctx: &mut Ctx<C>,
+        ctx: &mut InnerCtx<C>,
         render_state: &mut RenderingState,
     ) -> ElementRenderResult;
 }
@@ -168,7 +168,7 @@ where
 {
     fn render(
         self: Box<Self>,
-        ctx: &mut Ctx<C>,
+        ctx: &mut InnerCtx<C>,
         render_state: &mut RenderingState,
     ) -> ElementRenderResult {
         let this = *self;
