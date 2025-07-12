@@ -322,7 +322,6 @@ pub async fn native_tests(client: &Query) -> Result<Directory> {
         .with_env_variable("NEXTEST_EXPERIMENTAL_LIBTEST_JSON", "1")
         .with_exec_any(vec![
             "cargo",
-            "+nightly",
             "nextest",
             "run",
             "--color",
@@ -352,43 +351,30 @@ pub async fn native_tests(client: &Query) -> Result<Directory> {
 }
 
 /// Wasm unit tests
-pub async fn wasm_unit_tests(client: &Query, toolchain: &'static str) -> Result<Directory> {
+pub async fn wasm_unit_tests(client: &Query) -> Result<Directory> {
     let output = crate::base_images::wasm(client)
         .with_workspace(client)
         .with_workdir("./crates/natrix")
         .with_exec_any(vec![
             "cargo",
-            if toolchain == "nightly" {
-                "+nightly"
-            } else {
-                "+stable"
-            },
             "test",
             "--tests",
             "--target",
             "wasm32-unknown-unknown",
             "--features",
             "_internal_testing",
-            if toolchain == "nightly" {
-                "--all-features"
-            } else {
-                "--" // Just a valid argument
-            },
+            "--all-features",
         ])?
         .stdout()
         .await?;
 
-    let dir = parse_wasmbindgen_test_output(client, toolchain, &output)?;
+    let dir = parse_wasmbindgen_test_output(client, &output)?;
 
     Ok(dir)
 }
 
 /// Extract the result of a `wasm-pack test` run
-fn parse_wasmbindgen_test_output(
-    client: &Query,
-    toolchain: &'static str,
-    output: &str,
-) -> Result<Directory, eyre::Error> {
+fn parse_wasmbindgen_test_output(client: &Query, output: &str) -> Result<Directory, eyre::Error> {
     let mut traces = HashMap::new();
 
     let mut hit_first = false;
@@ -460,7 +446,7 @@ fn parse_wasmbindgen_test_output(
                     status_details,
                     labels: vec![
                         LabelType::Suite(UNIT_TESTS.to_string()),
-                        LabelType::SubSuite(format!("Web {toolchain}")),
+                        LabelType::SubSuite("Web".to_string()),
                         LabelType::Severity(Severity::Normal),
                     ],
                     steps: None,
@@ -470,6 +456,24 @@ fn parse_wasmbindgen_test_output(
             }
         }
     }
+
+    let all_output = TestResult {
+        uuid: uuid::Uuid::new_v4().to_string(),
+        name: String::from("[[ALL OUTPUT]]"),
+        status: TestStatus::Passed,
+        status_details: Some(StatusDetails {
+            message: output.into(),
+            trace: None,
+        }),
+        labels: vec![
+            LabelType::Suite(UNIT_TESTS.to_string()),
+            LabelType::SubSuite("Web".to_string()),
+            LabelType::Severity(Severity::Trivial),
+        ],
+        steps: None,
+    };
+    dir = dir.with_directory(".", all_output.into_file(client)?);
+
     Ok(dir)
 }
 
@@ -525,28 +529,20 @@ pub async fn clippy_workspace(client: &Query) -> Result<Directory> {
 }
 
 /// Run clippy hack on natrix
-pub async fn clippy_natrix(client: &Query, toolchain: &'static str) -> Result<Directory> {
-    let mut command = vec![
-        "cargo",
-        if toolchain == "nightly" {
-            "+nightly"
-        } else {
-            "+stable"
-        },
-        "hack",
-        "clippy",
-        "--each-feature",
-    ];
-    if toolchain == "stable" {
-        command.extend(["--skip", "nightly"]);
-    }
-    command.extend(["--tests", "--", "-Dwarnings"]);
-
+pub async fn clippy_natrix(client: &Query) -> Result<Directory> {
     run_linter(
         client,
         LinterConfig {
-            name: format!("Clippy hack Natrix ({toolchain})"),
-            command,
+            name: "Clippy hack Natrix".to_string(),
+            command: vec![
+                "cargo",
+                "hack",
+                "clippy",
+                "--each-feature",
+                "--tests",
+                "--",
+                "-Dwarnings",
+            ],
             workdir: Some("./crates/natrix"),
             needs_binstall: vec!["cargo-hack"],
             ..Default::default()
@@ -856,7 +852,6 @@ pub async fn test_book_examples(client: &Query) -> Result<Directory> {
 /// The server runs on port 3000
 fn natrix_dev(client: &Query, profile: &str) -> Service {
     crate::base_images::wasm(client)
-        .with_exec(vec!["rustup", "default", "nightly"])
         .with_directory("/bin", cli(client))
         .with_workspace(client)
         .with_workdir("./ci/integration_tests")
@@ -894,7 +889,6 @@ fn chrome_driver_with_page(client: &Query, page: Service) -> Service {
 /// Returns a nginx server with a natrix build
 fn natrix_build(client: &Query) -> Service {
     let page = crate::base_images::wasm(client)
-        .with_exec(vec!["rustup", "default", "nightly"])
         .with_directory("/bin", cli(client))
         .with_workspace(client)
         .with_workdir("./ci/integration_tests")
@@ -942,7 +936,6 @@ pub async fn integration_test(
 
     let mut command = vec![
         "cargo".to_string(),
-        "+nightly".to_string(),
         "nextest".to_string(),
         "run".to_string(),
         "-j".to_string(),

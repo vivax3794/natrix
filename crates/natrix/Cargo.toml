@@ -50,7 +50,6 @@ indexmap = "2.9.0"
 [features]
 default_app = ["console_log", "async", "performance_lints"]
 
-nightly = ["natrix_macros/nightly"]
 ergonomic_ops = []
 console_log = ["dep:console_log"]
 async = ["dep:pin-project", "dep:wasm-bindgen-futures"]

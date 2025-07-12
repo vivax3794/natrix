@@ -1,8 +1,4 @@
 #![doc = include_str!(concat!("../", std::env!("CARGO_PKG_README")))]
-#![cfg_attr(feature = "nightly", feature(must_not_suspend))]
-#![cfg_attr(feature = "nightly", warn(must_not_suspend))]
-#![cfg_attr(feature = "nightly", feature(associated_type_defaults))]
-#![cfg_attr(nightly, feature(cold_path))]
 #![cfg_attr(not(feature = "_internal_no_ssg"), forbid(unsafe_code))]
 
 pub mod async_utils;

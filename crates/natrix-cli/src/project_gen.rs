@@ -21,8 +21,8 @@ pub(crate) fn generate_project(name: &str, stable: bool) -> Result<()> {
 
     let nightly = !stable;
 
-    generate_cargo_toml(name, &root, nightly)?;
-    generate_main_rs(&src, name, nightly)?;
+    generate_cargo_toml(name, &root)?;
+    generate_main_rs(&src, name)?;
     generate_toolchain_toml(&root, nightly)?;
 
     let gitignore = "
@@ -55,17 +55,14 @@ dist
 }
 
 /// Generate the `cargo.toml`
-fn generate_cargo_toml(name: &str, root: &Path, nightly: bool) -> Result<(), anyhow::Error> {
+fn generate_cargo_toml(name: &str, root: &Path) -> Result<(), anyhow::Error> {
     let natrix_version = env!("CARGO_PKG_VERSION");
     let mut natrix_table = format!(r#"version = "{natrix_version}""#);
     if let Ok(path) = std::env::var("NATRIX_PATH") {
         natrix_table = format!(r#"{natrix_table}, path = "{path}""#);
     }
     let natrix_test_table = format!(r#"natrix = {{{natrix_table}, features=["test_utils"]}}"#);
-    let mut features = vec!["default_app"];
-    if nightly {
-        features.push("nightly");
-    }
+    let features = vec!["default_app"];
     let features = features
         .into_iter()
         .map(|feat| format!(r#""{feat}""#))
@@ -109,22 +106,9 @@ strip = "symbols"
 }
 
 /// Generate the main.rs file for a new project
-fn generate_main_rs(src: &Path, name: &str, nightly: bool) -> Result<(), anyhow::Error> {
-    let nightly_lints = if nightly {
-        "
-// This is a nightly only feature to warn you when you are passing certain types across a
-// `await` boundary, `natrix` marks multiple types with this attribute to prevent you from
-// causing runtime panics.
-#![feature(must_not_suspend)]
-#![warn(must_not_suspend)]
-        "
-        .trim()
-    } else {
-        ""
-    };
+fn generate_main_rs(src: &Path, name: &str) -> Result<(), anyhow::Error> {
     let main_rs = format!(
         r#"
-{nightly_lints}
 // Panicking in a wasm module will cause the state to be invalid
 // And it might cause UB on the next event handler execution.
 // (By default natrix uses a panic hook that blocks further event handler calls after a panic)
@@ -146,7 +130,7 @@ fn render_app() -> impl Element<App> {{
         .child(e::h1().text("Hello {name}").id(HELLO_ID))
         .child(e::button()
             .text(|ctx: &mut RenderCtx<App>| *ctx.counter) 
-            .on::<events::Click>(|ctx: &mut Ctx<App>, _, _| {{
+            .on::<events::Click>(|mut ctx: EventCtx<App>, _| {{
                 *ctx.counter += 1;
             }})
         )

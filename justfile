@@ -4,7 +4,7 @@ full jobs="1":
 
 # Run quick CI pipeline with optional job count  
 quick jobs="1":
-    dagger --quiet run cargo run -p dagger_pipeline -- tests --filter rustfmt,typos,native_tests,wasm_unit_nightly,clippy_workspace --jobs {{jobs}}
+    dagger --quiet run cargo run -p dagger_pipeline -- tests --filter rustfmt,typos,native_tests,clippy_workspace,wasm_unit --jobs {{jobs}}
 
 # Documentation-related tests
 docs jobs="1":
@@ -16,7 +16,7 @@ cli jobs="1":
 
 # All linting and static analysis
 lint jobs="1":
-    dagger --quiet run cargo run -p dagger_pipeline -- tests --filter rustfmt,typos,clippy_workspace,clippy_natrix_nightly,clippy_natrix_stable,cargo_deny_natrix,cargo_deny_natrix_cli,unused_deps,outdated_deps --jobs {{jobs}}
+    dagger --quiet run cargo run -p dagger_pipeline -- tests --filter rustfmt,typos,clippy_workspace,clippy_natrix,cargo_deny_natrix,cargo_deny_natrix_cli,unused_deps,outdated_deps --jobs {{jobs}}
 
 # Apply automatic fixes
 fix:

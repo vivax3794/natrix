@@ -32,7 +32,6 @@ pub fn snapshots(client: &Query, source: Directory) -> Directory {
         .with_workdir("/app/crates/natrix")
         .with_exec(vec![
             "cargo",
-            "+nightly",
             "insta",
             "test",
             "--accept",

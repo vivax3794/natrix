@@ -28,7 +28,7 @@ This will by default use nightly rust, if you wish to use stable rust, you can u
 natrix new <project-name> --stable
 ```
 
-All features work on stable rust, but nightly includes more optimizations as well as results in smaller binaries. As well as provides some quality of life improvements. see [Features](features.md) for more information.
+All features work on stable rust, but nightly includes more optimizations as well as results in smaller binaries. 
 
 ## Running the project
 

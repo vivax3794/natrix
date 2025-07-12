@@ -5,16 +5,8 @@ edition = "2024"
 publish = false
 
 [dependencies]
-natrix = { path="../../crates/natrix", features = ["nightly", "test_utils", "async_utils"] }
+natrix = { path="../../crates/natrix", features = ["test_utils", "async_utils"] }
 log = {version = "0.4", features = ["release_max_level_off"]}
 wasm-bindgen-test = "0.3.50"
 web-sys = {version="0.3.77", features=["Performance"]}
 pastey = "0.1.0"
-
-[package.metadata.natrix]
-ssg = false
-cache_busting = "none"
-
-[features]
-__natrix_internal_bundle = ["natrix/_internal_bundle"]
-__natrix_internal_no_ssg = ["natrix/_internal_no_ssg"]

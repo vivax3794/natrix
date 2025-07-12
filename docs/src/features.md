@@ -2,23 +2,6 @@
 
 ## opt-in features
 
-### `nightly`
-
-this feature enables nightly only features. this includes:
-
-
-#### `must_not_suspend`
-
-this annotates certain framework structs as [`must_not_suspend`](https://github.com/rust-lang/rust/issues/83310), which lets rust warn you if you misuse them in async contexts.
-
-> [!IMPORTANT]
-> this requires your project to also enable the feature and use the lint
->
-> ```rust
-> #![feature(must_not_suspend)]
-> #![warn(must_not_suspend)]
-> ```
-
 ### `default_app`
 This feature flag is enabled by default in the project template. And is a collection of features considered "default" for applications.
 We opted for this over normal default cargo features because we think it is important for libraries to use the minimal amount of features.

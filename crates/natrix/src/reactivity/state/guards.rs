@@ -69,7 +69,7 @@ impl<C: State> RenderCtx<'_, '_, C> {
     #[inline]
     pub fn guard<L, G>(&mut self, lens: L) -> G::Output<L>
     where
-        L: Lens<C, G> + Clone,
+        L: LensInner<Source = C, Target = G> + Clone,
         G: Guardable<C>,
     {
         let check_lens = lens.clone();
@@ -106,7 +106,6 @@ pub trait Guardable<S>: Sized {
 ///
 /// This lens is designed to be created by the `Guardable` trait, which ensures
 /// it is only used when the `Option` is `Some`, preventing panics.
-#[cfg_attr(feature = "nightly", must_not_suspend)]
 pub struct OptionLens<T>(PhantomData<T>);
 
 impl<T> OptionLens<T> {
@@ -127,10 +126,20 @@ impl<T: 'static> LensInner for OptionLens<Option<T>> {
     type Source = Option<T>;
     type Target = T;
 
-    #[expect(clippy::expect_used, reason = "Only constructable by guard")]
+    #[expect(clippy::unreachable, reason = "Only constructable by guard")]
     #[inline]
     fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
-        source.as_mut().expect("OptionLens used on `None`")
+        let Some(value) = source.as_mut() else {
+            let msg = "OptionLens called on `None`";
+            log::error!("{msg}");
+            unreachable!("{msg}");
+        };
+        value
+    }
+
+    #[inline]
+    fn resolve_failable(self, source: &mut Self::Source) -> Option<&mut Self::Target> {
+        source.as_mut()
     }
 }
 
@@ -161,7 +170,6 @@ where
 ///
 /// This lens is designed to be created by the `Guardable` trait, which ensures
 /// it is only used when the `Result` is `Ok`, preventing panics.
-#[cfg_attr(feature = "nightly", must_not_suspend)]
 pub struct OkLens<R>(PhantomData<R>);
 
 impl<R> OkLens<R> {
@@ -186,11 +194,20 @@ where
     type Source = Result<T, E>;
     type Target = T;
 
-    // HACK: https://github.com/rust-lang/rust-clippy/pull/15253
-    // #[expect(clippy::expect_used, reason = "Only constructable by guard")]
+    #[expect(clippy::unreachable, reason = "Only constructable by guard")]
     #[inline]
     fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
-        source.as_mut().ok().expect("OkLens used on `Err`")
+        let Ok(value) = source.as_mut() else {
+            let msg = "OkLens called on `Err`";
+            log::error!("{msg}");
+            unreachable!("{msg}");
+        };
+        value
+    }
+
+    #[inline]
+    fn resolve_failable(self, source: &mut Self::Source) -> Option<&mut Self::Target> {
+        source.as_mut().ok()
     }
 }
 
@@ -198,7 +215,6 @@ where
 ///
 /// This lens is designed to be created by the `Guardable` trait, which ensures
 /// it is only used when the `Result` is `Err`, preventing panics.
-#[cfg_attr(feature = "nightly", must_not_suspend)]
 pub struct ErrLens<R>(PhantomData<R>);
 
 impl<R> ErrLens<R> {
@@ -223,11 +239,20 @@ where
     type Source = Result<T, E>;
     type Target = E;
 
-    // HACK: https://github.com/rust-lang/rust-clippy/pull/15253
-    // #[expect(clippy::expect_used, reason = "Only constructable by guard")]
+    #[expect(clippy::unreachable, reason = "Only constructable by guard")]
     #[inline]
     fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
-        source.as_mut().err().expect("ErrLens used on `Ok`")
+        let Err(value) = source.as_mut() else {
+            let msg = "ErrLens called on `Ok`";
+            log::error!("{msg}");
+            unreachable!("{msg}");
+        };
+        value
+    }
+
+    #[inline]
+    fn resolve_failable(self, source: &mut Self::Source) -> Option<&mut Self::Target> {
+        source.as_mut().err()
     }
 }
 

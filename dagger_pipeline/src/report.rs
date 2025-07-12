@@ -48,10 +48,6 @@ pub async fn run_all_tests(client: &Query, arguments: &TestCommand) -> Result<Di
 }
 
 /// Return a vector of all tests
-#[expect(
-    clippy::too_many_lines,
-    reason = "Its a single vec literal, not much we can do."
-)]
 fn all_tests<'q>(
     client: &'q Query,
     arguments: &'q TestCommand,
@@ -70,13 +66,8 @@ fn all_tests<'q>(
             false,
         ),
         (
-            "wasm_unit_nightly",
-            Box::pin(crate::targets::wasm_unit_tests(client, "nightly")),
-            false,
-        ),
-        (
-            "wasm_unit_stable",
-            Box::pin(crate::targets::wasm_unit_tests(client, "stable")),
+            "wasm_unit",
+            Box::pin(crate::targets::wasm_unit_tests(client)),
             false,
         ),
         (
@@ -85,13 +76,8 @@ fn all_tests<'q>(
             false,
         ),
         (
-            "clippy_natrix_nightly",
-            Box::pin(crate::targets::clippy_natrix(client, "nightly")),
-            false,
-        ),
-        (
-            "clippy_natrix_stable",
-            Box::pin(crate::targets::clippy_natrix(client, "stable")),
+            "clippy_natrix",
+            Box::pin(crate::targets::clippy_natrix(client)),
             false,
         ),
         (
