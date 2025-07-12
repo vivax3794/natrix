@@ -4,28 +4,22 @@ use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
 use std::rc::Weak;
 
-use super::{EventToken, InnerCtx};
+use super::InnerCtx;
 use crate::EventCtx;
 use crate::error_handling::log_or_panic;
 use crate::reactivity::State;
 
 impl<T: State> EventCtx<'_, T> {
-    /// Get a wrapper around `Weak<RefCell<T>>` which provides a safer api that aligns with
-    /// framework assumptions.
-    pub fn deferred_borrow(&self, _token: EventToken) -> DeferredCtx<T> {
-        DeferredCtx {
-            inner: self.0.this.clone(),
-        }
-    }
-
     /// Spawn a async task in the local event loop, which will run on the next possible moment.
-    pub fn use_async<C, F>(&self, token: EventToken, func: C)
+    pub fn use_async<C, F>(&self, func: C)
     where
-        C: FnOnce(DeferredCtx<T>) -> F,
+        C: FnOnce(AsyncCtxHandle<T>) -> F,
         F: Future<Output = Option<()>> + 'static,
     {
-        let deferred = self.deferred_borrow(token);
-        let future = func(deferred);
+        let handle = AsyncCtxHandle {
+            inner: self.0.this.clone(),
+        };
+        let future = func(handle);
         let future = async {
             let _ = future.await;
         };
@@ -76,14 +70,14 @@ impl<S: State> DerefMut for AsyncCtx<'_, S> {
 }
 
 /// A combiend `Weak` and `RefCell` that facilities upgrading and borrowing as a shared
-/// operation
+/// operation and ensures you cant cause borrow errors.
 #[must_use]
-pub struct DeferredCtx<T: State> {
+pub struct AsyncCtxHandle<T: State> {
     /// The `Weak<RefCell<T>>` in question
     inner: Weak<RefCell<InnerCtx<T>>>,
 }
 
-impl<T: State> Clone for DeferredCtx<T> {
+impl<T: State> Clone for AsyncCtxHandle<T> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -91,7 +85,7 @@ impl<T: State> Clone for DeferredCtx<T> {
     }
 }
 
-impl<T: State> DeferredCtx<T> {
+impl<T: State> AsyncCtxHandle<T> {
     /// Run a function on the component state, returning `None` if the component was dropped.
     ///
     /// # Reactivity
@@ -101,9 +95,7 @@ impl<T: State> DeferredCtx<T> {
     pub fn update<R>(&self, func: impl FnOnce(AsyncCtx<T>) -> R) -> Option<R> {
         let rc = self.inner.upgrade()?;
         let Ok(mut borrow) = rc.try_borrow_mut() else {
-            log_or_panic!(
-                "Deferred state borrowed while already borrowed. This might happen due to holding it across a yield point"
-            );
+            log_or_panic!("State borrowed while already borrowed.");
             return None;
         };
 

@@ -104,7 +104,7 @@ fn fancy_button(
 fn render_counter() -> impl Element<App> {
     e::div()
         .child(e::p().text(|ctx: &mut RenderCtx<App>| *ctx.counter))
-        .child(fancy_button("Increment", |mut ctx: EventCtx<App>, _, _| {
+        .child(fancy_button("Increment", |mut ctx: EventCtx<App>, _| {
             *ctx.counter += 1;
         }))
 }
@@ -152,11 +152,11 @@ struct App {
 
 fn counter(value: impl Lens<App, u8> + Copy) -> impl Element<App> {
     e::div()
-        .child(e::button().text("-").on::<events::Click>(move |mut ctx: EventCtx<App>, _, _| {
+        .child(e::button().text("-").on::<events::Click>(move |mut ctx: EventCtx<App>, _| {
             *ctx.get(value) -= 1;
         }))
         .text(move |ctx: &mut RenderCtx<App>| *ctx.get(value))
-        .child(e::button().text("+").on::<events::Click>(move |mut ctx: EventCtx<App>, _, _| {
+        .child(e::button().text("+").on::<events::Click>(move |mut ctx: EventCtx<App>, _| {
             *ctx.get(value) += 1;
         }))
 }
@@ -177,11 +177,11 @@ If you are writing a component library you naturally wont know the state, then y
 
 fn counter<S: State>(value: impl Lens<S, u8> + Copy) -> impl Element<S> {
     e::div()
-        .child(e::button().text("-").on::<events::Click>(move |mut ctx: EventCtx<S>, _, _| {
+        .child(e::button().text("-").on::<events::Click>(move |mut ctx: EventCtx<S>, _| {
             *ctx.get(value) -= 1;
         }))
         .text(move |ctx: &mut RenderCtx<S>| *ctx.get(value))
-        .child(e::button().text("+").on::<events::Click>(move |mut ctx: EventCtx<S>, _, _| {
+        .child(e::button().text("+").on::<events::Click>(move |mut ctx: EventCtx<S>, _| {
             *ctx.get(value) += 1;
         }))
 }

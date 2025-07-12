@@ -27,14 +27,14 @@ fn render_hello_world() -> impl Element<HelloWorld> {
         .child(e::h1().text(HELLO_TEXT).id(HELLO_ID))
         .child(integration_tests_dependency::dep_component())
         .child(e::button().id(PANIC_ID).text("PANIC").on::<events::Click>(
-            |mut _ctx: EventCtx<HelloWorld>, _, _| {
+            |mut _ctx: EventCtx<HelloWorld>, _| {
                 panic!("Panic button clicked!");
             },
         ))
         .child(
             e::button()
                 .id(BUTTON_ID)
-                .on::<events::Click>(|mut ctx: EventCtx<HelloWorld>, _, _| {
+                .on::<events::Click>(|mut ctx: EventCtx<HelloWorld>, _| {
                     *ctx.counter += 1;
                 })
                 .text(|ctx: &mut RenderCtx<HelloWorld>| *ctx.counter), // .class(HELLO),

@@ -21,7 +21,7 @@ struct Counter {
 fn render_counter() -> impl Element<Counter> {
     e::button()
         .text(|ctx: &mut RenderCtx<Counter>| *ctx.value)
-        .on::<events::Click>(|mut ctx: EventCtx<Counter>, _, _| {
+        .on::<events::Click>(|mut ctx: EventCtx<Counter>, _| {
             *ctx.value += 1;
         })
 }

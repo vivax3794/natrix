@@ -87,7 +87,7 @@ fn render_counter() -> impl Element<Counter> {
         .attr("abc", |ctx: &mut RenderCtx<Counter>| {
             format!("{}", *ctx.value)
         })
-        .on::<events::Click>(|mut ctx: EventCtx<Counter>, _, _| {
+        .on::<events::Click>(|mut ctx: EventCtx<Counter>, _| {
             ctx.increment();
         })
 }
@@ -134,14 +134,14 @@ fn render_toggle() -> impl Element<Toggle> {
             e::button()
                 .id(ROOT)
                 .attr("abc", |ctx: &mut RenderCtx<Toggle>| *ctx.value)
-                .on::<events::Click>(|mut ctx: EventCtx<Toggle>, _, _| {
+                .on::<events::Click>(|mut ctx: EventCtx<Toggle>, _| {
                     ctx.toggle();
                 }),
         )
         .child(
             e::button()
                 .id(BUTTON)
-                .on::<events::Click>(|mut ctx: EventCtx<Toggle>, _, _| {
+                .on::<events::Click>(|mut ctx: EventCtx<Toggle>, _| {
                     ctx.set_false();
                 }),
         )

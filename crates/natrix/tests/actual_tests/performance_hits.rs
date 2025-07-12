@@ -19,7 +19,7 @@ fn render_stale_dep() -> impl Element<StaleDepAccumulation> {
         .child(
             e::button()
                 .id(BUTTON)
-                .on::<events::Click>(|mut ctx: EventCtx<StaleDepAccumulation>, _, _| {
+                .on::<events::Click>(|mut ctx: EventCtx<StaleDepAccumulation>, _| {
                     *ctx.modified += 1;
                 })
                 .text(|ctx: &mut RenderCtx<StaleDepAccumulation>| *ctx.modified),

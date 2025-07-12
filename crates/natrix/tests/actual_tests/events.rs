@@ -20,7 +20,7 @@ fn render_counter() -> impl Element<Counter> {
     e::button()
         .id(BUTTON_ID)
         .child(|ctx: &mut RenderCtx<Counter>| *ctx.value)
-        .on::<events::Click>(|mut ctx: EventCtx<Counter>, _, _| ctx.increment())
+        .on::<events::Click>(|mut ctx: EventCtx<Counter>, _| ctx.increment())
 }
 
 #[wasm_bindgen_test]

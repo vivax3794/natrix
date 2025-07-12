@@ -13,7 +13,7 @@ mod hook_manager;
 mod watch;
 
 #[cfg(feature = "async")]
-pub use self::async_state::DeferredCtx;
+pub use self::async_state::{AsyncCtx, AsyncCtxHandle};
 pub(crate) use self::core::InnerCtx;
 pub use self::core::{EventCtx, RenderCtx};
 pub(crate) use self::data_manager::HookDepListHolder;
@@ -22,18 +22,3 @@ pub use self::data_manager::HookDepListIter;
 pub use self::data_manager::State;
 #[doc(hidden)]
 pub use self::hook_manager::HookKey;
-
-/// A token only accessible in events.
-/// This is used to guard certain apis that should only be used in events.
-#[derive(Clone, Copy)]
-pub struct EventToken {
-    /// A private field to prevent this from being constructed outside of the framework
-    _private: (),
-}
-
-impl EventToken {
-    /// Create a new token
-    pub(crate) fn new() -> Self {
-        Self { _private: () }
-    }
-}

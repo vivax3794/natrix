@@ -16,12 +16,12 @@ struct DoubleCounter {
 fn render_double_counter() -> impl Element<DoubleCounter> {
     e::div()
         .child(e::button().id(BUTTON_1).on::<events::Click>(
-            |mut ctx: EventCtx<DoubleCounter>, _, _| {
+            |mut ctx: EventCtx<DoubleCounter>, _| {
                 *ctx.value_one += 1;
             },
         ))
         .child(e::button().id(BUTTON_2).on::<events::Click>(
-            |mut ctx: EventCtx<DoubleCounter>, _, _| {
+            |mut ctx: EventCtx<DoubleCounter>, _| {
                 *ctx.value_two += 1;
             },
         ))

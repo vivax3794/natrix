@@ -32,7 +32,7 @@ use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::prelude::Id;
 use crate::reactivity::State;
 use crate::reactivity::render_callbacks::RenderingState;
-use crate::reactivity::state::{EventToken, InnerCtx};
+use crate::reactivity::state::InnerCtx;
 use crate::{EventCtx, get_document};
 
 /// A deferred function to do something once state is available
@@ -117,7 +117,7 @@ impl<C: State, T> HtmlElement<C, T> {
     /// #     some_value: Signal<i32>,
     /// # }
     /// # fn render() -> impl Element<MyState> {
-    /// e::button().on::<events::Click>(|mut ctx: EventCtx<MyState>, _, _| {
+    /// e::button().on::<events::Click>(|mut ctx: EventCtx<MyState>, _| {
     ///     *ctx.some_value += 1;
     /// })
     /// # }
@@ -150,7 +150,7 @@ impl<C: State, T> HtmlElement<C, T> {
                 };
 
                 ctx.track_changes(|ctx| {
-                    function(EventCtx(ctx), EventToken::new(), event);
+                    function(EventCtx(ctx), event);
                 });
             });
             let closure = Closure::wrap(callback);

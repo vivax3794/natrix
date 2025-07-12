@@ -59,7 +59,7 @@ Child elements can also be reactive as closures implement the [`Element`](dom::e
 e::div()
     .child(e::button()
         .text("Click me!")
-        .on::<events::Click>(|mut ctx: EventCtx<MyComponent>, _, _| {
+        .on::<events::Click>(|mut ctx: EventCtx<MyComponent>, _| {
             *ctx.is_active = !*ctx.is_active;
         })
     )
@@ -175,7 +175,7 @@ Attributes can also be reactive as closures implement the [`ToAttribute`](dom::T
 e::button()
     .disabled(|ctx: &mut RenderCtx<MyComponent>| !*ctx.is_active)
     .text("Click me!")
-    .on::<events::Click>(|mut ctx: EventCtx<MyComponent>, _, _| {
+    .on::<events::Click>(|mut ctx: EventCtx<MyComponent>, _| {
         *ctx.is_active = !*ctx.is_active;
     })
 # }
@@ -233,7 +233,7 @@ e::div()
     })
     .child(e::button()
         .text("Click me!")
-        .on::<events::Click>(|mut ctx: EventCtx<MyComponent>, _, _| {
+        .on::<events::Click>(|mut ctx: EventCtx<MyComponent>, _| {
             *ctx.is_active = !*ctx.is_active;
         })
     )

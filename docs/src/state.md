@@ -55,7 +55,7 @@ Now you get fine-grained reactivity on the `book` fields.
 > #  counter: Signal<u8>
 > # }
 > # fn render() -> impl Element<App> {
-> e::button().on::<events::Click>(|mut ctx: EventCtx<App>, _, _|{
+> e::button().on::<events::Click>(|mut ctx: EventCtx<App>, _|{
 >   // This is really bad:
 >   ctx.counter = Signal::new(10);
 > })
@@ -78,7 +78,7 @@ struct App {
 fn render() -> impl Element<App> {
     e::button()
         .text(|ctx: &mut RenderCtx<App>| *ctx.counter) // The `*` read the `u8` value and tells natrix to track this
-        .on::<events::Click>(|mut ctx: EventCtx<App>, _, _| {
+        .on::<events::Click>(|mut ctx: EventCtx<App>, _| {
             // Similarly this informs natrix the signal changed.
             *ctx.counter += 1;
         })
