@@ -8,8 +8,8 @@ use wasm_bindgen::JsCast;
 use web_sys::HtmlElement;
 
 use crate::prelude::State;
-use crate::reactivity::KeepAlive;
 use crate::reactivity::mount::render_component;
+use crate::reactivity::{KeepAlive, statics};
 use crate::{Element, get_document};
 
 /// The parent of the testing env
@@ -72,6 +72,8 @@ pub fn mount_test<C: State>(component: C, tree: impl Element<C>) {
 /// # Panics
 /// if the js is in a invalid state.
 pub fn setup() {
+    statics::clear();
+
     let document = web_sys::window()
         .expect("Failed to get window")
         .document()

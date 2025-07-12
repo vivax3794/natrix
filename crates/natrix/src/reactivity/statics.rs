@@ -85,3 +85,10 @@ pub(crate) fn with_dirty_tracking<R>(func: impl FnOnce() -> R) -> (HookDepListHo
 
     (dirty_list, result)
 }
+
+/// Clear the statics
+#[cfg(feature = "test_utils")]
+pub(crate) fn clear() {
+    DIRTY_HOOKS.set(None);
+    CURRENT_HOOK.set(None);
+}

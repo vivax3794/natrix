@@ -58,8 +58,6 @@ In most cases make use of `log_or_panic_*` macros to panic on debug builds, but 
 Additionally natrix has important invariants in terms of its reactivity system that must not be invalidated.
 When implementing new features, try to build on existing functionality in order to minimize the risk of breaking these invariants.
 
-Natrix has two nightly "feature flags", `cfg(nightly)` and `cfg(feature = "nightly"`). Its important to understand their different usecases, `cfg(nightly)` is set automatically on nightly, and should be used for non-public facing optimizations. `cfg(feature = "nightly")` is set by the user, and should be used for public facing features that are only available on nightly.
-
 ## Comment style
 Natrix has a few "comment tags" we use:
 

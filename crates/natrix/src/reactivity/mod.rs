@@ -8,7 +8,7 @@ pub mod mount;
 pub mod render_callbacks;
 pub mod signal;
 pub mod state;
-mod statics;
+pub(crate) mod statics;
 
 pub use state::{EventCtx, RenderCtx, State};
 

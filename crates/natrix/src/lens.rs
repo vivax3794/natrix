@@ -6,6 +6,9 @@ use std::ops::DerefMut;
 // TODO: Owned lens.
 
 /// A lens provides a type safe way to access a sub-section of a State
+///
+/// This trait is only useful if you wish to implement your own lenses.
+/// For method you can call on lenses see the [`Lens`] trait.
 pub trait LensInner: Clone + 'static {
     /// The input type to this lens
     type Source;
@@ -14,34 +17,11 @@ pub trait LensInner: Clone + 'static {
 
     /// Execute this lens
     fn resolve(self, source: &mut Self::Source) -> &mut Self::Target;
-}
 
-/// Marker trait for lenses that are safe to use in async.
-///
-/// Lenses that arent safe are lenses that might panic due to checks no longer being valid.
-/// Such as lenses from `.guard`
-// TODO: How to deal with optional data in async better.
-// If you know its gonna be optional `Lens<..., Option<...>>` isnt that hard to do.
-// But it doesnt generlize well, like if your state is `Result`, and a component library expects
-// `Option` there isnt much you can do. I think what we want is a `FailableLens`?
-// Which would return `Option<&mut T>` instead of forcing `&mut T`.
-// It would let us say convert a `Lens<..., Option<T>>` into a `FailableLens<..., T>`.
-// And let you then add lenses to the FailableLens.
-// and if you have a `FailableLens<..., Option<T>>` you can flatten it.
-// so like `lens!(App => .maybe).failable().then(lens!(Book => .maybe_author)).flatten()`
-// would produce `FailableLens<App, String>`
-// In this case maybe we should instead require that lenses in async are always `FailableLenses`?
-// What if we want to have a guard, but then want to pass it into async.
-// Can we somehow allow any `Lens` to make it self Failable?
-// So if you can take a `impl Lens<App, String>` and in async it would always return
-// `Option<String>` magically knowing if there was a `OptionLens` in the..
-// Hmm I think we might be able to add like a `resolve_failable` to the `LensInner` type?
-// That might actually work perfectly!
-#[diagnostic::on_unimplemented(
-    message = "This lens is not `AsyncSafe`",
-    note = "Not all lenses are safe to use in async, such as those created by `ctx.guard`"
-)]
-pub trait AsyncSafe {}
+    /// Execute this lens, and return `None` if any path fails.
+    /// (for example if it contains `ctx.guard`)
+    fn resolve_failable(self, source: &mut Self::Source) -> Option<&mut Self::Target>;
+}
 
 impl<S: crate::reactivity::State> crate::reactivity::EventCtx<'_, S> {
     /// Execute a lens on this state
@@ -62,23 +42,26 @@ impl<S: crate::reactivity::State> crate::reactivity::RenderCtx<'_, '_, S> {
 #[cfg(feature = "async")]
 impl<S: crate::reactivity::State> crate::reactivity::state::AsyncCtx<'_, S> {
     /// Execute a lens on this state
+    ///
+    /// This returns a `Option` as certain lenses, such as those produced by `ctx.guard`
+    /// might stop being valid after a certain point in time.
     #[inline]
-    pub fn get<L: LensInner<Source = S> + AsyncSafe>(&mut self, lens: L) -> &mut L::Target {
-        lens.resolve(&mut self.0.data)
+    pub fn get<L: LensInner<Source = S>>(&mut self, lens: L) -> Option<&mut L::Target> {
+        lens.resolve_failable(&mut self.0.data)
     }
 }
 
 /// A lens thats just a direct function call.
-pub struct Direct<F, S, T, const ASYNC_SAFE: bool = false> {
+pub struct Direct<F, S, T> {
     /// The function to call
     pub func: F,
     /// Make rust happy
     phantom: PhantomData<(S, T)>,
 }
 
-impl<F: Copy, S, T, const ASYNC_SAFE: bool> Copy for Direct<F, S, T, ASYNC_SAFE> {}
+impl<F: Copy, S, T> Copy for Direct<F, S, T> {}
 
-impl<F: Clone, S, T, const ASYNC_SAFE: bool> Clone for Direct<F, S, T, ASYNC_SAFE> {
+impl<F: Clone, S, T> Clone for Direct<F, S, T> {
     fn clone(&self) -> Self {
         Self {
             func: self.func.clone(),
@@ -87,7 +70,7 @@ impl<F: Clone, S, T, const ASYNC_SAFE: bool> Clone for Direct<F, S, T, ASYNC_SAF
     }
 }
 
-impl<F, S, T, const ASYNC_SAFE: bool> Direct<F, S, T, ASYNC_SAFE>
+impl<F, S, T> Direct<F, S, T>
 where
     F: Fn(&mut S) -> &mut T,
 {
@@ -102,7 +85,7 @@ where
     }
 }
 
-impl<S, T, F, const ASYNC_SAFE: bool> LensInner for Direct<F, S, T, ASYNC_SAFE>
+impl<S, T, F> LensInner for Direct<F, S, T>
 where
     F: Fn(&mut S) -> &mut T,
     F: Clone + 'static,
@@ -116,9 +99,12 @@ where
     fn resolve(self, source: &mut S) -> &mut T {
         (self.func)(source)
     }
-}
 
-impl<F, S, T> AsyncSafe for Direct<F, S, T, true> {}
+    #[inline]
+    fn resolve_failable(self, source: &mut Self::Source) -> Option<&mut Self::Target> {
+        Some(self.resolve(source))
+    }
+}
 
 /// Chain two lenses
 #[derive(Clone, Copy)]
@@ -137,8 +123,12 @@ where
     fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
         self.1.resolve(self.0.resolve(source))
     }
+
+    #[inline]
+    fn resolve_failable(self, source: &mut Self::Source) -> Option<&mut Self::Target> {
+        self.1.resolve_failable(self.0.resolve_failable(source)?)
+    }
 }
-impl<L1: AsyncSafe, L2: AsyncSafe> AsyncSafe for Chain<L1, L2> {}
 
 /// A Lens that calls `.deref` on the value
 pub struct DerefLens<T>(pub PhantomData<T>);
@@ -167,9 +157,12 @@ where
     fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
         &mut *source
     }
-}
 
-impl<T: AsyncSafe> AsyncSafe for DerefLens<T> {}
+    #[inline]
+    fn resolve_failable(self, source: &mut Self::Source) -> Option<&mut Self::Target> {
+        Some(self.resolve(source))
+    }
+}
 
 /// A lens provides a type safe way to access a sub-section of a State
 pub trait Lens<S, T>: LensInner<Source = S, Target = T> {
@@ -186,21 +179,7 @@ pub trait Lens<S, T>: LensInner<Source = S, Target = T> {
     /// Map a function on the lens
     /// You should generally prefer the `.then` method + the `lens!` macro.
     #[inline]
-    fn map<F, R>(self, func: F) -> Chain<Self, Direct<F, Self::Target, R, false>>
-    where
-        Self: Sized,
-        F: Fn(&mut Self::Target) -> &mut R,
-    {
-        Chain(self, Direct::new(func))
-    }
-
-    /// Map a function on the lens, but keeping it `AsyncSafe`.
-    /// This means you can not use any surrounding state assumptions, such as `ctx.watch`
-    /// to perform potentially panicy operations.
-    ///
-    /// You should generally prefer the `.then` method + the `lens!` macro.
-    #[inline]
-    fn map_assert_async_safe<F, R>(self, func: F) -> Chain<Self, Direct<F, Self::Target, R, true>>
+    fn map<F, R>(self, func: F) -> Chain<Self, Direct<F, Self::Target, R>>
     where
         Self: Sized,
         F: Fn(&mut Self::Target) -> &mut R,
@@ -222,7 +201,7 @@ impl<S, T, Ty> Lens<S, T> for Ty where Ty: LensInner<Source = S, Target = T> {}
 #[macro_export]
 macro_rules! lens {
     ($source:ty => $(. $field:ident)+) => {
-        $crate::lens::Direct::<_, _, _, true>::new(
+        $crate::lens::Direct::<_, _, _>::new(
             #[inline]
             |value: &mut $source| &mut value$(.$field)+
         )
