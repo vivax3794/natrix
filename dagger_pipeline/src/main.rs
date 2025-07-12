@@ -13,9 +13,9 @@ use prelude::*;
 /// Generate a test report, or simply run the tests
 #[derive(clap::Parser)]
 struct TestCommand {
-    /// Only run a subset of tests
-    #[arg(short, long)]
-    quick: bool,
+    /// Filter tests to run (comma-separated). If empty, runs all tests
+    #[arg(short, long, value_delimiter = ',')]
+    filter: Vec<String>,
     /// How many jobs to run in parallel.
     /// If not specified defaults to 1
     #[arg(short, long)]
