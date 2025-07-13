@@ -92,3 +92,71 @@ pub(crate) fn clear() {
     DIRTY_HOOKS.set(None);
     CURRENT_HOOK.set(None);
 }
+
+#[cfg(test)]
+#[expect(clippy::expect_used, clippy::unreachable, reason = "Its tests")]
+mod tests {
+    use indexmap::IndexSet;
+    use slotmap::KeyData;
+
+    use super::*;
+
+    #[test]
+    fn outside_closure_is_no_hook() {
+        let hook1 = HookKey::from(KeyData::from_ffi(1));
+
+        assert_eq!(current_hook(), None);
+        with_hook(hook1, || {});
+        assert_eq!(current_hook(), None);
+    }
+
+    #[test]
+    fn setting_hook_gives_hook() {
+        let hook1 = HookKey::from(KeyData::from_ffi(1));
+
+        with_hook(hook1, || {
+            assert_eq!(current_hook(), Some(hook1));
+        });
+    }
+
+    #[test]
+    fn nesting_hook() {
+        let hook1 = HookKey::from(KeyData::from_ffi(1));
+        let hook2 = HookKey::from(KeyData::from_ffi(2));
+
+        with_hook(hook1, || {
+            with_hook(hook2, || {
+                assert_eq!(current_hook(), Some(hook2));
+            });
+            assert_eq!(current_hook(), Some(hook1));
+        });
+    }
+
+    #[test]
+    fn dirty_tracking() {
+        let hook1 = HookKey::from(KeyData::from_ffi(1));
+        let hook2 = HookKey::from(KeyData::from_ffi(2));
+
+        let (mut result, ()) = with_dirty_tracking(|| {
+            reg_dirty_list(|| {
+                let mut keys = IndexSet::new();
+                keys.insert(hook1);
+                keys.insert(hook2);
+                keys.into_iter()
+            });
+        });
+
+        assert_eq!(result.len(), 1);
+        let iter = result.first_mut().expect("No results in dirty tracking.");
+        assert_eq!(iter.next(), Some(hook1));
+        assert_eq!(iter.next(), Some(hook2));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn reg_dirty_list_lazy() {
+        reg_dirty_list(|| {
+            unreachable!("Dirty list closure was called even tho no dirty tracking active.")
+        });
+    }
+}

@@ -3,7 +3,12 @@
 use std::marker::PhantomData;
 use std::ops::DerefMut;
 
-// TODO: Owned lens.
+// TODO: Generlize lenses.
+// Okay let be pedantic here.
+// Do we need lenses?
+// What lenses solve is using a mutable getter on `RenderCtx`.
+// Because a user taking a `impl Fn(...) -> &mut ...` should not be able to get mut access in
+// `RenderCtx`.
 
 /// A lens provides a type safe way to access a sub-section of a State
 ///
