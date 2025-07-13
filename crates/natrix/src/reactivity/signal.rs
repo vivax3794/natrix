@@ -86,3 +86,69 @@ impl<T: Default> Default for Signal<T> {
         Self::new(T::default())
     }
 }
+
+#[cfg(test)]
+#[expect(clippy::expect_used, reason = "tests")]
+mod tests {
+    use slotmap::KeyData;
+
+    use super::*;
+
+    #[test]
+    fn reading_signals_makes_them_apear_in_dirty() {
+        let mut foo = Signal::new(0);
+        let mut bar = Signal::new(0);
+
+        let hook = HookKey::from(KeyData::from_ffi(0));
+
+        statics::with_hook(hook, || {
+            let _ = *foo;
+            let _ = *bar;
+        });
+
+        let (dirty, ()) = statics::with_dirty_tracking(|| {
+            *foo = 10;
+            *bar = 20;
+        });
+
+        let mut dirty = dirty.into_iter();
+        let mut first = dirty.next().expect("Expected at least one element");
+        let mut second = dirty.next().expect("Expected at least two elements");
+        assert!(dirty.next().is_none());
+
+        assert_eq!(first.next(), Some(hook));
+        assert_eq!(first.next(), None);
+
+        assert_eq!(second.next(), Some(hook));
+        assert_eq!(second.next(), None);
+    }
+
+    #[test]
+    fn can_read_mut_in_non_tracking() {
+        let mut foo = Signal::new(0);
+        let mut bar = Signal::new(0);
+
+        let hook = HookKey::from(KeyData::from_ffi(0));
+
+        statics::with_hook(hook, || {
+            *foo = 5;
+            *bar = 10;
+        });
+
+        let (dirty, ()) = statics::with_dirty_tracking(|| {
+            *foo = 10;
+            *bar = 20;
+        });
+
+        let mut dirty = dirty.into_iter();
+        let mut first = dirty.next().expect("Expected at least one element");
+        let mut second = dirty.next().expect("Expected at least two elements");
+        assert!(dirty.next().is_none());
+
+        assert_eq!(first.next(), Some(hook));
+        assert_eq!(first.next(), None);
+
+        assert_eq!(second.next(), Some(hook));
+        assert_eq!(second.next(), None);
+    }
+}
