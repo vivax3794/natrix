@@ -22,9 +22,9 @@ fn render_test_option() -> impl Element<TestOption> {
                     None => *ctx.value = Some(0),
                 }),
         )
-        .child(|ctx: &mut RenderCtx<TestOption>| {
+        .child(|mut ctx: RenderCtx<TestOption>| {
             if let Some(value_guard) = ctx.guard(lens!(TestOption => .value).deref()) {
-                e::div().text(move |ctx: &mut RenderCtx<TestOption>| *ctx.get(value_guard))
+                e::div().text(move |mut ctx: RenderCtx<TestOption>| *ctx.get(value_guard))
             } else {
                 e::div().text("NO VALUE")
             }
@@ -76,13 +76,13 @@ fn render_test_result() -> impl Element<TestResult> {
                     Err(_) => *ctx.value = Ok(0),
                 }),
         )
-        .child(|ctx: &mut RenderCtx<TestResult>| {
+        .child(|mut ctx: RenderCtx<TestResult>| {
             match ctx.guard(lens!(TestResult => .value).deref()) {
                 Ok(value_guard) => {
-                    e::div().text(move |ctx: &mut RenderCtx<TestResult>| *ctx.get(value_guard))
+                    e::div().text(move |mut ctx: RenderCtx<TestResult>| *ctx.get(value_guard))
                 }
                 Err(error_guard) => {
-                    e::div().text(move |ctx: &mut RenderCtx<TestResult>| *ctx.get(error_guard))
+                    e::div().text(move |mut ctx: RenderCtx<TestResult>| *ctx.get(error_guard))
                 }
             }
             .id(TEXT)
@@ -131,13 +131,13 @@ fn render_nested() -> impl Element<Nested> {
                     None => *ctx.value = Some(None),
                 }),
         )
-        .child(|ctx: &mut RenderCtx<Nested>| {
+        .child(|mut ctx: RenderCtx<Nested>| {
             if let Some(value_guard) = ctx.guard(lens!(Nested => .value).deref()) {
-                e::div().text(move |ctx: &mut RenderCtx<Nested>| {
+                e::div().text(move |mut ctx: RenderCtx<Nested>| {
                     if let Some(inner_guard) = ctx.guard(value_guard) {
                         e::div()
                             .id(TEXT)
-                            .text(move |ctx: &mut RenderCtx<Nested>| *ctx.get(inner_guard))
+                            .text(move |mut ctx: RenderCtx<Nested>| *ctx.get(inner_guard))
                     } else {
                         e::div().text("NO VALUE INNER").id(TEXT)
                     }
@@ -204,12 +204,12 @@ fn render_edge_case() -> impl Element<ReactiveOrderingEdgeCaseRegression> {
                     *ctx.guarded_value = Some(0);
                 }
             })
-            .child(|ctx: &mut RenderCtx<ReactiveOrderingEdgeCaseRegression>| {
+            .child(|mut ctx: RenderCtx<ReactiveOrderingEdgeCaseRegression>| {
                 if let Some(guard) =
                     ctx.guard(lens!(ReactiveOrderingEdgeCaseRegression => .guarded_value).deref())
                 {
                     Some(e::div().id(TEXT).text(
-                        move |ctx: &mut RenderCtx<ReactiveOrderingEdgeCaseRegression>| {
+                        move |mut ctx: RenderCtx<ReactiveOrderingEdgeCaseRegression>| {
                             let trigger = *ctx.trigger;
                             format!("{}-{}", trigger, *ctx.get(guard))
                         },

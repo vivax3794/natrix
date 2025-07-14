@@ -22,14 +22,14 @@ fn render_hello_world() -> impl Element<HelloWorld> {
                 .on::<events::Click>(|mut ctx: EventCtx<HelloWorld>, _| {
                     *ctx.counter += 1;
                 })
-                .class(|ctx: &mut RenderCtx<HelloWorld>| {
+                .class(|ctx: RenderCtx<HelloWorld>| {
                     if *ctx.counter > 0 {
                         CLICKED_CLASS
                     } else {
                         NOT_CLICKED_CLASS
                     }
                 })
-                .class(|ctx: &mut RenderCtx<HelloWorld>| {
+                .class(|ctx: RenderCtx<HelloWorld>| {
                     if *ctx.counter > 2 {
                         Some(CLICKED_MORE_THAN_2_CLASS)
                     } else {

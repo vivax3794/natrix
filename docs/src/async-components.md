@@ -28,7 +28,7 @@ struct HelloWorld {
 
 fn render_hello_world() -> impl Element<HelloWorld> {
     e::button()
-        .text(|ctx: &mut RenderCtx<HelloWorld>| *ctx.counter)
+        .text(|ctx: RenderCtx<HelloWorld>| *ctx.counter)
         .on::<events::Click>(|mut ctx: EventCtx<HelloWorld>, _| {
             ctx.use_async(async |ctx| {
                 ctx.update(|mut ctx| {

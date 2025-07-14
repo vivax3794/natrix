@@ -18,7 +18,7 @@ such as:
 # struct App;
 # 
 fn title(content: impl Lens<App, String>) -> impl Element<App> {
-    e::h1().text(move |ctx: &mut RenderCtx<App>| ctx.get(content.clone()).clone())
+    e::h1().text(move |mut ctx: RenderCtx<App>| ctx.get(content.clone()).clone())
 }
 ```
 

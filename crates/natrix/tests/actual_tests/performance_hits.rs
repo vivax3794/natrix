@@ -22,11 +22,11 @@ fn render_stale_dep() -> impl Element<StaleDepAccumulation> {
                 .on::<events::Click>(|mut ctx: EventCtx<StaleDepAccumulation>, _| {
                     *ctx.modified += 1;
                 })
-                .text(|ctx: &mut RenderCtx<StaleDepAccumulation>| *ctx.modified),
+                .text(|ctx: RenderCtx<StaleDepAccumulation>| *ctx.modified),
         )
-        .child(|ctx: &mut RenderCtx<StaleDepAccumulation>| {
+        .child(|ctx: RenderCtx<StaleDepAccumulation>| {
             *ctx.modified;
-            |ctx: &mut RenderCtx<StaleDepAccumulation>| *ctx.read_only
+            |ctx: RenderCtx<StaleDepAccumulation>| *ctx.read_only
         })
 }
 

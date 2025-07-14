@@ -24,21 +24,21 @@ impl<C, F, T> ReactiveHook<C> for WatchState<F, T>
 where
     C: State,
     T: PartialEq,
-    F: Fn(&mut RenderCtx<C>) -> T,
+    F: Fn(RenderCtx<C>) -> T,
 {
     fn update(&mut self, ctx: &mut InnerCtx<C>, you: HookKey) -> UpdateResult {
         self.keep_alive.clear();
         let hooks = std::mem::take(&mut self.hooks);
 
         let new_value = ctx.track_reads(you, |ctx| {
-            let mut render = RenderCtx {
+            let render = RenderCtx {
                 ctx,
                 render_state: RenderingState {
                     keep_alive: &mut self.keep_alive,
                     hooks: &mut self.hooks,
                 },
             };
-            (self.calc_value)(&mut render)
+            (self.calc_value)(render)
         });
 
         if new_value == self.last_value {
@@ -66,9 +66,9 @@ impl<C: State> RenderCtx<'_, '_, C> {
     /// # struct App {value: Signal<u32>}
     /// #
     /// # fn render() -> impl Element<App> {
-    /// # |ctx: &mut RenderCtx<App>| {
+    /// # |mut ctx: RenderCtx<App>| {
     /// if ctx.watch(|ctx| *ctx.value > 2) {
-    ///     e::div().text(|ctx: &mut RenderCtx<App>| *ctx.value)
+    ///     e::div().text(|ctx: RenderCtx<App>| *ctx.value)
     /// } else {
     ///     e::div().text("Value is too low")
     /// }
@@ -78,7 +78,7 @@ impl<C: State> RenderCtx<'_, '_, C> {
     pub fn watch<T, F>(&mut self, func: F) -> T
     where
         // TODO: Make this a owned lens
-        F: for<'c, 's> Fn(&mut RenderCtx<'c, 's, C>) -> T + 'static,
+        F: for<'c, 's> Fn(RenderCtx<'c, 's, C>) -> T + 'static,
         T: PartialEq + Clone + 'static,
     {
         let me = self.ctx.hooks.reserve_key();
@@ -89,14 +89,14 @@ impl<C: State> RenderCtx<'_, '_, C> {
         let hooks_borrow = &mut hooks;
 
         let result = self.ctx.track_reads(me, |ctx| {
-            let mut render = RenderCtx {
+            let render = RenderCtx {
                 ctx,
                 render_state: RenderingState {
                     keep_alive: keep_alive_borrow,
                     hooks: hooks_borrow,
                 },
             };
-            func(&mut render)
+            func(render)
         });
 
         let Some(dep) = statics::current_hook() else {

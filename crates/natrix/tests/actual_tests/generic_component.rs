@@ -11,7 +11,7 @@ struct Generic<T>(Signal<T>);
 fn render_generic<T: ToString + 'static>() -> impl Element<Generic<T>> {
     e::div()
         .id(ROOT_ID)
-        .text(|ctx: &mut RenderCtx<Generic<T>>| ctx.0.to_string())
+        .text(|ctx: RenderCtx<Generic<T>>| ctx.0.to_string())
 }
 
 #[wasm_bindgen_test]

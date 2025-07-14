@@ -45,7 +45,7 @@ pub(crate) enum UpdateResult {
 /// Reactive hook for swapping out a entire dom node.
 pub(crate) struct ReactiveNode<C: State> {
     /// The callback to produce nodes
-    callback: Box<dyn Fn(&mut RenderCtx<C>) -> MaybeStaticElement<C>>,
+    callback: Box<dyn Fn(RenderCtx<C>) -> MaybeStaticElement<C>>,
     /// The current rendered node to replace
     target_node: web_sys::Node,
     /// Vector of various objects to be kept alive for the duration of the rendered content
@@ -61,7 +61,7 @@ impl<C: State> ReactiveNode<C> {
     /// `target_node` field. This function is split out to facilitate `Self::create_initial`
     fn render(&mut self, ctx: &mut InnerCtx<C>, you: HookKey) -> ElementRenderResult {
         let element = ctx.track_reads(you, |ctx| {
-            (self.callback)(&mut RenderCtx {
+            (self.callback)(RenderCtx {
                 ctx,
                 render_state: RenderingState {
                     keep_alive: &mut self.keep_alive,
@@ -80,7 +80,7 @@ impl<C: State> ReactiveNode<C> {
     /// Create a new `ReactiveNode` registering the initial dependencies and returning both the
     /// `HookKey` for it and the initial node (Which should be inserted in the dom)
     pub(crate) fn create_initial(
-        callback: Box<dyn Fn(&mut RenderCtx<C>) -> MaybeStaticElement<C>>,
+        callback: Box<dyn Fn(RenderCtx<C>) -> MaybeStaticElement<C>>,
         ctx: &mut InnerCtx<C>,
     ) -> (HookKey, web_sys::Node) {
         let me = ctx.hooks.reserve_key();
@@ -164,7 +164,7 @@ pub(crate) enum SimpleReactiveResult<C: State, K> {
 pub(crate) struct SimpleReactive<C: State, K: ReactiveValue> {
     /// The callback to call, takes state and returns the needed data for the reactive
     /// transformation
-    callback: Box<dyn Fn(&mut RenderCtx<C>, &web_sys::Element) -> SimpleReactiveResult<C, K>>,
+    callback: Box<dyn Fn(RenderCtx<C>, &web_sys::Element) -> SimpleReactiveResult<C, K>>,
     /// The node to apply transformations to
     node: web_sys::Element,
     /// Vector of various objects to be kept alive for the duration of the rendered content
@@ -187,7 +187,7 @@ impl<C: State, K: ReactiveValue> ReactiveHook<C> for SimpleReactive<C, K> {
 
         let value = ctx.track_reads(you, |ctx| {
             (self.callback)(
-                &mut RenderCtx {
+                RenderCtx {
                     ctx,
                     render_state: RenderingState {
                         keep_alive: &mut self.keep_alive,
@@ -219,7 +219,7 @@ impl<C: State, K: ReactiveValue + 'static> SimpleReactive<C, K> {
     /// Creates a new simple reactive hook, applying the initial transformation.
     /// Returns a hookkey of the hook
     pub(crate) fn init_new(
-        callback: Box<dyn Fn(&mut RenderCtx<C>, &web_sys::Element) -> SimpleReactiveResult<C, K>>,
+        callback: Box<dyn Fn(RenderCtx<C>, &web_sys::Element) -> SimpleReactiveResult<C, K>>,
         node: web_sys::Element,
         ctx: &mut InnerCtx<C>,
     ) -> HookKey {

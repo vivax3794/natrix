@@ -95,7 +95,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn reading_signals_makes_them_apear_in_dirty() {
+    fn reading_signals_makes_them_appear_in_dirty() {
         let mut foo = Signal::new(0);
         let mut bar = Signal::new(0);
 

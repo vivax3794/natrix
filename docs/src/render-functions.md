@@ -18,7 +18,7 @@ struct MyApp {
 fn render_my_app() -> impl Element<MyApp> {
     e::div()
         .child(e::h1().text("My App"))
-        .child(e::p().text(|ctx: &mut RenderCtx<MyApp>| *ctx.count))
+        .child(e::p().text(|ctx: RenderCtx<MyApp>| *ctx.count))
 }
 
 fn main() {
@@ -47,7 +47,7 @@ fn greeting(name: &'static str) -> impl Element<MyApp> {
 fn render_my_app() -> impl Element<MyApp> {
     e::div()
         .child(greeting("World"))
-        .child(e::p().text(|ctx: &mut RenderCtx<MyApp>| ctx.user_name.clone()))
+        .child(e::p().text(|ctx: RenderCtx<MyApp>| ctx.user_name.clone()))
 }
 ```
 
@@ -71,7 +71,7 @@ fn greeting(name: impl Element<MyApp>) -> impl Element<MyApp> {
 
 fn render_my_app() -> impl Element<MyApp> {
     e::div()
-        .child(greeting(|ctx: &mut RenderCtx<MyApp>| ctx.user_name.clone()))
+        .child(greeting(|ctx: RenderCtx<MyApp>| ctx.user_name.clone()))
 }
 ```
 
@@ -103,7 +103,7 @@ fn fancy_button(
 
 fn render_counter() -> impl Element<App> {
     e::div()
-        .child(e::p().text(|ctx: &mut RenderCtx<App>| *ctx.counter))
+        .child(e::p().text(|ctx: RenderCtx<App>| *ctx.counter))
         .child(fancy_button("Increment", |mut ctx: EventCtx<App>, _| {
             *ctx.counter += 1;
         }))
@@ -125,7 +125,7 @@ struct App {
 fn greeting() -> impl Element<App> {
     e::h1()
         .text("Hello ")
-        .text(|ctx: &mut RenderCtx<App>| ctx.username.clone())
+        .text(|ctx: RenderCtx<App>| ctx.username.clone())
 }
 
 fn render_app() -> impl Element<App> {
@@ -155,7 +155,7 @@ fn counter(value: impl Lens<App, u8> + Copy) -> impl Element<App> {
         .child(e::button().text("-").on::<events::Click>(move |mut ctx: EventCtx<App>, _| {
             *ctx.get(value) -= 1;
         }))
-        .text(move |ctx: &mut RenderCtx<App>| *ctx.get(value))
+        .text(move |mut ctx: RenderCtx<App>| *ctx.get(value))
         .child(e::button().text("+").on::<events::Click>(move |mut ctx: EventCtx<App>, _| {
             *ctx.get(value) += 1;
         }))
@@ -180,7 +180,7 @@ fn counter<S: State>(value: impl Lens<S, u8> + Copy) -> impl Element<S> {
         .child(e::button().text("-").on::<events::Click>(move |mut ctx: EventCtx<S>, _| {
             *ctx.get(value) -= 1;
         }))
-        .text(move |ctx: &mut RenderCtx<S>| *ctx.get(value))
+        .text(move |mut ctx: RenderCtx<S>| *ctx.get(value))
         .child(e::button().text("+").on::<events::Click>(move |mut ctx: EventCtx<S>, _| {
             *ctx.get(value) += 1;
         }))
@@ -203,13 +203,13 @@ mod my_library {
         where S: State + HasLanguage
     {
         e::div()
-            .text(|ctx: &mut RenderCtx<S>| {
+            .text(|ctx: RenderCtx<S>| {
                 match ctx.get_language() {
                     "NO" => "Hallo ",
                     "EN" | _ => "Greetins "
                 }
             })
-            .text(move |ctx: &mut RenderCtx<S>| ctx.get(name.clone()).clone())
+            .text(move |mut ctx: RenderCtx<S>| ctx.get(name.clone()).clone())
     }
 }
 

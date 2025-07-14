@@ -21,7 +21,7 @@ fn render_counter() -> impl Element<Counter> {
     e::button()
         .id(BUTTON_ID)
         .children(format_elements!(
-            |ctx: &mut RenderCtx<Counter>| "value: {}-{}",
+            |ctx: RenderCtx<Counter>| "value: {}-{}",
             *ctx.value,
             *ctx.value + 10
         ))
@@ -84,7 +84,7 @@ struct TwoValues {
 fn render_two() -> impl Element<TwoValues> {
     e::button()
         .id(BUTTON_ID)
-        .text(|ctx: &mut RenderCtx<TwoValues>| format!("{}-{}", *ctx.foo, *ctx.bar))
+        .text(|ctx: RenderCtx<TwoValues>| format!("{}-{}", *ctx.foo, *ctx.bar))
         .on::<events::Click>(|mut ctx: EventCtx<TwoValues>, _| {
             *ctx.foo += 1;
         })

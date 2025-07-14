@@ -25,11 +25,11 @@ fn render_double_counter() -> impl Element<DoubleCounter> {
                 *ctx.value_two += 1;
             },
         ))
-        .child(|ctx: &mut RenderCtx<DoubleCounter>| {
+        .child(|ctx: RenderCtx<DoubleCounter>| {
             (*ctx.value_one >= 2).then_some(
                 e::div()
                     .id(TEXT)
-                    .child(|ctx: &mut RenderCtx<DoubleCounter>| *ctx.value_two),
+                    .child(|ctx: RenderCtx<DoubleCounter>| *ctx.value_two),
             )
         })
 }

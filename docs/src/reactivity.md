@@ -2,7 +2,7 @@
 
 ## Callbacks
 
-You have already seen `|ctx: &mut RenderCtx<App>| ...` used in the varying examples in the book.
+You have already seen `|ctx: RenderCtx<App>| ...` used in the varying examples in the book.
 Lets go into some more detail about what this does. Both `RenderCtx` and `EventCtx` implement `Deref` to your `App` (and `DerefMut` as well for `EventCtx`)
 
 > ![TIP]
@@ -46,7 +46,7 @@ Sometimes two branches returns different kinds of elements, this can be solved u
 # }
 # fn render_hello_world() -> impl Element<HelloWorld> {
 e::div()
-    .child(|ctx: &mut RenderCtx<HelloWorld>| {
+    .child(|ctx: RenderCtx<HelloWorld>| {
         if *ctx.counter > 10 {
             e::h1().text("Such big").render()
         } else {
@@ -75,7 +75,7 @@ struct Counter {
 fn render_counter() -> impl Element<Counter> {
     e::div()
         .child(e::button()
-            .text(|ctx: &mut RenderCtx<Counter>| *ctx.value)
+            .text(|ctx: RenderCtx<Counter>| *ctx.value)
             .on::<events::Click>(|mut ctx: EventCtx<Counter>, _| {
                 *ctx.value += 1;
             }))
@@ -95,13 +95,14 @@ This is where [`ctx.watch`](prelude::RenderCtx::watch) comes in, this caches the
 # struct App {value: Signal<u32>}
 #
 # fn render() -> impl Element<App> {
-# |ctx: &mut RenderCtx<App>| {
-if ctx.watch(|ctx| *ctx.value > 2) {
-    e::button().text(|ctx: &mut RenderCtx<App>| *ctx.value).generic()
-} else {
-    e::h1().text("Value is too low").generic()
+|mut ctx: RenderCtx<App>| {
+    if ctx.watch(|ctx| *ctx.value > 2) {
+        e::button().text(|ctx: RenderCtx<App>| *ctx.value).generic()
+    } else {
+        e::h1().text("Value is too low").generic()
+    }
 }
-# }}
+# }
 ```
 
 Here the `*ctx.value > 2` will re-run whenever `ctx.value` changes, *but* the if-block itself will only-run if the condition flips, which in practice means we arent swapping out dom-nodes all the time.
@@ -123,7 +124,7 @@ struct App {
 }
 
 fn render() -> impl Element<App> {
-    |ctx: &mut RenderCtx<App>| {
+    |ctx: RenderCtx<App>| {
         if let Some(value) = *ctx.value {
             e::div().text(value)
         } else {
@@ -145,9 +146,9 @@ You might reach for `ctx.watch` to solve this, and it actually works perfectly:
 # #[derive(State)]
 # struct App {value: Signal<Option<u32>>}
 # fn render() -> impl Element<App> {
-# |ctx: &mut RenderCtx<App>| {
+# |mut ctx: RenderCtx<App>| {
 if ctx.watch(|ctx| ctx.value.is_some()) {
-    e::div().text(|ctx: &mut RenderCtx<App>| ctx.value.unwrap())
+    e::div().text(|ctx: RenderCtx<App>| ctx.value.unwrap())
 } else {
     e::div().text("Is none")
 }
@@ -171,9 +172,9 @@ Guards provide an elegant solution to this exact problem:
 # #[derive(State)]
 # struct App {value: Signal<Option<u32>>}
 # fn render() -> impl Element<App> {
-# |ctx: &mut RenderCtx<App>| {
+# |mut ctx: RenderCtx<App>| {
 if let Some(value_guard) = ctx.guard(lens!(App => .value).deref()) {
-    e::div().text(move |ctx: &mut RenderCtx<App>| *ctx.get(value_guard))
+    e::div().text(move |mut ctx: RenderCtx<App>| *ctx.get(value_guard))
 } else {
     e::div().text("Is none")
 }
@@ -202,15 +203,15 @@ Guards also work with `Result<T, E>` types:
 # #[derive(State)]
 # struct App {operation: Signal<Result<u32, String>>}
 # fn render() -> impl Element<App> {
-# |ctx: &mut RenderCtx<App>| {
+# |mut ctx: RenderCtx<App>| {
 match ctx.guard(lens!(App => .operation).deref()) {
     Ok(success_guard) => {
         e::div()
-            .text(move |ctx: &mut RenderCtx<App>| *ctx.get(success_guard))
+            .text(move |mut ctx: RenderCtx<App>| *ctx.get(success_guard))
     }
     Err(error_guard) => {
         e::div()
-            .text(move |ctx: &mut RenderCtx<App>| ctx.get(error_guard).clone())
+            .text(move |mut ctx: RenderCtx<App>| ctx.get(error_guard).clone())
     }
 }
 # }}

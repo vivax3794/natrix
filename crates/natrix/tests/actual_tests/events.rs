@@ -19,7 +19,7 @@ impl Counter {
 fn render_counter() -> impl Element<Counter> {
     e::button()
         .id(BUTTON_ID)
-        .child(|ctx: &mut RenderCtx<Counter>| *ctx.value)
+        .child(|ctx: RenderCtx<Counter>| *ctx.value)
         .on::<events::Click>(|mut ctx: EventCtx<Counter>, _| ctx.increment())
 }
 

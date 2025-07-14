@@ -133,7 +133,7 @@ impl<C: State, T: ToAttribute<C, AttributeKind = K>, E: ToAttribute<C, Attribute
 
 impl<F, C, R> ToAttribute<C> for F
 where
-    F: Fn(&mut RenderCtx<C>) -> R + 'static,
+    F: Fn(RenderCtx<C>) -> R + 'static,
     R: ToAttribute<C>,
     C: State,
 {

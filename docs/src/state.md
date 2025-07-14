@@ -77,7 +77,7 @@ struct App {
 
 fn render() -> impl Element<App> {
     e::button()
-        .text(|ctx: &mut RenderCtx<App>| *ctx.counter) // The `*` read the `u8` value and tells natrix to track this
+        .text(|ctx: RenderCtx<App>| *ctx.counter) // The `*` read the `u8` value and tells natrix to track this
         .on::<events::Click>(|mut ctx: EventCtx<App>, _| {
             // Similarly this informs natrix the signal changed.
             *ctx.counter += 1;

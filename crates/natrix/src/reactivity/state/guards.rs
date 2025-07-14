@@ -17,7 +17,7 @@ impl<C: State> RenderCtx<'_, '_, C> {
     /// # #[derive(State)]
     /// # struct App {value: Signal<Option<u32>>}
     /// # fn render() -> impl Element<App> {
-    /// # |ctx: &mut RenderCtx<App>| {
+    /// # |ctx: RenderCtx<App>| {
     /// if let Some(value) = *ctx.value {
     ///     e::div().text(value)
     /// } else {
@@ -33,9 +33,9 @@ impl<C: State> RenderCtx<'_, '_, C> {
     /// # #[derive(State)]
     /// # struct App {value: Signal<Option<u32>>}
     /// # fn render() -> impl Element<App> {
-    /// # |ctx: &mut RenderCtx<App>| {
+    /// # |mut ctx: RenderCtx<App>| {
     /// if ctx.watch(|ctx| ctx.value.is_some()) {
-    ///     e::div().text(|ctx: &mut RenderCtx<App>| ctx.value.unwrap())
+    ///     e::div().text(|ctx: RenderCtx<App>| ctx.value.unwrap())
     /// } else {
     ///     e::div().text("Is none")
     /// }
@@ -52,9 +52,9 @@ impl<C: State> RenderCtx<'_, '_, C> {
     /// # #[derive(State)]
     /// # struct App {value: Signal<Option<u32>>}
     /// # fn render() -> impl Element<App> {
-    /// # |ctx: &mut RenderCtx<App>| {
+    /// # |mut ctx: RenderCtx<App>| {
     /// if let Some(value_guard) = ctx.guard(lens!(App => .value).deref()) {
-    ///     e::div().text(move |ctx: &mut RenderCtx<App>| *ctx.get(value_guard))
+    ///     e::div().text(move |mut ctx: RenderCtx<App>| *ctx.get(value_guard))
     /// } else {
     ///     e::div().text("Is none")
     /// }

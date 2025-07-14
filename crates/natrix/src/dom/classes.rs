@@ -42,7 +42,7 @@ impl<C: State, T: ToClass<C>, E: ToClass<C>> ToClass<C> for Result<T, E> {
 
 impl<F, C, R> ToClass<C> for F
 where
-    F: Fn(&mut RenderCtx<C>) -> R + 'static,
+    F: Fn(RenderCtx<C>) -> R + 'static,
     R: ToClass<C> + 'static,
     C: State,
 {

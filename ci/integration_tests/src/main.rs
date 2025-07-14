@@ -37,7 +37,7 @@ fn render_hello_world() -> impl Element<HelloWorld> {
                 .on::<events::Click>(|mut ctx: EventCtx<HelloWorld>, _| {
                     *ctx.counter += 1;
                 })
-                .text(|ctx: &mut RenderCtx<HelloWorld>| *ctx.counter), // .class(HELLO),
+                .text(|ctx: RenderCtx<HelloWorld>| *ctx.counter), // .class(HELLO),
         )
         .child(e::div().id(RELOAD_ID).text(reload_tests::VALUE))
         .child(

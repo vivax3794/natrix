@@ -177,7 +177,7 @@ impl<C: State, T> HtmlElement<C, T> {
     /// # fn render() -> impl Element<MyState> {
     /// e::div()
     ///     .child(e::h1().text("Wow!"))
-    ///     .child(|ctx: &mut RenderCtx<MyState>| {
+    ///     .child(|ctx: RenderCtx<MyState>| {
     ///         if *ctx.toggle {
     ///             "Hello"
     ///         } else {

@@ -129,7 +129,7 @@ fn render_app() -> impl Element<App> {{
     e::div()
         .child(e::h1().text("Hello {name}").id(HELLO_ID))
         .child(e::button()
-            .text(|ctx: &mut RenderCtx<App>| *ctx.counter) 
+            .text(|ctx: RenderCtx<App>| *ctx.counter) 
             .on::<events::Click>(|mut ctx: EventCtx<App>, _| {{
                 *ctx.counter += 1;
             }})

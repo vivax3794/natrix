@@ -162,7 +162,7 @@ impl<C: State> Element<C> for MaybeStaticElement<C> {
 
 impl<F, C, R> DynElement<C> for F
 where
-    F: Fn(&mut RenderCtx<C>) -> R + 'static,
+    F: Fn(RenderCtx<C>) -> R + 'static,
     R: Element<C> + 'static,
     C: State,
 {
@@ -180,7 +180,7 @@ where
 
 impl<F, C, R> Element<C> for F
 where
-    F: Fn(&mut RenderCtx<C>) -> R + 'static,
+    F: Fn(RenderCtx<C>) -> R + 'static,
     R: Element<C> + 'static,
     C: State,
 {

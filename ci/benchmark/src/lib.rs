@@ -22,7 +22,7 @@ fn render_buttons<const N: u32>() -> impl Element<Buttons<N>> {
         res = res.child(
             e::button()
                 .id(BUTTON)
-                .text(|ctx: &mut RenderCtx<Buttons<N>>| *ctx.state)
+                .text(|ctx: RenderCtx<Buttons<N>>| *ctx.state)
                 .on::<events::Click>(|mut ctx: EventCtx<Buttons<N>>, _| {
                     *ctx.state += 1;
                 }),
@@ -45,7 +45,7 @@ fn render_toggle_node<const N: u32>() -> impl Element<ToggleNode<N>> {
     ));
 
     for _ in 0..N {
-        res = res.child(e::div().child(|ctx: &mut RenderCtx<ToggleNode<N>>| {
+        res = res.child(e::div().child(|ctx: RenderCtx<ToggleNode<N>>| {
             // NOTE: In a real application the reactivity would be on the text level
             // But we are testing dom swapping.
             if *ctx.state {
@@ -73,8 +73,7 @@ fn render_toggle_text<const N: u32>() -> impl Element<ToggleText<N>> {
 
     for _ in 0..N {
         res = res.child(
-            e::div()
-                .child(|ctx: &mut RenderCtx<ToggleText<N>>| if *ctx.state { "ON" } else { "OFF" }),
+            e::div().child(|ctx: RenderCtx<ToggleText<N>>| if *ctx.state { "ON" } else { "OFF" }),
         );
     }
 
@@ -94,7 +93,7 @@ fn render_toggle_attr<const N: u32>() -> impl Element<ToggleAttr<N>> {
     ));
 
     for _ in 0..N {
-        res = res.child(e::button().disabled(|ctx: &mut RenderCtx<ToggleAttr<N>>| *ctx.state));
+        res = res.child(e::button().disabled(|ctx: RenderCtx<ToggleAttr<N>>| *ctx.state));
     }
 
     res
@@ -116,9 +115,10 @@ fn render_toggle_class<const N: u32>() -> impl Element<ToggleClass<N>> {
     ));
 
     for _ in 0..N {
-        res = res.child(e::button().class(
-            |ctx: &mut RenderCtx<ToggleClass<N>>| if *ctx.state { CLASS_ON } else { CLASS_OFF },
-        ));
+        res =
+            res.child(e::button().class(
+                |ctx: RenderCtx<ToggleClass<N>>| if *ctx.state { CLASS_ON } else { CLASS_OFF },
+            ));
     }
 
     res
@@ -138,7 +138,7 @@ fn render_toggle_exist<const N: u32>() -> impl Element<ToggleExist<N>> {
 
     for _ in 0..N {
         res = res.child(e::div().child(
-            |ctx: &mut RenderCtx<ToggleExist<N>>| {
+            |ctx: RenderCtx<ToggleExist<N>>| {
                 if *ctx.state { Some("ON") } else { None }
             },
         ));
@@ -159,7 +159,7 @@ fn render_toggle_at_once<const N: u32>() -> impl Element<ToggleAtOnce<N>> {
                 *ctx.state = !*ctx.state;
             },
         ))
-        .child(|ctx: &mut RenderCtx<ToggleAtOnce<N>>| {
+        .child(|ctx: RenderCtx<ToggleAtOnce<N>>| {
             if *ctx.state {
                 let mut res = e::div();
                 for _ in 0..N {
@@ -194,7 +194,7 @@ macro_rules! define_large_fields {
                     },
                 ))
                 $(
-                    .child(|ctx: &mut RenderCtx<LargeFields>| ctx.$field.clone())
+                    .child(|ctx: RenderCtx<LargeFields>| ctx.$field.clone())
                 )*
         }
     };
@@ -252,7 +252,7 @@ fn render_update_nested<const N: u32>() -> impl Element<UpdateNested<N>> {
     for _ in 0..N {
         res = e::button()
             .id(BUTTON)
-            .text(|ctx: &mut RenderCtx<UpdateNested<N>>| *ctx.state)
+            .text(|ctx: RenderCtx<UpdateNested<N>>| *ctx.state)
             .on::<events::Click>(|mut ctx: EventCtx<UpdateNested<N>>, _| {
                 *ctx.state += 1;
             })

@@ -55,7 +55,7 @@ Child elements can also be reactive as closures implement the [`Element`](dom::e
 #     pub is_active: Signal<bool>,
 # }
 #
-# fn render(ctx: &mut RenderCtx<MyComponent>) -> impl Element<MyComponent> {
+# fn render(ctx: RenderCtx<MyComponent>) -> impl Element<MyComponent> {
 e::div()
     .child(e::button()
         .text("Click me!")
@@ -63,7 +63,7 @@ e::div()
             *ctx.is_active = !*ctx.is_active;
         })
     )
-    .child(|ctx: &mut RenderCtx<MyComponent>| {
+    .child(|ctx: RenderCtx<MyComponent>| {
         if *ctx.is_active {
             Some(e::p().text("Active!"))
         } else {
@@ -85,9 +85,9 @@ You can use the [`format_elements`](format_elements) macro to get `format!` like
 #     pub target: Signal<u8>,
 # }
 #
-# fn render(ctx: &mut RenderCtx<MyComponent>) -> impl Element<MyComponent> {
+# fn render(ctx: RenderCtx<MyComponent>) -> impl Element<MyComponent> {
 e::h1().children(natrix::format_elements!(
-    |ctx: &mut RenderCtx<MyComponent>| "Counter is {}, just {} clicks left!", 
+    |ctx: RenderCtx<MyComponent>| "Counter is {}, just {} clicks left!", 
     *ctx.counter, *ctx.target - *ctx.counter
 ))
 # }
@@ -103,12 +103,12 @@ Which expands to effectively:
 #     pub target: Signal<u8>,
 # }
 #
-# fn render(ctx: &mut RenderCtx<MyComponent>) -> impl Element<MyComponent> {
+# fn render(ctx: RenderCtx<MyComponent>) -> impl Element<MyComponent> {
 e::h1()
     .text("Counter is ")
-    .child(|ctx: &mut RenderCtx<MyComponent>| *ctx.counter)
+    .child(|ctx: RenderCtx<MyComponent>| *ctx.counter)
     .text(", just ")
-    .child(|ctx: &mut RenderCtx<MyComponent>| *ctx.target - *ctx.counter)
+    .child(|ctx: RenderCtx<MyComponent>| *ctx.target - *ctx.counter)
     .text(" clicks left!")
 # }
 ```
@@ -171,9 +171,9 @@ Attributes can also be reactive as closures implement the [`ToAttribute`](dom::T
 #     pub is_active: Signal<bool>,
 # }
 #
-# fn render(ctx: &mut RenderCtx<MyComponent>) -> impl Element<MyComponent> {
+# fn render(ctx: RenderCtx<MyComponent>) -> impl Element<MyComponent> {
 e::button()
-    .disabled(|ctx: &mut RenderCtx<MyComponent>| !*ctx.is_active)
+    .disabled(|ctx: RenderCtx<MyComponent>| !*ctx.is_active)
     .text("Click me!")
     .on::<events::Click>(|mut ctx: EventCtx<MyComponent>, _| {
         *ctx.is_active = !*ctx.is_active;
@@ -222,9 +222,9 @@ const ACTIVE: Class = natrix::class!();
 #     pub is_active: Signal<bool>,
 # }
 #
-# fn render(ctx: &mut RenderCtx<MyComponent>) -> impl Element<MyComponent> {
+# fn render(ctx: RenderCtx<MyComponent>) -> impl Element<MyComponent> {
 e::div()
-    .class(|ctx: &mut RenderCtx<MyComponent>| {
+    .class(|ctx: RenderCtx<MyComponent>| {
         if *ctx.is_active {
             Some(ACTIVE)
         } else {

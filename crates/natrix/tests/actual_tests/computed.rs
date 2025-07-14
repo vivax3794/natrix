@@ -20,11 +20,9 @@ impl Counter {
 fn render_counter() -> impl Element<Counter> {
     e::button()
         .id(BUTTON_ID)
-        .child(|ctx: &mut RenderCtx<Counter>| {
+        .child(|mut ctx: RenderCtx<Counter>| {
             if ctx.watch(|ctx| *ctx.value > 2) {
-                e::div()
-                    .text(|ctx: &mut RenderCtx<Counter>| *ctx.value)
-                    .id(TEXT)
+                e::div().text(|ctx: RenderCtx<Counter>| *ctx.value).id(TEXT)
             } else {
                 e::div()
             }

@@ -18,7 +18,7 @@ struct AsyncComponent {
 fn render_async_component() -> impl Element<AsyncComponent> {
     e::button()
         .id(BUTTON_ID)
-        .text(|ctx: &mut RenderCtx<AsyncComponent>| *ctx.data)
+        .text(|ctx: RenderCtx<AsyncComponent>| *ctx.data)
         .on::<events::Click>(|mut ctx: EventCtx<AsyncComponent>, _| {
             ctx.use_async(async |ctx| {
                 async_utils::sleep_milliseconds(10).await;
@@ -76,7 +76,7 @@ fn render_optional_async() -> impl Element<OptionalAsync> {
         .child(
             e::button()
                 .id(BUTTON_ID)
-                .text(|ctx: &mut RenderCtx<OptionalAsync>| format!("{:?}", *ctx.value))
+                .text(|ctx: RenderCtx<OptionalAsync>| format!("{:?}", *ctx.value))
                 .on::<events::Click>(
                     |mut ctx: EventCtx<OptionalAsync>, _| match &mut *ctx.value {
                         None => *ctx.value = Some(0),
@@ -86,7 +86,7 @@ fn render_optional_async() -> impl Element<OptionalAsync> {
                     },
                 ),
         )
-        .child(|ctx: &mut RenderCtx<OptionalAsync>| {
+        .child(|mut ctx: RenderCtx<OptionalAsync>| {
             if let Some(guard) = ctx.guard(lens!(OptionalAsync => .value).deref()) {
                 Some(e::button().id(BUTTON2).on::<events::Click>(
                     move |mut ctx: EventCtx<OptionalAsync>, _| {
