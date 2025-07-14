@@ -173,8 +173,8 @@ Guards provide an elegant solution to this exact problem:
 # struct App {value: Signal<Option<u32>>}
 # fn render() -> impl Element<App> {
 # |mut ctx: RenderCtx<App>| {
-if let Some(value_guard) = ctx.guard(lens!(App => .value).deref()) {
-    e::div().text(move |mut ctx: RenderCtx<App>| *ctx.get(value_guard))
+if let Some(value_guard) = ctx.guard_option(|ctx| field!(ctx.value).deref().project()) {
+    e::div().text(move |mut ctx: RenderCtx<App>| *value_guard.call_read(&ctx))
 } else {
     e::div().text("Is none")
 }
@@ -204,14 +204,14 @@ Guards also work with `Result<T, E>` types:
 # struct App {operation: Signal<Result<u32, String>>}
 # fn render() -> impl Element<App> {
 # |mut ctx: RenderCtx<App>| {
-match ctx.guard(lens!(App => .operation).deref()) {
+match ctx.guard_result(|ctx| field!(ctx.operation).deref().project()) {
     Ok(success_guard) => {
         e::div()
-            .text(move |mut ctx: RenderCtx<App>| *ctx.get(success_guard))
+            .text(move |mut ctx: RenderCtx<App>| *success_guard.call_read(&ctx))
     }
     Err(error_guard) => {
         e::div()
-            .text(move |mut ctx: RenderCtx<App>| ctx.get(error_guard).clone())
+            .text(move |mut ctx: RenderCtx<App>| error_guard.call_read(&ctx).clone())
     }
 }
 # }}

@@ -1,11 +1,12 @@
 #![doc = include_str!(concat!("../", std::env!("CARGO_PKG_README")))]
 #![cfg_attr(not(feature = "_internal_no_ssg"), forbid(unsafe_code))]
 
+pub mod access;
+
 pub mod async_utils;
 pub mod css;
 pub mod dom;
 mod error_handling;
-pub mod lens;
 pub mod panics;
 pub mod reactivity;
 pub mod test_utils;
@@ -15,6 +16,9 @@ pub use wasm_bindgen::intern;
 
 // TODO: Create a custom set of lints for natrix: https://github.com/trailofbits/dylint
 // TODO: Create a `natrix_unsafe` crate to encapsulate unsafe micro-optimizations.
+
+// TODO: (dont know a better spot for this)
+// Write a dynlint lint set.
 
 thread_local! {
     /// A lazy initlized reference to the js document.
@@ -61,6 +65,7 @@ pub(crate) fn get_window() -> web_sys::Window {
 pub mod prelude {
     pub use natrix_macros::State;
 
+    pub use super::access::{Downgradable, Getter, Project, Ref, RefClosure};
     pub use super::css::selectors::{
         Class,
         Id,
@@ -69,11 +74,10 @@ pub mod prelude {
         IntoFinalizedSelector,
     };
     pub use super::dom::{Element, events, html_elements as e};
-    pub use super::lens;
-    pub use super::lens::{Lens, LensInner};
     pub use super::reactivity::State;
     pub use super::reactivity::signal::Signal;
     pub use super::reactivity::state::{EventCtx, RenderCtx};
+    pub use super::{field, with};
 }
 
 pub use dom::Element;

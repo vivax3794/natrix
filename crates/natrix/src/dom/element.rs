@@ -71,6 +71,10 @@ impl<C: State> MaybeStaticElement<C> {
 
 /// A element is anything that can be rendered in the dom.
 /// This is ofc `HtmlElement`, but also strings, numerics, and even closures.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` is not a valid Element.",
+    note = "If this is a reference/signal you might have forgotten to dereference."
+)]
 pub trait Element<C: State>: 'static {
     /// Convert the element into a `MaybeStaticElement`.
     fn render(self) -> MaybeStaticElement<C>;

@@ -11,10 +11,14 @@ use crate::reactivity::state::HookKey;
 use crate::reactivity::statics;
 
 /// A signal tracks reads and writes to a value, as well as dependencies.
+// TODO: Derive serde on signal using just `data`
+// TODO: Create lint against using interor mutability in signals.
 pub struct Signal<T> {
     /// The data to be tracked.
     data: T,
     /// A collection of the dependencies.
+    // BUG: This is never cleaned of stale hooks if never modified.
+    // Leading to a memory leak.
     deps: RefCell<IndexSet<HookKey>>,
 }
 

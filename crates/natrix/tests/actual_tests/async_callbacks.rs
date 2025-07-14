@@ -87,14 +87,15 @@ fn render_optional_async() -> impl Element<OptionalAsync> {
                 ),
         )
         .child(|mut ctx: RenderCtx<OptionalAsync>| {
-            if let Some(guard) = ctx.guard(lens!(OptionalAsync => .value).deref()) {
+            if let Some(guard) = ctx.guard_option(|ctx| field!(ctx.value).deref().project()) {
                 Some(e::button().id(BUTTON2).on::<events::Click>(
                     move |mut ctx: EventCtx<OptionalAsync>, _| {
                         *ctx.value = None;
+                        let guard = guard.clone();
                         ctx.use_async(async move |ctx| {
                             natrix::async_utils::sleep_milliseconds(10).await;
-                            let value: u8 = ctx.update(move |mut ctx| {
-                                let value = *ctx.get(guard)?;
+                            let value: u8 = ctx.update(|mut ctx| {
+                                let value = *guard.call_failable(&mut ctx)?;
                                 Some(value)
                             })??;
                             Some(())

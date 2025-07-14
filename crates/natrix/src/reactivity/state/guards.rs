@@ -1,9 +1,15 @@
 //! Implementation of guards
+#![expect(
+    clippy::unreachable,
+    reason = "The whole point of guards is doing unwraps internally."
+)]
 
-use std::marker::PhantomData;
+// TODO: Make guards "derivable"
+// We can prolly generate a extension trait and impl it for `RenderCtx` automatically from a
+// derive.
 
 use super::{RenderCtx, State};
-use crate::lens::{self, Lens, LensInner};
+use crate::access::Ref;
 
 impl<C: State> RenderCtx<'_, '_, C> {
     /// Get a guard lens that can be used to retrieve the `Some` variant of a option without having to
@@ -53,8 +59,8 @@ impl<C: State> RenderCtx<'_, '_, C> {
     /// # struct App {value: Signal<Option<u32>>}
     /// # fn render() -> impl Element<App> {
     /// # |mut ctx: RenderCtx<App>| {
-    /// if let Some(value_guard) = ctx.guard(lens!(App => .value).deref()) {
-    ///     e::div().text(move |mut ctx: RenderCtx<App>| *ctx.get(value_guard))
+    /// if let Some(value_guard) = ctx.guard_option(|ctx| field!(ctx.value).deref().project()) {
+    ///     e::div().text(move |mut ctx: RenderCtx<App>| *value_guard.call_read(&ctx))
     /// } else {
     ///     e::div().text("Is none")
     /// }
@@ -66,219 +72,74 @@ impl<C: State> RenderCtx<'_, '_, C> {
     ///
     /// Internally this uses `ctx.watch` and `.unwrap` (which should never fail)
     /// Guard also functions on `Result`
+    ///
+    /// # Panics
+    /// The return method will panic if called outside intended scope.
+    /// Which in most cases means async.
+    // TODO: Lint against manual guard impl.
     #[inline]
-    pub fn guard<L, G>(&mut self, lens: L) -> G::Output<L>
+    pub fn guard_option<F, T>(
+        &mut self,
+        getter: F,
+    ) -> Option<impl Fn(Ref<C>) -> Ref<T> + Clone + use<F, T, C>>
     where
-        L: LensInner<Source = C, Target = G> + Clone,
-        G: Guardable<C>,
+        F: Fn(Ref<C>) -> Option<Ref<T>> + Clone + 'static,
     {
-        let check_lens = lens.clone();
-        let check = self.watch(
-            #[inline]
-            move |ctx| check_lens.clone().resolve(&mut ctx.ctx.data).check(),
-        );
-        G::into_lens(check, lens)
-    }
-}
-
-/// A type that is guardable.
-/// This generally means types such as `Option` and `Result`
-// TODO: Make this derivable
-pub trait Guardable<S>: Sized {
-    /// The result of guarding this value.
-    /// The generic is the source lens
-    type Output<L: Lens<S, Self>>;
-
-    /// The output of the `ctx.watch` call, this should indicate the variant we have
-    type WatchState: PartialEq + Clone + 'static;
-
-    /// The function that will be called in `ctx.watch`
-    fn check(&self) -> Self::WatchState;
-
-    /// Construct yourself wrapping a lens that will grab the corresponding variant data in a
-    /// paniciky way
-    fn into_lens<L>(check_result: Self::WatchState, to_you: L) -> Self::Output<L>
-    where
-        L: Lens<S, Self>;
-}
-
-/// A lens that calls `.unwrap` on a option value.
-///
-/// This lens is designed to be created by the `Guardable` trait, which ensures
-/// it is only used when the `Option` is `Some`, preventing panics.
-pub struct OptionLens<T>(PhantomData<T>);
-
-impl<T> OptionLens<T> {
-    /// Create a new one
-    #[must_use]
-    fn new() -> Self {
-        Self(PhantomData)
-    }
-}
-impl<T> Clone for OptionLens<T> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-impl<T> Copy for OptionLens<T> {}
-
-impl<T: 'static> LensInner for OptionLens<Option<T>> {
-    type Source = Option<T>;
-    type Target = T;
-
-    #[expect(clippy::unreachable, reason = "Only constructable by guard")]
-    #[inline]
-    fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
-        let Some(value) = source.as_mut() else {
-            let msg = "OptionLens called on `None`";
-            log::error!("{msg}");
-            unreachable!("{msg}");
-        };
-        value
-    }
-
-    #[inline]
-    fn resolve_failable(self, source: &mut Self::Source) -> Option<&mut Self::Target> {
-        source.as_mut()
-    }
-}
-
-impl<S, T> Guardable<S> for Option<T>
-where
-    T: 'static,
-{
-    type Output<L: Lens<S, Self>> = Option<lens::Chain<L, OptionLens<Self>>>;
-    type WatchState = bool;
-
-    fn check(&self) -> Self::WatchState {
-        self.is_some()
-    }
-
-    fn into_lens<L>(check_result: Self::WatchState, to_you: L) -> Self::Output<L>
-    where
-        L: Lens<S, Self>,
-    {
-        if check_result {
-            Some(to_you.then(OptionLens::new()))
+        let watch_getter = getter.clone();
+        let check = self.watch(move |render| watch_getter(Ref::Read(&render.ctx.data)).is_some());
+        if check {
+            Some(create_getter(move |ctx| getter(ctx)))
         } else {
             None
         }
     }
-}
 
-/// A lens that calls `.unwrap()` on a `Result` to access the `Ok` value.
-///
-/// This lens is designed to be created by the `Guardable` trait, which ensures
-/// it is only used when the `Result` is `Ok`, preventing panics.
-pub struct OkLens<R>(PhantomData<R>);
-
-impl<R> OkLens<R> {
-    /// Creates a new `OkLens`.
-    #[must_use]
-    fn new() -> Self {
-        Self(PhantomData)
-    }
-}
-impl<T> Clone for OkLens<T> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-impl<T> Copy for OkLens<T> {}
-
-impl<T, E> LensInner for OkLens<Result<T, E>>
-where
-    T: 'static,
-    E: 'static,
-{
-    type Source = Result<T, E>;
-    type Target = T;
-
-    #[expect(clippy::unreachable, reason = "Only constructable by guard")]
+    /// Same as `guard_option`, but for `Result`
+    #[expect(clippy::missing_errors_doc, reason = "This is transforming a Result")]
     #[inline]
-    fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
-        let Ok(value) = source.as_mut() else {
-            let msg = "OkLens called on `Err`";
-            log::error!("{msg}");
-            unreachable!("{msg}");
-        };
-        value
-    }
-
-    #[inline]
-    fn resolve_failable(self, source: &mut Self::Source) -> Option<&mut Self::Target> {
-        source.as_mut().ok()
-    }
-}
-
-/// A lens that calls `.unwrap_err()` on a `Result` to access the `Err` value.
-///
-/// This lens is designed to be created by the `Guardable` trait, which ensures
-/// it is only used when the `Result` is `Err`, preventing panics.
-pub struct ErrLens<R>(PhantomData<R>);
-
-impl<R> ErrLens<R> {
-    /// Creates a new `ErrLens`.
-    #[must_use]
-    fn new() -> Self {
-        Self(PhantomData)
-    }
-}
-impl<T> Clone for ErrLens<T> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-impl<T> Copy for ErrLens<T> {}
-
-impl<T, E> LensInner for ErrLens<Result<T, E>>
-where
-    T: 'static,
-    E: 'static,
-{
-    type Source = Result<T, E>;
-    type Target = E;
-
-    #[expect(clippy::unreachable, reason = "Only constructable by guard")]
-    #[inline]
-    fn resolve(self, source: &mut Self::Source) -> &mut Self::Target {
-        let Err(value) = source.as_mut() else {
-            let msg = "ErrLens called on `Ok`";
-            log::error!("{msg}");
-            unreachable!("{msg}");
-        };
-        value
-    }
-
-    #[inline]
-    fn resolve_failable(self, source: &mut Self::Source) -> Option<&mut Self::Target> {
-        source.as_mut().err()
-    }
-}
-
-impl<S, T, E> Guardable<S> for Result<T, E>
-where
-    T: 'static,
-    E: 'static,
-{
-    type Output<L: Lens<S, Self>> =
-        Result<lens::Chain<L, OkLens<Self>>, lens::Chain<L, ErrLens<Self>>>;
-    type WatchState = bool;
-
-    #[inline]
-    fn check(&self) -> Self::WatchState {
-        self.is_ok()
-    }
-
-    #[inline]
-    fn into_lens<L>(check_result: Self::WatchState, to_you: L) -> Self::Output<L>
+    pub fn guard_result<F, T, E>(
+        &mut self,
+        getter: F,
+    ) -> Result<
+        // Once rust gets better about `use` bounds we can get rid of `T`/`E` in the different
+        // bounds.
+        impl Fn(Ref<C>) -> Ref<T> + Clone + use<F, T, E, C>,
+        impl Fn(Ref<C>) -> Ref<E> + Clone + use<F, T, E, C>,
+    >
     where
-        L: Lens<S, Self>,
+        F: Fn(Ref<C>) -> Result<Ref<T>, Ref<E>> + Clone + 'static,
+        T: 'static,
+        E: 'static,
     {
-        if check_result {
-            Ok(to_you.then(OkLens::new()))
+        let watch_getter = getter.clone();
+        let check = self.watch(move |render| watch_getter(Ref::Read(&render.ctx.data)).is_ok());
+
+        if check {
+            Ok(create_getter(move |ctx| getter(ctx).ok()))
         } else {
-            Err(to_you.then(ErrLens::new()))
+            Err(create_getter(move |ctx| getter(ctx).err()))
+        }
+    }
+}
+
+/// Create a getter that handles the logic of guard getters.
+#[inline]
+fn create_getter<S, R>(
+    getter: impl Fn(Ref<S>) -> Option<Ref<R>> + Clone,
+) -> impl Fn(Ref<S>) -> Ref<R> + Clone {
+    #[inline]
+    move |ctx| {
+        let is_failable = matches!(ctx, Ref::FaillableMut(_));
+        match getter(ctx) {
+            None => {
+                if is_failable {
+                    Ref::FaillableMut(None)
+                } else {
+                    log::error!("Guard closure got `None` in non_failable mode.");
+                    unreachable!("Guard closure got `None` in non_failable mode.");
+                }
+            }
+            Some(value) => value,
         }
     }
 }

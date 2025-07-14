@@ -1,8 +1,6 @@
 //! Types for handling the component state
 
 // TODO: Reacting to reactive changes
-// NOTE: This we removed as a feature because being able to emit messages during the update cycle
-// led to inconsistent code.
 
 #[cfg(feature = "async")]
 mod async_state;

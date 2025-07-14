@@ -137,8 +137,9 @@ fn render_app() -> impl Element<App> {
 
 ## Generic state access.
 What if you want a more reusable component, lets say a slider?
-For that we have lenses, the primary api for lenses is the `lens!` macro and [`Lens`](lens::Lens) trait methods.
-The signature for a lens is `Lens<Source, Target>`.
+For this rust just uses closures, kinda.
+Pure rust closures dont allow for combined read and mut paths, so natrix uses [`Ref`](access::Ref), see the [Getters Chapther](ref.md) for detailed docs on them.
+[`Getter`](access::Getter) is a ergonomic "Alias Trait" for closures that take a `Ref` as the first argument, are cloneable, and are `'static`, all of which basically all closures in natrix need or might need at some point (and basically all closures will be), it saves you from having to write longer bounds, as well as needing to propagate a `Clone` bound after refactors as `Clone` is the default with `Getter`.  
 
 ```rust
 # extern crate natrix;
@@ -150,21 +151,21 @@ struct App {
     second: Signal<u8>,
 }
 
-fn counter(value: impl Lens<App, u8> + Copy) -> impl Element<App> {
+fn counter(value: impl Getter<App, u8>) -> impl Element<App> {
     e::div()
-        .child(e::button().text("-").on::<events::Click>(move |mut ctx: EventCtx<App>, _| {
-            *ctx.get(value) -= 1;
-        }))
-        .text(move |mut ctx: RenderCtx<App>| *ctx.get(value))
-        .child(e::button().text("+").on::<events::Click>(move |mut ctx: EventCtx<App>, _| {
-            *ctx.get(value) += 1;
-        }))
+        .child(e::button().text("-").on::<events::Click>(with!(move value |mut ctx: EventCtx<App>, _| {
+            *value.call_mut(&mut ctx) -= 1;
+        })))
+        .text(with!(move value |mut ctx: RenderCtx<App>| *value.call_read(&ctx)))
+        .child(e::button().text("+").on::<events::Click>(with!(move value |mut ctx: EventCtx<App>, _| {
+            *value.call_mut(&mut ctx) += 1;
+        })))
 }
 
 fn render_app() -> impl Element<App> {
     e::div()
-        .child(counter(lens!(App => .first).deref()))
-        .child(counter(lens!(App => .second).deref()))
+        .child(counter(|ctx| field!(ctx.first).deref()))
+        .child(counter(|ctx| field!(ctx.second).deref()))
 }
 ```
 The amazing thing is that since the helper is still concrete (`impl Element<App>`), you can still access any field directly, if you said had a `theme` field, the `counter` function could access that directly without needing lenses.
@@ -175,15 +176,15 @@ If you are writing a component library you naturally wont know the state, then y
 # extern crate natrix;
 # use natrix::prelude::*;
 
-fn counter<S: State>(value: impl Lens<S, u8> + Copy) -> impl Element<S> {
+fn counter<S: State>(value: impl Getter<S, u8>) -> impl Element<S> {
     e::div()
-        .child(e::button().text("-").on::<events::Click>(move |mut ctx: EventCtx<S>, _| {
-            *ctx.get(value) -= 1;
-        }))
-        .text(move |mut ctx: RenderCtx<S>| *ctx.get(value))
-        .child(e::button().text("+").on::<events::Click>(move |mut ctx: EventCtx<S>, _| {
-            *ctx.get(value) += 1;
-        }))
+        .child(e::button().text("-").on::<events::Click>(with!(move value |mut ctx: EventCtx<S>, _| {
+            *value.call_mut(&mut ctx) -= 1;
+        })))
+        .text(with!(move value |mut ctx: RenderCtx<S>| *value.call_read(&ctx)))
+        .child(e::button().text("+").on::<events::Click>(with!(move value |mut ctx: EventCtx<S>, _| {
+            *value.call_mut(&mut ctx) += 1;
+        })))
 }
 ```
 
@@ -199,7 +200,7 @@ mod my_library {
         fn get_language(&self) -> &'static str;
     }
 
-    pub fn greeting<S>(name: impl Lens<S, String>) -> impl Element<S>
+    pub fn greeting<S>(name: impl Getter<S, str>) -> impl Element<S>
         where S: State + HasLanguage
     {
         e::div()
@@ -209,7 +210,7 @@ mod my_library {
                     "EN" | _ => "Greetins "
                 }
             })
-            .text(move |mut ctx: RenderCtx<S>| ctx.get(name.clone()).clone())
+            .text(move |mut ctx: RenderCtx<S>| name.call_read(&ctx).to_string())
     }
 }
 
@@ -227,6 +228,6 @@ impl my_library::HasLanguage for App {
 
 fn render_app() -> impl Element<App> {
     e::div()
-        .child(my_library::greeting(lens!(App => .author_name).deref()))
+        .child(my_library::greeting(|ctx: Ref<App>| field!(ctx.author_name).deref().deref()))
 }
 ```

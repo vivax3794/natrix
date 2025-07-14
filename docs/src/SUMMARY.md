@@ -10,6 +10,7 @@
 - [Features](features.md)
 - [Panic Policy](panics.md)
 - [Render Functions](render-functions.md)
+- [Getters](ref.md)
 - [State](state.md)
 - [Reactivity](reactivity.md)
 - [Lenses](lens.md)

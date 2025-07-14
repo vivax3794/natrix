@@ -26,7 +26,7 @@ thread_local! {
 static LOGGER_ACTIVE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// A simple  `log` logger that just prints to `console.log` for all levels.
-// HACK: This is used for two reasons.
+// NOTE: This is used for two reasons.
 // 1. the `console_log` crate color coding just adds noise in the wasm_bindgen_test capture (it
 //    literally prints out the css)
 // 2. This outputs everything to just `.log` for a reason, as wasm_bindgen_test splits logs per
