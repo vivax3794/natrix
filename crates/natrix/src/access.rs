@@ -5,7 +5,6 @@
 // * `-> Ref<Option<T>>` if the `Option` variant is never changed (prefer `-> Option<Ref<T>>`)
 // (same for Result)
 // * `-> Ref<Signal<T>>` (prefer `-> Ref<T>`) (`Ref<T>` where `T` is a non-signal `State` is fine)
-
 // TODO: Indexing
 use std::ops::{Deref, DerefMut};
 
@@ -27,6 +26,7 @@ pub enum Ref<'a, T: ?Sized> {
     Mut(&'a mut T),
     /// a `Option<&mut T>` (used in async)
     FaillableMut(Option<&'a mut T>),
+    // MAYBE: A owned variant?
 }
 
 impl<'a, T: ?Sized> Ref<'a, T> {
@@ -160,7 +160,7 @@ impl<T, E> Project for Result<T, E> {
 /// Note, to avoid unwraps in your code for this you can use `RefClosure` apis instead.
 /// Which hides the unwrap behind the assumption the closure is well behaved (maintains variant.)
 // MAYBE: Make derivable
-pub trait Downgradable<'a> {
+pub trait Downgrade<'a> {
     /// The `&` version of this type.
     type ReadOutput;
 
@@ -176,7 +176,7 @@ pub trait Downgradable<'a> {
     fn into_mut(self) -> Option<Self::MutOutput>;
 }
 
-impl<'a, T: ?Sized> Downgradable<'a> for Ref<'a, T> {
+impl<'a, T: ?Sized> Downgrade<'a> for Ref<'a, T> {
     type ReadOutput = &'a T;
     type MutOutput = &'a mut T;
 
@@ -201,7 +201,7 @@ impl<'a, T: ?Sized> Downgradable<'a> for Ref<'a, T> {
 
 // NOTE: We do not implement `Dwongradble` for `&`
 // Because a type that always fails to downgrade into `&mut` is not a valid `Downgradble`
-impl<'a, T: ?Sized> Downgradable<'a> for &'a mut T {
+impl<'a, T: ?Sized> Downgrade<'a> for &'a mut T {
     type ReadOutput = &'a T;
     type MutOutput = &'a mut T;
     #[inline]
@@ -213,9 +213,9 @@ impl<'a, T: ?Sized> Downgradable<'a> for &'a mut T {
         Some(self)
     }
 }
-impl<'a, T> Downgradable<'a> for Option<T>
+impl<'a, T> Downgrade<'a> for Option<T>
 where
-    T: Downgradable<'a>,
+    T: Downgrade<'a>,
 {
     type ReadOutput = Option<T::ReadOutput>;
     type MutOutput = Option<T::MutOutput>;
@@ -234,10 +234,10 @@ where
         }
     }
 }
-impl<'a, T, E> Downgradable<'a> for Result<T, E>
+impl<'a, T, E> Downgrade<'a> for Result<T, E>
 where
-    T: Downgradable<'a>,
-    E: Downgradable<'a>,
+    T: Downgrade<'a>,
+    E: Downgrade<'a>,
 {
     type ReadOutput = Result<T::ReadOutput, E::ReadOutput>;
     type MutOutput = Result<T::MutOutput, E::MutOutput>;
@@ -261,7 +261,7 @@ where
 ///
 /// You should generally not use this bounds, and instead opt for the `impl Fn...` syntax.
 // TODO: Create lint against using `call_read` and `call_mut` in async context.
-pub trait RefClosure<'a, I: ?Sized, T: Downgradable<'a>> {
+pub trait RefClosure<'a, I: ?Sized, T: Downgrade<'a>> {
     /// Call the read path of this closure.
     /// This will never fail
     ///
@@ -282,7 +282,7 @@ pub trait RefClosure<'a, I: ?Sized, T: Downgradable<'a>> {
 impl<'a, I, T, F> RefClosure<'a, I, T> for F
 where
     F: Fn(Ref<'a, I>) -> T,
-    T: Downgradable<'a>,
+    T: Downgrade<'a>,
     I: 'a + ?Sized,
 {
     #[expect(clippy::unreachable, reason = "Core invariant.")]

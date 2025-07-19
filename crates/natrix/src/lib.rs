@@ -65,7 +65,7 @@ pub(crate) fn get_window() -> web_sys::Window {
 pub mod prelude {
     pub use natrix_macros::State;
 
-    pub use super::access::{Downgradable, Getter, Project, Ref, RefClosure};
+    pub use super::access::{Downgrade, Getter, Project, Ref, RefClosure};
     pub use super::css::selectors::{
         Class,
         Id,
