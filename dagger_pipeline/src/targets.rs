@@ -11,8 +11,6 @@ use crate::prelude::*;
 // MAYBE: Unused features
 // MAYBE: Record timing info
 // MAYBE: Add execution info
-// TODO: Update snapshots.
-// TODO: Build book
 
 // MAYBE: Check for semver breaking changes.
 // Actually that might just need to be a pure CI thing

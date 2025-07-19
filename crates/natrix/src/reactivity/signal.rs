@@ -19,6 +19,10 @@ pub struct Signal<T> {
     /// A collection of the dependencies.
     // BUG: This is never cleaned of stale hooks if never modified.
     // Leading to a memory leak.
+    // We do not want to do a O(n) loop over all signals at the end of update.
+    // We could store the dropped hooks so far in current update cycle in a static and have signals
+    // check it on access. But that doesnt solve cases where the accumulation happens in two steps.
+    // (like switching a condition).
     deps: RefCell<IndexSet<HookKey>>,
 }
 

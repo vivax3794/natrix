@@ -62,17 +62,16 @@ impl<T: State> HookStore<T> {
         self.insert_hook(None)
     }
 
-    /// Drop all children of the hook
+    /// Drop the hook and all of its children
     pub(super) fn drop_hook(&mut self, hook_key: HookKey) {
-        if let Some(hook) = self.hooks.remove(hook_key) {
-            let Some(hook) = hook else {
-                log_or_panic!("Attempted to drop `None` (uninitlized) hook, {hook_key:?}");
-                return;
-            };
-
-            let mut hooks = hook.drop_us();
-            for hook in hooks.drain(..) {
-                self.drop_hook(hook);
+        let mut hooks_to_drop = vec![hook_key];
+        while let Some(hook_key) = hooks_to_drop.pop() {
+            if let Some(hook) = self.hooks.remove(hook_key) {
+                let Some(hook) = hook else {
+                    log_or_panic!("Attempted to drop `None` (uninitlized) hook, {hook_key:?}");
+                    return;
+                };
+                hooks_to_drop.extend(hook.drop_us());
             }
         }
     }

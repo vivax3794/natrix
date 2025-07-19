@@ -33,7 +33,7 @@ fn render_stale_dep() -> impl Element<StaleDepAccumulation> {
 // As of writing this causes the `read_only` dep list to grow without ever being
 // cleared
 #[wasm_bindgen_test]
-#[ignore = "Unsure whether we want to optimize this"]
+// #[ignore = "Unsure whether we want to optimize this"]
 fn stale_dep_accumulation() {
     crate::mount_test(StaleDepAccumulation::default(), render_stale_dep());
     let button = crate::get(BUTTON);

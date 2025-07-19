@@ -182,6 +182,7 @@ impl<T: State> InnerCtx<T> {
 
     /// Run the given method and track the reactive modifications done in it.
     /// and call initiate the update cycle afterwards.
+    #[inline]
     pub(crate) fn track_changes<R>(&mut self, func: impl FnOnce(&mut Self) -> R) -> R {
         let (dirty_list, result) = statics::with_dirty_tracking(|| func(self));
         self.update(dirty_list);
@@ -190,6 +191,7 @@ impl<T: State> InnerCtx<T> {
 
     /// Run the given method and track reads, registering the given hook as a dependency of read
     /// signals
+    #[inline]
     pub(crate) fn track_reads<R>(
         &mut self,
         hook: HookKey,

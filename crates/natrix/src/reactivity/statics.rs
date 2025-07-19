@@ -9,10 +9,6 @@ use crate::error_handling::{log_or_panic, log_or_panic_assert};
 use crate::macro_ref::HookDepListIter;
 use crate::reactivity::state::HookDepListHolder;
 
-// MAYBE: This module controls full access to the statics.
-// It would be really easy to see that borrow rules hold.
-// Should we use `unsafe` for faster access?
-
 thread_local! {
     /// The current hook the signal is being accessed in.
     static CURRENT_HOOK: Cell<Option<HookKey>> = const {Cell::new(None)};
