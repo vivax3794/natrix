@@ -103,10 +103,10 @@ fn populate_sourcemap(
                     if let Some(directory) = file.directory(header) {
                         let directory = debug_info.attr_string(&unit, directory)?.to_string_lossy();
                         let directory = Path::new(directory.as_ref());
-                        if directory.is_relative() {
-                            if let Some(comp_dir) = unit.comp_dir {
-                                path.push(comp_dir.to_string_lossy().as_ref());
-                            }
+                        if directory.is_relative()
+                            && let Some(comp_dir) = unit.comp_dir
+                        {
+                            path.push(comp_dir.to_string_lossy().as_ref());
                         }
                         path.push(directory);
                     }

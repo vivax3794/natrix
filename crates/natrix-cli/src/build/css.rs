@@ -104,26 +104,26 @@ impl<'i> lightningcss::visitor::Visitor<'i> for SymbolVisitor {
         &mut self,
         rule: &mut lightningcss::rules::CssRule<'i>,
     ) -> std::result::Result<(), Self::Error> {
-        if let lightningcss::rules::CssRule::Unknown(unknown_rule) = rule {
-            if unknown_rule.name == "keep" {
-                let tokens = &unknown_rule.prelude.0;
-                if let Some(token) = tokens.first() {
-                    match token {
-                        lightningcss::properties::custom::TokenOrValue::Token(
-                            lightningcss::properties::custom::Token::Ident(ident),
-                        ) => {
-                            let ident = ident.to_string();
-                            self.keep.insert(ident);
-                        }
-                        lightningcss::properties::custom::TokenOrValue::DashedIdent(ident) => {
-                            let ident = ident.to_string();
-                            self.keep.insert(ident);
-                        }
-                        _ => (),
+        if let lightningcss::rules::CssRule::Unknown(unknown_rule) = rule
+            && unknown_rule.name == "keep"
+        {
+            let tokens = &unknown_rule.prelude.0;
+            if let Some(token) = tokens.first() {
+                match token {
+                    lightningcss::properties::custom::TokenOrValue::Token(
+                        lightningcss::properties::custom::Token::Ident(ident),
+                    ) => {
+                        let ident = ident.to_string();
+                        self.keep.insert(ident);
                     }
+                    lightningcss::properties::custom::TokenOrValue::DashedIdent(ident) => {
+                        let ident = ident.to_string();
+                        self.keep.insert(ident);
+                    }
+                    _ => (),
                 }
-                *rule = lightningcss::rules::CssRule::Ignored;
             }
+            *rule = lightningcss::rules::CssRule::Ignored;
         }
         rule.visit_children(self)
     }

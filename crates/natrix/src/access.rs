@@ -5,6 +5,7 @@
 // * `-> Ref<Option<T>>` if the `Option` variant is never changed (prefer `-> Option<Ref<T>>`)
 // (same for Result)
 // * `-> Ref<Signal<T>>` (prefer `-> Ref<T>`) (`Ref<T>` where `T` is a non-signal `State` is fine)
+
 // TODO: Indexing
 use std::ops::{Deref, DerefMut};
 

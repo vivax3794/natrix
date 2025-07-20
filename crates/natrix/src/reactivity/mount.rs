@@ -43,10 +43,10 @@ pub struct RenderResult<C: State> {
 pub fn mount<C: State, E: Element<C>>(component: C, tree: impl FnOnce() -> E) {
     crate::panics::set_panic_hook();
     #[cfg(feature = "console_log")]
-    if cfg!(target_arch = "wasm32") {
-        if let Err(err) = console_log::init_with_level(log::Level::Trace) {
-            crate::error_handling::log_or_panic!("Failed to create logger: {err}");
-        }
+    if cfg!(target_arch = "wasm32")
+        && let Err(err) = console_log::init_with_level(log::Level::Trace)
+    {
+        crate::error_handling::log_or_panic!("Failed to create logger: {err}");
     }
     #[cfg(feature = "_internal_bundle")]
     if let Err(err) = simple_logger::init_with_level(log::Level::Trace) {

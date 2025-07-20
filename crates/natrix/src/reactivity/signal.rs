@@ -44,10 +44,8 @@ impl<T> Deref for Signal<T> {
         if let Some(hook) = statics::current_hook() {
             if let Ok(mut deps) = self.deps.try_borrow_mut() {
                 deps.insert(hook);
-                if do_performance_check() {
-                    if deps.len() > 20 {
-                        performance_lint!("Signal deps list over 20");
-                    }
+                if do_performance_check() && deps.len() > 20 {
+                    performance_lint!("Signal deps list over 20");
                 }
             } else {
                 log_or_panic!("Signal deps list already borrowed");
@@ -64,10 +62,8 @@ impl<T> DerefMut for Signal<T> {
         if let Some(hook) = statics::current_hook() {
             deps.insert(hook);
 
-            if do_performance_check() {
-                if deps.len() > 20 {
-                    performance_lint!("Signal deps list over 20");
-                }
+            if do_performance_check() && deps.len() > 20 {
+                performance_lint!("Signal deps list over 20");
             }
         } else if deps.len() > 0 {
             statics::reg_dirty_list(|| deps.create_iter_and_clear());

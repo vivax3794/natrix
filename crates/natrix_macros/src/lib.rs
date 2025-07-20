@@ -84,13 +84,11 @@ fn emit_file(
         reason = "We should have write permission to target/"
     )]
     {
-        if first_use {
-            if let Err(err) = std::fs::remove_dir_all(&output_directory) {
-                assert!(
-                    err.kind() == io::ErrorKind::NotFound,
-                    "Deleting folder failed {err}"
-                );
-            }
+        if first_use && let Err(err) = std::fs::remove_dir_all(&output_directory) {
+            assert!(
+                err.kind() == io::ErrorKind::NotFound,
+                "Deleting folder failed {err}"
+            );
         }
         std::fs::create_dir_all(&output_directory)
             .expect("Could not create target output directory for crate");

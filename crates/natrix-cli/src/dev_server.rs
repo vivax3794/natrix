@@ -38,16 +38,15 @@ pub(crate) fn do_dev(args: &options::DevArguments) -> Result<()> {
 
     let matcher = find_gitignore()?;
     let mut watcher = notify::recommended_watcher(move |event: Result<notify::Event, _>| {
-        if let Ok(event) = event {
-            if (event.kind.is_modify() || event.kind.is_create() || event.kind.is_remove())
-                && event.paths.iter().any(|path| {
-                    !matcher
-                        .matched_path_or_any_parents(path, path.is_dir())
-                        .is_ignore()
-                })
-            {
-                let _ = tx_notify.send(event);
-            }
+        if let Ok(event) = event
+            && (event.kind.is_modify() || event.kind.is_create() || event.kind.is_remove())
+            && event.paths.iter().any(|path| {
+                !matcher
+                    .matched_path_or_any_parents(path, path.is_dir())
+                    .is_ignore()
+            })
+        {
+            let _ = tx_notify.send(event);
         }
     })?;
     watcher.watch(&PathBuf::from("."), notify::RecursiveMode::Recursive)?;
