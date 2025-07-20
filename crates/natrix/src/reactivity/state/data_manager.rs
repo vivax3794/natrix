@@ -144,6 +144,8 @@ impl HookQueue {
 
 /// Trait automatically implemented on reactive structs by the derive macro.
 /// This is in fact just a marker trait to prevent using non-reactive state.
+// TODO: `.set` method
+// TODO: lint again direct overwriting States.
 #[doc(hidden)]
 pub trait State: Sized + 'static {}
 impl State for () {}

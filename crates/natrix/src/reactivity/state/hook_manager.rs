@@ -31,7 +31,7 @@ pub(crate) type InsertionOrder = u32;
 /// A key into a slotmap
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Copy)]
 pub struct HookKey {
-    /// The lost to use
+    /// The slot to use
     pub(crate) slot: KeySlot,
     /// Version used to avoid use after free
     pub(crate) version: KeyVersion,
@@ -378,12 +378,7 @@ impl SignalDepList {
                 if node.key.version == key.version {
                     return;
                 }
-
-                node.key = key;
-
-                if self.tail == Some(*entry.get()) {
-                    return;
-                }
+                node.key.version = key.version;
 
                 // if `next` is `None` we are tail.
                 if let Some(next_index) = node.next.take() {

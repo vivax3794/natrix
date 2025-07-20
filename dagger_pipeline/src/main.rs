@@ -1,6 +1,8 @@
 //! Run the CI pipeline using dagger
 
 // TODO: `cargo-sweep` caches.
+// TODO: Run in github actions
+// TODO: Publish book in github actions.
 
 mod base_images;
 mod fix;

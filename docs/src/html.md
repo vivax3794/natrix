@@ -117,6 +117,24 @@ I.e this is much more performant than `format!` for multiple reasons:
 * You avoid the format machinery overhead.
 * You get fine-grained reactivty for specific parts of the text.
 
+This macro supports anything that is a element, including html elements.
+```rust
+# extern crate natrix;
+# use natrix::prelude::*;
+#
+# #[derive(State)]
+# struct MyComponent {
+#     pub counter: Signal<u8>,
+#     pub target: Signal<u8>,
+# }
+#
+# fn render(ctx: RenderCtx<MyComponent>) -> impl Element<MyComponent> {
+e::h1().children(natrix::format_elements!(
+    |ctx: RenderCtx<MyComponent>| "Counter is {}, just {} clicks left!", 
+    e::h1().text(*ctx.counter), *ctx.target - *ctx.counter
+))
+# }
+```
 
 ## Attributes
 
