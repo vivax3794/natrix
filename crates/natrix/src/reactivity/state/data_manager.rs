@@ -3,20 +3,16 @@
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 
-use slotmap::SecondaryMap;
 use smallvec::SmallVec;
 
 use super::{HookKey, InnerCtx};
 use crate::error_handling::log_or_panic;
 use crate::reactivity::render_callbacks::UpdateResult;
+use crate::reactivity::state::hook_manager::{HookStore, InsertionOrder, IterSignalList};
 use crate::reactivity::statics;
 
-/// The type of iterator we use for the hook collection
-#[doc(hidden)]
-pub type HookDepListIter = indexmap::set::IntoIter<HookKey>;
-
 /// The type that will be used to hold the dirty lists.
-pub(crate) type HookDepListHolder = SmallVec<[HookDepListIter; 2]>;
+pub(crate) type HookDepListHolder = SmallVec<[IterSignalList; 2]>;
 
 /// Store some data but use `O` for its `Ord` implementation
 #[derive(Debug)]
@@ -50,7 +46,7 @@ struct HookQueue {
     /// All changed vectors
     vectors: HookDepListHolder,
     /// The queue of the next item in each vector
-    queue: BinaryHeap<OrderAssociatedData<(HookKey, usize), Reverse<u64>>>,
+    queue: BinaryHeap<OrderAssociatedData<(HookKey, usize), Reverse<InsertionOrder>>>,
     /// A temporary next item
     next_item: Option<HookKey>,
     /// Last processed hook to avoid duplicates
@@ -58,12 +54,12 @@ struct HookQueue {
 }
 
 /// Iterate over `iter` until it finds a key in `insertion_orders`
-fn get_next_valid(
-    insertion_orders: &SecondaryMap<HookKey, u64>,
-    iter: &mut HookDepListIter,
-) -> Option<(HookKey, u64)> {
+fn get_next_valid<T: State>(
+    hook_store: &HookStore<T>,
+    iter: &mut IterSignalList,
+) -> Option<(HookKey, InsertionOrder)> {
     for hook in iter.by_ref() {
-        if let Some(&order) = insertion_orders.get(hook) {
+        if let Some(order) = hook_store.get_insertion_order(hook) {
             return Some((hook, order));
         }
     }
@@ -72,14 +68,14 @@ fn get_next_valid(
 
 impl HookQueue {
     /// Create a new queue
-    fn new(insertion_orders: &SecondaryMap<HookKey, u64>, mut vectors: HookDepListHolder) -> Self {
+    fn new<T: State>(hook_store: &HookStore<T>, mut vectors: HookDepListHolder) -> Self {
         let mut queue = BinaryHeap::with_capacity(vectors.len());
 
         let first_items = vectors
             .iter_mut()
             .enumerate()
             .filter_map(|(index, vector)| {
-                let (hook, ordering) = get_next_valid(insertion_orders, vector)?;
+                let (hook, ordering) = get_next_valid(hook_store, vector)?;
                 Some(OrderAssociatedData {
                     data: (hook, index),
                     ordering: Reverse(ordering),
@@ -105,7 +101,7 @@ impl HookQueue {
     }
 
     /// Pop the next item
-    fn pop(&mut self, insertion_orders: &SecondaryMap<HookKey, u64>) -> Option<HookKey> {
+    fn pop<T: State>(&mut self, hook_store: &HookStore<T>) -> Option<HookKey> {
         if let Some(next) = self.next_item.take() {
             self.last_hook = Some(next);
             return Some(next);
@@ -119,7 +115,7 @@ impl HookQueue {
             // to enforce that invariant (maybe something fancy with marker lifetimes)
             // Hopefully rust optimizes out the bounds check?
             if let Some(vector) = self.vectors.get_mut(source_index) {
-                while let Some((next_hook, ordering)) = get_next_valid(insertion_orders, vector) {
+                while let Some((next_hook, ordering)) = get_next_valid(hook_store, vector) {
                     if Some(next_hook) != self.last_hook {
                         self.queue.push(OrderAssociatedData {
                             data: (next_hook, source_index),
@@ -159,9 +155,9 @@ impl<T: State> InnerCtx<T> {
         log::trace!("Performing update cycle for {}", std::any::type_name::<T>());
 
         log::trace!("{} signals changed", dep_lists.len());
-        let mut hook_queue = HookQueue::new(&self.hooks.insertion_order, dep_lists);
+        let mut hook_queue = HookQueue::new(&self.hooks, dep_lists);
 
-        while let Some(hook_key) = hook_queue.pop(&self.hooks.insertion_order) {
+        while let Some(hook_key) = hook_queue.pop(&self.hooks) {
             log::trace!("Updating hook {hook_key:?}");
             self.run_with_hook_and_self(hook_key, |ctx, hook| match hook.update(ctx, hook_key) {
                 UpdateResult::RunHook(dep, drop) => {

@@ -3,11 +3,9 @@
 use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
 
-use indexmap::IndexSet;
-
 use crate::error_handling::{do_performance_check, log_or_panic, performance_lint};
 use crate::prelude::State;
-use crate::reactivity::state::HookKey;
+use crate::reactivity::state::SignalDepList;
 use crate::reactivity::statics;
 
 /// A signal tracks reads and writes to a value, as well as dependencies.
@@ -17,13 +15,7 @@ pub struct Signal<T> {
     /// The data to be tracked.
     data: T,
     /// A collection of the dependencies.
-    // BUG: This is never cleaned of stale hooks if never modified.
-    // Leading to a memory leak.
-    // We do not want to do a O(n) loop over all signals at the end of update.
-    // We could store the dropped hooks so far in current update cycle in a static and have signals
-    // check it on access. But that doesnt solve cases where the accumulation happens in two steps.
-    // (like switching a condition).
-    deps: RefCell<IndexSet<HookKey>>,
+    deps: RefCell<SignalDepList>,
 }
 
 impl<T: std::fmt::Debug> std::fmt::Debug for Signal<T> {
@@ -37,7 +29,7 @@ impl<T> Signal<T> {
     pub fn new(data: T) -> Self {
         Self {
             data,
-            deps: RefCell::new(IndexSet::new()),
+            deps: RefCell::new(SignalDepList::new()),
         }
     }
 }
@@ -77,12 +69,8 @@ impl<T> DerefMut for Signal<T> {
                     performance_lint!("Signal deps list over 20");
                 }
             }
-        } else if !deps.is_empty() {
-            statics::reg_dirty_list(|| {
-                let mut new = IndexSet::with_capacity(deps.len());
-                std::mem::swap(&mut new, deps);
-                new.into_iter()
-            });
+        } else if deps.len() > 0 {
+            statics::reg_dirty_list(|| deps.create_iter_and_clear());
         }
 
         &mut self.data
@@ -98,16 +86,19 @@ impl<T: Default> Default for Signal<T> {
 #[cfg(test)]
 #[expect(clippy::expect_used, reason = "tests")]
 mod tests {
-    use slotmap::KeyData;
 
     use super::*;
+    use crate::reactivity::state::HookKey;
 
     #[test]
     fn reading_signals_makes_them_appear_in_dirty() {
         let mut foo = Signal::new(0);
         let mut bar = Signal::new(0);
 
-        let hook = HookKey::from(KeyData::from_ffi(0));
+        let hook = HookKey {
+            slot: 0,
+            version: 0,
+        };
 
         statics::with_hook(hook, || {
             let _ = *foo;
@@ -136,7 +127,10 @@ mod tests {
         let mut foo = Signal::new(0);
         let mut bar = Signal::new(0);
 
-        let hook = HookKey::from(KeyData::from_ffi(0));
+        let hook = HookKey {
+            slot: 0,
+            version: 0,
+        };
 
         statics::with_hook(hook, || {
             *foo = 5;

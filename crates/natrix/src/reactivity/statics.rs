@@ -6,8 +6,7 @@ use smallvec::SmallVec;
 
 use super::state::HookKey;
 use crate::error_handling::{log_or_panic, log_or_panic_assert};
-use crate::macro_ref::HookDepListIter;
-use crate::reactivity::state::HookDepListHolder;
+use crate::reactivity::state::{HookDepListHolder, IterSignalList};
 
 thread_local! {
     /// The current hook the signal is being accessed in.
@@ -34,7 +33,7 @@ pub(crate) fn with_hook<R>(new_hook: HookKey, func: impl FnOnce() -> R) -> R {
 
 /// Push a iterator to the dirty hooks list
 #[inline]
-pub(crate) fn reg_dirty_list(calc: impl FnOnce() -> HookDepListIter) {
+pub(crate) fn reg_dirty_list(calc: impl FnOnce() -> IterSignalList) {
     DIRTY_HOOKS.with(|dirty_hooks| {
         let Ok(mut dirty_hooks) = dirty_hooks.try_borrow_mut() else {
             log_or_panic!("`DIRTY_HOOKS` overlapping borrow");
@@ -92,14 +91,15 @@ pub(crate) fn clear() {
 #[cfg(test)]
 #[expect(clippy::expect_used, clippy::unreachable, reason = "Its tests")]
 mod tests {
-    use indexmap::IndexSet;
-    use slotmap::KeyData;
-
     use super::*;
+    use crate::reactivity::state::SignalDepList;
 
     #[test]
     fn outside_closure_is_no_hook() {
-        let hook1 = HookKey::from(KeyData::from_ffi(1));
+        let hook1 = HookKey {
+            slot: 0,
+            version: 0,
+        };
 
         assert_eq!(current_hook(), None);
         with_hook(hook1, || {});
@@ -108,8 +108,10 @@ mod tests {
 
     #[test]
     fn setting_hook_gives_hook() {
-        let hook1 = HookKey::from(KeyData::from_ffi(1));
-
+        let hook1 = HookKey {
+            slot: 0,
+            version: 0,
+        };
         with_hook(hook1, || {
             assert_eq!(current_hook(), Some(hook1));
         });
@@ -117,8 +119,14 @@ mod tests {
 
     #[test]
     fn nesting_hook() {
-        let hook1 = HookKey::from(KeyData::from_ffi(1));
-        let hook2 = HookKey::from(KeyData::from_ffi(2));
+        let hook1 = HookKey {
+            slot: 0,
+            version: 0,
+        };
+        let hook2 = HookKey {
+            slot: 1,
+            version: 0,
+        };
 
         with_hook(hook1, || {
             with_hook(hook2, || {
@@ -130,15 +138,21 @@ mod tests {
 
     #[test]
     fn dirty_tracking() {
-        let hook1 = HookKey::from(KeyData::from_ffi(1));
-        let hook2 = HookKey::from(KeyData::from_ffi(2));
+        let hook1 = HookKey {
+            slot: 0,
+            version: 0,
+        };
+        let hook2 = HookKey {
+            slot: 1,
+            version: 0,
+        };
 
         let (mut result, ()) = with_dirty_tracking(|| {
             reg_dirty_list(|| {
-                let mut keys = IndexSet::new();
+                let mut keys = SignalDepList::new();
                 keys.insert(hook1);
                 keys.insert(hook2);
-                keys.into_iter()
+                keys.create_iter_and_clear()
             });
         });
 

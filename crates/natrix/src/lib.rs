@@ -90,9 +90,9 @@ pub use reactivity::state::{EventCtx, RenderCtx};
 pub mod macro_ref {
     #[cfg(feature = "_internal_collect_css")]
     pub use inventory;
-    pub use {const_base, const_sha1, indexmap, log};
+    pub use {const_base, const_sha1, log};
 
     pub use super::css;
     pub use super::dom::element::Element;
-    pub use super::reactivity::state::{HookDepListIter, HookKey, State};
+    pub use super::reactivity::state::State;
 }
