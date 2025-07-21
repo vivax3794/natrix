@@ -299,7 +299,7 @@ impl<T: State> InnerCtx<T> {
 }
 
 /// A linked list for holding signal dependencies.
-/// Allows O(1) removal, and keeps insertion order
+/// Allows O(1) move to end and deduplication,
 /// While removing stale entries based on slotmap.
 ///
 /// Worst case this is bound to the size of the max amount of concurrent hooks.
@@ -382,8 +382,15 @@ impl SignalDepList {
 
                 // if `next` is `None` we are tail.
                 if let Some(next_index) = node.next.take() {
-                    let previous_tail = self.tail.replace(*entry.get());
-                    let previous = std::mem::replace(&mut node.previous, previous_tail);
+                    let tail = self.tail.replace(*entry.get());
+                    let previous = std::mem::replace(&mut node.previous, tail);
+                    if let Some(tail) = tail {
+                        let Some(tail) = self.nodes.get_mut(tail) else {
+                            log_or_panic!("Next not found");
+                            return;
+                        };
+                        tail.next = Some(*entry.get());
+                    }
 
                     match previous {
                         // We are head
@@ -456,11 +463,145 @@ impl Iterator for IterSignalList {
 }
 
 #[cfg(test)]
+#[cfg(not(target_arch = "wasm32"))]
 mod tests {
+    use proptest::proptest;
+
     use super::*;
 
-    // No reason to have more insertion values than possible hooks
-    static_assertions::assert_eq_size!(HookKey, InsertionOrder);
-    // Ensure that the `SlotValue` enum does in fact use niche optimization on the `Box`;
-    static_assertions::assert_eq_size!(SlotValue<()>, (InsertionOrder, Box<dyn ReactiveHook<()>>));
+    fn key(slot: KeySlot, version: KeyVersion) -> HookKey {
+        HookKey { slot, version }
+    }
+
+    #[test]
+    fn insertion_order_kept_for_unique_slots() {
+        let mut list = SignalDepList::new();
+        list.insert(key(0, 0));
+        list.insert(key(1, 0));
+        list.insert(key(2, 0));
+        list.insert(key(3, 0));
+        list.insert(key(4, 0));
+        list.insert(key(5, 0));
+
+        let slots = list
+            .create_iter_and_clear()
+            .map(|key| key.slot)
+            .collect::<Vec<_>>();
+        assert_eq!(slots, vec![0, 1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn creating_iterator_clears_list() {
+        let mut list = SignalDepList::new();
+        list.insert(key(0, 0));
+        list.insert(key(1, 0));
+        list.insert(key(2, 0));
+        list.insert(key(3, 0));
+        list.insert(key(4, 0));
+        list.insert(key(5, 0));
+        list.create_iter_and_clear();
+
+        assert_eq!(list.len(), 0);
+    }
+
+    #[test]
+    fn can_iter_empty_list() {
+        let mut list = SignalDepList::new();
+        let mut iter = list.create_iter_and_clear();
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn can_iter_one_element_list() {
+        let mut list = SignalDepList::new();
+        list.insert(key(0, 0));
+
+        let mut iter = list.create_iter_and_clear();
+        assert_eq!(iter.next(), Some(key(0, 0)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn reuse_slot_single() {
+        let mut list = SignalDepList::new();
+        list.insert(key(0, 0));
+        list.insert(key(0, 1));
+
+        assert_eq!(list.len(), 1);
+        let mut iter = list.create_iter_and_clear();
+        assert_eq!(iter.next(), Some(key(0, 1)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn reuse_slot_head() {
+        let mut list = SignalDepList::new();
+        list.insert(key(0, 0));
+        list.insert(key(1, 0));
+        list.insert(key(2, 0));
+
+        list.insert(key(0, 1));
+        assert_eq!(list.len(), 3);
+        let mut iter = list.create_iter_and_clear();
+        assert_eq!(iter.next(), Some(key(1, 0)));
+        assert_eq!(iter.next(), Some(key(2, 0)));
+        assert_eq!(iter.next(), Some(key(0, 1)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn reuse_slot_tail() {
+        let mut list = SignalDepList::new();
+        list.insert(key(0, 0));
+        list.insert(key(1, 0));
+        list.insert(key(2, 0));
+
+        list.insert(key(2, 1));
+        assert_eq!(list.len(), 3);
+        let mut iter = list.create_iter_and_clear();
+        assert_eq!(iter.next(), Some(key(0, 0)));
+        assert_eq!(iter.next(), Some(key(1, 0)));
+        assert_eq!(iter.next(), Some(key(2, 1)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn reuse_slot_middle() {
+        let mut list = SignalDepList::new();
+        list.insert(key(0, 0));
+        list.insert(key(1, 0));
+        list.insert(key(2, 0));
+
+        list.insert(key(1, 1));
+        assert_eq!(list.len(), 3);
+        let mut iter = list.create_iter_and_clear();
+        assert_eq!(iter.next(), Some(key(0, 0)));
+        assert_eq!(iter.next(), Some(key(2, 0)));
+        assert_eq!(iter.next(), Some(key(1, 1)));
+        assert_eq!(iter.next(), None);
+    }
+
+    proptest! {
+        #[test]
+        fn linked_list_doesnt_panic(slots: Vec<(KeySlot, KeyVersion)>) {
+            let mut list = SignalDepList::new();
+            for (slot,version) in slots {
+                list.insert(key(slot, version));
+            }
+            for _ in list.create_iter_and_clear() {}
+        }
+
+        #[test]
+        fn iter_length_eq_list_length(slots: Vec<(KeySlot, KeyVersion)>) {
+            let mut list = SignalDepList::new();
+            for (slot,version) in slots {
+                list.insert(key(slot, version));
+            }
+
+            let list_length = list.len();
+            let iter_length = list.create_iter_and_clear().count();
+            assert_eq!(list_length, iter_length);
+        }
+    }
 }
