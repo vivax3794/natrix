@@ -34,7 +34,11 @@ impl<T> Signal<T> {
     }
 }
 
-impl<T: 'static> State for Signal<T> {}
+impl<T: 'static> State for Signal<T> {
+    fn set(&mut self, new: Self) {
+        **self = new.data;
+    }
+}
 
 impl<T> Deref for Signal<T> {
     type Target = T;

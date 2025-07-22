@@ -14,6 +14,9 @@ pub(crate) enum ElementRenderResult {
     /// A generic node.
     Node(web_sys::Node),
     /// A text node.
+    // TODO: Relax static bound.
+    // The consumer of this just needs a `&str`.
+    // But lifetimes you know :P
     Text(Cow<'static, str>),
 }
 

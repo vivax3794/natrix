@@ -46,6 +46,7 @@ Now you get fine-grained reactivity on the `book` fields.
 
 > [!IMPORTANT]
 > Never directly overwrite a `State`. Doing this will not trigger reactive updates. and will break your app.
+> Use [`.set`](prelude::State::set) instead.
 > ```rust
 > # extern crate natrix;
 > # use natrix::prelude::*;
@@ -85,5 +86,3 @@ fn render() -> impl Element<App> {
 }
 
 ```
-
-

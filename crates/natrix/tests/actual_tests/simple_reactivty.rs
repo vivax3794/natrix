@@ -107,3 +107,65 @@ fn test_two_values() {
     button.click();
     assert_eq!(button.text_content(), Some("1-0".to_string()));
 }
+
+#[derive(State)]
+struct Book {
+    title: Signal<String>,
+    author: Signal<String>,
+}
+
+#[derive(State)]
+struct SetTest {
+    book: Book,
+}
+
+const TITLE: Id = natrix::id!();
+const AUTHOR: Id = natrix::id!();
+
+fn render_set_test() -> impl Element<SetTest> {
+    e::div()
+        .child(
+            e::div()
+                .id(TITLE)
+                .text(|ctx: RenderCtx<SetTest>| ctx.book.title.clone()),
+        )
+        .child(
+            e::div()
+                .id(AUTHOR)
+                .text(|ctx: RenderCtx<SetTest>| ctx.book.author.clone()),
+        )
+        .child(
+            e::button()
+                .id(BUTTON_ID)
+                .on::<events::Click>(|mut ctx: EventCtx<SetTest>, _| {
+                    ctx.book.set(Book {
+                        title: Signal::new("Natrix Guide".to_string()),
+                        author: Signal::new("Viv".to_string()),
+                    });
+                }),
+        )
+}
+
+#[wasm_bindgen_test]
+fn test_set() {
+    crate::mount_test(
+        SetTest {
+            book: Book {
+                title: Signal::new("Rust Book".to_string()),
+                author: Signal::new("Rust Contributors".to_string()),
+            },
+        },
+        render_set_test(),
+    );
+
+    let button = crate::get(BUTTON_ID);
+    let title = crate::get(TITLE);
+    let author = crate::get(AUTHOR);
+
+    assert_eq!(title.text_content(), Some("Rust Book".to_string()));
+    assert_eq!(author.text_content(), Some("Rust Contributors".to_string()));
+
+    button.click();
+    assert_eq!(title.text_content(), Some("Natrix Guide".to_string()));
+    assert_eq!(author.text_content(), Some("Viv".to_string()));
+}

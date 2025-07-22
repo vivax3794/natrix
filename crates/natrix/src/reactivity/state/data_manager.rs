@@ -143,13 +143,17 @@ impl HookQueue {
 }
 
 /// Trait automatically implemented on reactive structs by the derive macro.
-/// This is in fact just a marker trait to prevent using non-reactive state.
-// TODO: `.set` method
 // TODO: lint again direct overwriting States.
 // TODO: lint against using `.set` when not required. (on signals)
-#[doc(hidden)]
-pub trait State: Sized + 'static {}
-impl State for () {}
+pub trait State: Sized + 'static {
+    /// Overwrite the value of this state while preserving reactive tracking.
+    /// Generally prefer derefences.
+    fn set(&mut self, new: Self);
+}
+
+impl State for () {
+    fn set(&mut self, _new: Self) {}
+}
 
 impl<T: State> InnerCtx<T> {
     /// Loop over signals and update any depdant hooks for changed signals

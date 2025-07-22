@@ -5,9 +5,11 @@ use quote::{ToTokens, quote};
 use syn::{ItemStruct, parse_quote};
 
 /// A abstract representation of a struct field
-pub(crate) struct Field {
+struct Field {
     /// The type of the field
-    pub(crate) type_: TokenStream,
+    type_: TokenStream,
+    /// How to access the field
+    access: TokenStream,
 }
 
 /// Actual implementation of the macro, split out to make dealing with the different `TokenStream`
@@ -30,15 +32,23 @@ pub(crate) fn state_derive_implementation(item: ItemStruct) -> TokenStream {
     } else {
         quote! {where}
     };
+    let mut set_statements = quote!();
 
     for field in &fields {
         let type_ = &field.type_;
+        let access = &field.access;
+
         where_clause = quote!(#where_clause #type_: ::natrix::macro_ref::State ,);
+        set_statements = quote!(#set_statements self.#access.set(new.#access););
     }
 
     quote! {
         #[automatically_derived]
-        impl #impl_generics ::natrix::macro_ref::State for #name #type_generics #where_clause {}
+        impl #impl_generics ::natrix::macro_ref::State for #name #type_generics #where_clause {
+            fn set(&mut self, new: Self) {
+                #set_statements
+            }
+        }
     }
 }
 
@@ -52,13 +62,16 @@ pub(crate) fn get_fields(fields: syn::Fields) -> Vec<Field> {
             .into_iter()
             .map(|field| Field {
                 type_: field.ty.into_token_stream(),
+                access: field.ident.to_token_stream(),
             })
             .collect(),
         syn::Fields::Unnamed(fields) => fields
             .unnamed
             .into_iter()
-            .map(|field| Field {
+            .enumerate()
+            .map(|(index, field)| Field {
                 type_: field.ty.to_token_stream(),
+                access: proc_macro2::Literal::usize_unsuffixed(index).to_token_stream(),
             })
             .collect(),
     }
