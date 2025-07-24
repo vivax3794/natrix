@@ -10,7 +10,6 @@ The intent is that even if a library uses all the below features it should not b
 
 * `console_log`
 * `async`
-* `performance_lints`
 
 ### `console_log`
 Automatically sets up [`console_log`](https://crates.io/crates/console_log) on [`mount`](reactivity::mount::mount).
@@ -27,13 +26,6 @@ Various testing utilities, this should be enabled via a `[dev-dependencies]`.
 [dev-dependencies]
 natrix = {version = "*", features=["test_utils"]}
 ```
-
-### `performance_lints`
-This enables various warning for situations that are not bugs, or even indicate wrongful use. But are signs of poor optimization.
-This features flag is extremely oppinonated about whats sane limits for various internal values.
-
-> [!NOTE]
-> Performance lints are only checked in debug builds.
 
 ## Internal features
 

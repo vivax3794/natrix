@@ -337,7 +337,8 @@ impl SignalDepList {
     }
 
     /// Get the amount of current hooks (including stale ones.)
-    pub(crate) fn len(&self) -> usize {
+    #[cfg(test)]
+    fn len(&self) -> usize {
         self.nodes.len()
     }
 

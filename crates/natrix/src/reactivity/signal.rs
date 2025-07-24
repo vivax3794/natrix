@@ -3,7 +3,8 @@
 use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
 
-use crate::error_handling::{do_performance_check, log_or_panic, performance_lint};
+use crate::access::{Downgrade, Project, Ref, RefClosure};
+use crate::error_handling::log_or_panic;
 use crate::prelude::State;
 use crate::reactivity::state::SignalDepList;
 use crate::reactivity::statics;
@@ -48,9 +49,6 @@ impl<T> Deref for Signal<T> {
         if let Some(hook) = statics::current_hook() {
             if let Ok(mut deps) = self.deps.try_borrow_mut() {
                 deps.insert(hook);
-                if do_performance_check() && deps.len() > 20 {
-                    performance_lint!("Signal deps list over 20");
-                }
             } else {
                 log_or_panic!("Signal deps list already borrowed");
             }
@@ -62,22 +60,126 @@ impl<T> Deref for Signal<T> {
 impl<T> DerefMut for Signal<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        let deps = self.deps.get_mut();
-        if let Some(hook) = statics::current_hook() {
-            deps.insert(hook);
-
-            if do_performance_check() && deps.len() > 20 {
-                performance_lint!("Signal deps list over 20");
-            }
-        } else if deps.len() > 0 {
-            statics::reg_dirty_list(|| deps.create_iter_and_clear());
-        }
+        statics::reg_dirty_list(|| self.deps.get_mut().create_iter_and_clear());
 
         &mut self.data
     }
 }
 
 impl<T: Default> Default for Signal<T> {
+    #[inline]
+    fn default() -> Self {
+        Self::new(T::default())
+    }
+}
+
+/// Trait for `Project` type whos target contains a state.
+/// Such as `Option<Signal<...>>`
+pub trait ProjectIntoState: Project {}
+impl<T: State> ProjectIntoState for Option<T> {}
+impl<T: State, E: State> ProjectIntoState for Result<T, E> {}
+
+/// A signal over a type that implements `Project`, such as `Option`.
+/// Allows modifying the inne projected value without triggering re-renders of all values
+/// subscribed to this signal.
+pub struct ProjectableSignal<T: ProjectIntoState> {
+    /// The data itself
+    data: T,
+    /// the depedency on the `T`s variant state.
+    deps: RefCell<SignalDepList>,
+}
+
+impl<T> State for ProjectableSignal<T>
+where
+    T: ProjectIntoState + 'static,
+{
+    #[inline]
+    fn set(&mut self, new: Self) {
+        self.update(new.data);
+    }
+}
+
+impl<T> ProjectableSignal<T>
+where
+    T: ProjectIntoState,
+{
+    /// Create a new projected signal.
+    #[inline]
+    #[must_use]
+    pub fn new(data: T) -> Self {
+        Self {
+            data,
+            deps: RefCell::new(SignalDepList::new()),
+        }
+    }
+
+    /// Update the wrapping value, triggering updates of all readers.
+    #[inline]
+    pub fn update(&mut self, new: T) {
+        self.data = new;
+        statics::reg_dirty_list(|| self.deps.get_mut().create_iter_and_clear());
+    }
+
+    /// Convert from a `&mut ProjectableSignal<Option<T>>` into a `Option<&mut T>`
+    /// (Or similarly for any other projectable value)
+    /// This does *not* mark the `ProjectableSignal` as dirty.
+    #[inline]
+    #[must_use]
+    pub fn as_mut<'s>(&'s mut self) -> <T::Projected<'s> as Downgrade<'s>>::MutOutput
+    where
+        T::Projected<'s>: Downgrade<'s>,
+    {
+        (Ref::project).call_mut(&mut self.data)
+    }
+}
+
+// TODO: (NEXT) Write tests and docs for this.
+impl<'s, T> Ref<'s, ProjectableSignal<T>>
+where
+    T: ProjectIntoState,
+{
+    /// Convert a `Ref<ProjectableSignal<Option<T>>>` into a `Option<Ref<T>>`,
+    /// (Or similarly for any other projectable value)
+    /// In the mut path this does *not* mark the `ProjectableSignal` as dirty.
+    #[must_use]
+    pub fn project_signal(self) -> T::Projected<'s> {
+        if let Ref::Read(this) = &self
+            && let Some(hook) = statics::current_hook()
+        {
+            if let Ok(mut deps) = this.deps.try_borrow_mut() {
+                deps.insert(hook);
+            } else {
+                log_or_panic!("Deps list overlapping borrow");
+            }
+        }
+        crate::field!((self).data).project()
+    }
+}
+
+impl<T> Deref for ProjectableSignal<T>
+where
+    T: ProjectIntoState,
+{
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        if let Some(hook) = statics::current_hook() {
+            if let Ok(mut deps) = self.deps.try_borrow_mut() {
+                deps.insert(hook);
+            } else {
+                log_or_panic!("Signal deps list already borrowed");
+            }
+        }
+
+        &self.data
+    }
+}
+
+impl<T> Default for ProjectableSignal<T>
+where
+    T: Default + ProjectIntoState,
+{
+    #[inline]
     fn default() -> Self {
         Self::new(T::default())
     }
@@ -103,38 +205,6 @@ mod tests {
         statics::with_hook(hook, || {
             let _ = *foo;
             let _ = *bar;
-        });
-
-        let (dirty, ()) = statics::with_dirty_tracking(|| {
-            *foo = 10;
-            *bar = 20;
-        });
-
-        let mut dirty = dirty.into_iter();
-        let mut first = dirty.next().expect("Expected at least one element");
-        let mut second = dirty.next().expect("Expected at least two elements");
-        assert!(dirty.next().is_none());
-
-        assert_eq!(first.next(), Some(hook));
-        assert_eq!(first.next(), None);
-
-        assert_eq!(second.next(), Some(hook));
-        assert_eq!(second.next(), None);
-    }
-
-    #[test]
-    fn can_read_mut_in_non_tracking() {
-        let mut foo = Signal::new(0);
-        let mut bar = Signal::new(0);
-
-        let hook = HookKey {
-            slot: 0,
-            version: 0,
-        };
-
-        statics::with_hook(hook, || {
-            *foo = 5;
-            *bar = 10;
         });
 
         let (dirty, ()) = statics::with_dirty_tracking(|| {

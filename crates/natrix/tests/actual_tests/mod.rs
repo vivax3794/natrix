@@ -7,6 +7,5 @@ mod generic_component;
 mod guards;
 mod loops;
 mod nested_reactivity;
-mod performance_hits;
 mod simple_reactivty;
 mod simple_rendering;
