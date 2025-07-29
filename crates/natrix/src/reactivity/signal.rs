@@ -73,7 +73,7 @@ impl<T: Default> Default for Signal<T> {
     }
 }
 
-/// Trait for `Project` type whos target contains a state.
+/// Trait for `Project` type whose target contains a state.
 /// Such as `Option<Signal<...>>`
 pub trait ProjectIntoState: Project {}
 impl<T: State> ProjectIntoState for Option<T> {}
@@ -85,7 +85,7 @@ impl<T: State, E: State> ProjectIntoState for Result<T, E> {}
 pub struct ProjectableSignal<T: ProjectIntoState> {
     /// The data itself
     data: T,
-    /// the depedency on the `T`s variant state.
+    /// the dependency on the `T`s variant state.
     deps: RefCell<SignalDepList>,
 }
 

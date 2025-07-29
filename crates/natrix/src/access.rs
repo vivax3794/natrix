@@ -5,8 +5,6 @@
 // * `-> Ref<Option<T>>` if the `Option` variant is never changed (prefer `-> Option<Ref<T>>`)
 // (same for Result)
 // * `-> Ref<Signal<T>>` (prefer `-> Ref<T>`) (`Ref<T>` where `T` is a non-signal `State` is fine)
-
-// TODO: Indexing
 use std::ops::{Deref, DerefMut};
 
 /// Either a `&T` or a `&mut T`
@@ -38,8 +36,8 @@ impl<'a, T: ?Sized> Ref<'a, T> {
     #[must_use]
     pub fn map<R: ?Sized>(
         self,
-        read: impl Fn(&'a T) -> &'a R,
-        write: impl Fn(&'a mut T) -> &'a mut R,
+        read: impl FnOnce(&'a T) -> &'a R,
+        write: impl FnOnce(&'a mut T) -> &'a mut R,
     ) -> Ref<'a, R> {
         match self {
             Ref::Read(value) => Ref::Read(read(value)),
@@ -114,10 +112,6 @@ impl<T> Project for Option<T> {
         match value {
             Ref::Read(value) => value.as_ref().map(Into::into),
             Ref::Mut(value) => value.as_mut().map(Into::into),
-            // MAYBE: Is this the correct direction?
-            // We do not want user of `project` to handle the none case.
-            // We want to propagate the failed mut case to further callers.
-            // So this feels correct.
             Ref::FaillableMut(None) => Some(Ref::FaillableMut(None)),
             Ref::FaillableMut(Some(value)) => {
                 value.as_mut().map(|value| Ref::FaillableMut(Some(value)))
@@ -136,15 +130,7 @@ impl<T, E> Project for Result<T, E> {
         match value {
             Ref::Read(value) => value.as_ref().map(Into::into).map_err(Into::into),
             Ref::Mut(value) => value.as_mut().map(Into::into).map_err(Into::into),
-            // MAYBE: Still very unsure about this.
-            // Okay lets think.
-            // This should never be hit in sync cases.
-            // `FaillableMut` is only used in async.
-            // In those case project calls on a `FaillabelMut(None)` just have to make the get
-            // fail in general.
-            // If they happen to return the expected variant the inner `None` will make it fail.
-            // If they dont, the variant mismatch will prompt a `None` return.
-            Ref::FaillableMut(None) => Ok(Ref::FaillableMut(None)),
+            Ref::FaillableMut(None) => Err(Ref::FaillableMut(None)),
             Ref::FaillableMut(Some(value)) => value
                 .as_mut()
                 .map(|val| Ref::FaillableMut(Some(val)))
@@ -200,7 +186,7 @@ impl<'a, T: ?Sized> Downgrade<'a> for Ref<'a, T> {
     }
 }
 
-// NOTE: We do not implement `Dwongradble` for `&`
+// NOTE: We do not implement `Downgradable` for `&`
 // Because a type that always fails to downgrade into `&mut` is not a valid `Downgradble`
 impl<'a, T: ?Sized> Downgrade<'a> for &'a mut T {
     type ReadOutput = &'a T;
@@ -291,7 +277,6 @@ where
         if let Some(value) = self(Ref::Read(value)).into_read() {
             value
         } else {
-            log::error!("Closure didnt return Read compatible result when given `Ref::Read`");
             unreachable!("Closure didnt return Read compatible result when given `Ref::Read`");
         }
     }
@@ -301,7 +286,6 @@ where
         if let Some(value) = self(Ref::Mut(value)).into_mut() {
             value
         } else {
-            log::error!("Closure didnt return Mut compatible result when given `Ref::Mut`");
             unreachable!("Closure didnt return Mut compatible result when given `Ref::Mut`");
         }
     }

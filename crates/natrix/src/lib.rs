@@ -15,7 +15,6 @@ mod type_macros;
 pub use wasm_bindgen::intern;
 
 // TODO: Create a custom set of lints for natrix: https://github.com/trailofbits/dylint
-// TODO: Create a `natrix_unsafe` crate to encapsulate unsafe micro-optimizations.
 
 // TODO: (dont know a better spot for this)
 // Write a dynlint lint set.
@@ -42,7 +41,6 @@ thread_local! {
         web_sys::window()
             .expect("Window object not found")
     };
-
 }
 
 /// Get the globally acquired document
