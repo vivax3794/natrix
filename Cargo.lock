@@ -1856,6 +1856,7 @@ dependencies = [
  "proptest-derive",
  "rustversion",
  "ryu",
+ "serde",
  "simple_logger",
  "smallvec",
  "static_assertions",

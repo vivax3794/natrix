@@ -44,6 +44,7 @@ simple_logger = {version="5.0", features=["stderr"], default-features=false, opt
 
 # Other
 cfg-if = "1.0.0"
+serde = {version="1.0.219", optional=true}
 
 [features]
 default_app = ["console_log", "async"]
@@ -52,6 +53,7 @@ ergonomic_ops = []
 console_log = ["dep:console_log"]
 async = ["dep:pin-project", "dep:wasm-bindgen-futures"]
 async_utils = ["async", "dep:futures-channel"]
+serde = ["dep:serde"]
 
 test_utils = ["web-sys/console"]
 

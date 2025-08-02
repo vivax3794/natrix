@@ -325,6 +325,12 @@ struct SignalDepNode {
     next: Option<usize>,
 }
 
+impl Default for SignalDepList {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SignalDepList {
     /// Create a new empty signal dep list
     pub(crate) fn new() -> Self {

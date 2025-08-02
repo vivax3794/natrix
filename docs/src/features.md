@@ -27,6 +27,9 @@ Various testing utilities, this should be enabled via a `[dev-dependencies]`.
 natrix = {version = "*", features=["test_utils"]}
 ```
 
+### `serde`
+Implements `Serialize` and `Deserialize` on `Signal` and friends.
+
 ## Internal features
 
 You might notice a few `_internal_*` features listed for `natrix` itself, and you'll also see `_natrix_internal_*` proxy features in your own crate's `Cargo.toml`. These are internal features, and as such, we won't be documenting their specific functionalities in detail.

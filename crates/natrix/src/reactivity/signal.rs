@@ -10,18 +10,26 @@ use crate::reactivity::state::SignalDepList;
 use crate::reactivity::statics;
 
 /// A signal tracks reads and writes to a value, as well as dependencies.
-// TODO: Derive serde on signal using just `data`
 // TODO: Create lint against using interor mutability in signals.
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Signal<T> {
     /// The data to be tracked.
     data: T,
     /// A collection of the dependencies.
+    #[cfg_attr(feature = "serde", serde(skip))]
     deps: RefCell<SignalDepList>,
 }
 
 impl<T: std::fmt::Debug> std::fmt::Debug for Signal<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         (**self).fmt(f)
+    }
+}
+
+impl<T> From<T> for Signal<T> {
+    fn from(value: T) -> Self {
+        Self::new(value)
     }
 }
 
