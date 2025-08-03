@@ -88,7 +88,7 @@ impl<T: State> ProjectIntoState for Option<T> {}
 impl<T: State, E: State> ProjectIntoState for Result<T, E> {}
 
 /// A signal over a type that implements `Project`, such as `Option`.
-/// Allows modifying the inne projected value without triggering re-renders of all values
+/// Allows modifying the inner projected value without triggering re-renders of all values
 /// subscribed to this signal.
 pub struct ProjectableSignal<T: ProjectIntoState> {
     /// The data itself
@@ -141,7 +141,6 @@ where
     }
 }
 
-// TODO: (NEXT) Write tests and docs for this.
 impl<'s, T> Ref<'s, ProjectableSignal<T>>
 where
     T: ProjectIntoState,
@@ -197,6 +196,8 @@ where
 #[expect(clippy::expect_used, reason = "tests")]
 mod tests {
 
+    use std::collections::HashSet;
+
     use super::*;
     use crate::reactivity::state::HookKey;
 
@@ -230,5 +231,65 @@ mod tests {
 
         assert_eq!(second.next(), Some(hook));
         assert_eq!(second.next(), None);
+    }
+
+    #[test]
+    fn projectable_signal_modify_outer_alerts_both() {
+        let mut signal = ProjectableSignal::new(Some(Signal::new(10)));
+        let hook_outer = HookKey {
+            slot: 0,
+            version: 0,
+        };
+        let hook_inner = HookKey {
+            slot: 1,
+            version: 0,
+        };
+
+        statics::with_hook(hook_outer, || {
+            let _ = *signal;
+        });
+        statics::with_hook(hook_inner, || {
+            if let Some(inner) = &*signal {
+                let _: i32 = **inner;
+            }
+        });
+
+        let (dirty, ()) = statics::with_dirty_tracking(|| {
+            signal.update(None);
+        });
+
+        let hooks: HashSet<_> = dirty.into_iter().flatten().collect();
+        assert_eq!(hooks, HashSet::from([hook_outer, hook_inner]));
+    }
+
+    #[test]
+    fn projectable_signal_modify_inner_alerts_on() {
+        let mut signal = ProjectableSignal::new(Some(Signal::new(10)));
+        let hook_outer = HookKey {
+            slot: 0,
+            version: 0,
+        };
+        let hook_inner = HookKey {
+            slot: 1,
+            version: 0,
+        };
+
+        statics::with_hook(hook_outer, || {
+            let _ = *signal;
+        });
+        statics::with_hook(hook_inner, || {
+            if let Some(inner) = &*signal {
+                let _: i32 = **inner;
+            }
+        });
+
+        let (dirty, ()) = statics::with_dirty_tracking(|| {
+            if let Some(inner) = signal.as_mut() {
+                **inner = 10;
+            }
+        });
+
+        let hooks: HashSet<_> = dirty.into_iter().flatten().collect();
+        assert_eq!(hooks, HashSet::from([hook_inner]));
     }
 }

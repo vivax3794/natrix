@@ -16,9 +16,6 @@ pub use wasm_bindgen::intern;
 
 // TODO: Create a custom set of lints for natrix: https://github.com/trailofbits/dylint
 
-// TODO: (dont know a better spot for this)
-// Write a dynlint lint set.
-
 thread_local! {
     /// A lazy initlized reference to the js document.
     static DOCUMENT: web_sys::Document = {

@@ -10,7 +10,7 @@ use std::ops::{Deref, DerefMut};
 /// Either a `&T` or a `&mut T`
 /// Use to provide generic getters.
 ///
-///  INVARIANT: All closures dealing with these should preserve the enum variant.
+/// INVARIANT: All closures dealing with these should preserve the enum variant.
 /// Meaning a closure that wants to downgrade a reference needs to just return `&T` instead.
 /// Natrix assumes all closure of the form `Fn(Ref<T>) -> Ref<R>` Maintain the variant given.
 ///

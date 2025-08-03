@@ -84,5 +84,37 @@ fn render() -> impl Element<App> {
             *ctx.counter += 1;
         })
 }
-
 ```
+
+## `ProjectableSignal`
+The [`ProjectableSignal`](reactivity::signal::ProjectableSignal) allows you to use fine-grained reactivity over certain wrapper types that dont implement the required tracking internally, such as most enums. When you have a `Ref` to the value you can use [`.project_signal`](access::Ref::project_signal) to get a projected `Ref` to the inner value.
+
+```rust
+# extern crate natrix;
+use natrix::prelude::*;
+use natrix::reactivity::signal::ProjectableSignal;
+
+#[derive(State)]
+struct User {
+    name: Signal<String>,
+    email: Signal<String>
+}
+
+#[derive(State)]
+struct App {
+    user: ProjectableSignal<Option<User>>
+}
+
+fn render() -> impl Element<App> {
+    e::div().child(|mut ctx: RenderCtx<App>| {
+        if let Some(guard) = ctx.guard(|ctx| field!(ctx.user).project_signal()) {
+            e::h1().text(|ctx: RenderCtx<App>| ctx.call_read(guard).name.clone())
+        }
+    })
+}
+```
+
+Modify the option itself using `.update`/`.set`, but use `.as_mut`/`.project_signal` to modify the inner value.
+
+> [!NOTE]
+> Prefer `Signal<Option<NonState>>` over `ProjectableSignal<Option<Signal<NonState>>>`

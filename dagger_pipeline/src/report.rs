@@ -118,7 +118,7 @@ fn all_tests<'q>(
         (
             "test_book_links",
             Box::pin(crate::targets::test_book_links(client)),
-            true,
+            false,
         ),
         (
             "test_book_examples",
@@ -132,7 +132,7 @@ fn all_tests<'q>(
                 IntegrationTestMode::Dev,
                 arguments,
             )),
-            true,
+            false,
         ),
         (
             "integration_test_release",
@@ -141,7 +141,7 @@ fn all_tests<'q>(
                 IntegrationTestMode::Release,
                 arguments,
             )),
-            true,
+            false,
         ),
         (
             "integration_test_build",
@@ -150,7 +150,7 @@ fn all_tests<'q>(
                 IntegrationTestMode::Build,
                 arguments,
             )),
-            true,
+            false,
         ),
     ];
     all_tests
