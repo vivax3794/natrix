@@ -57,7 +57,7 @@ pub trait Property {
 pub trait Supports<Kind>: Property {}
 
 /// A css rule body
-#[derive(Default)]
+#[derive(Default, Clone)]
 #[must_use]
 pub struct RuleBody {
     /// The properties in the rule

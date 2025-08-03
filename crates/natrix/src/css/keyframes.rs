@@ -1,11 +1,12 @@
 //! Implement css keyframes
 
 use super::values::ToCssValue;
+use crate::css::prelude::RuleBody;
+use crate::css::values::units::Percentage;
 
 /// The name of a keyframe
 pub struct KeyFrame(pub &'static str);
 
-// TODO: Finish this implementation
 // SPEC: Keyframes cant contain `!important`
 // (which we currently dont support setting on properties to begin with)
 // SPEC: Not all properties can be animated in keyframes
@@ -17,9 +18,9 @@ impl ToCssValue for KeyFrame {
 }
 
 /// A keyframe definition
-#[derive(Clone, Default)]
+#[derive(Default, Clone)]
 #[must_use]
-pub struct KeyframeDefinition {}
+pub struct KeyframeDefinition(Vec<(Percentage, RuleBody)>);
 
 impl KeyframeDefinition {
     /// Create a new empty keyframe definition
@@ -30,9 +31,23 @@ impl KeyframeDefinition {
     /// Convert this into css
     #[doc(hidden)]
     #[must_use]
-    pub fn to_css(self, name: &'static str) -> String {
-        let inner = "";
-        format!("@keyframes {} {{{inner}}}", super::as_css_identifier(name))
+    pub fn to_css(self, name: &KeyFrame) -> String {
+        let mut inner = String::new();
+        for (frame, body) in self.0 {
+            let rule = format!("{}, {{{}}}", frame.to_css(), body.into_css());
+            inner.push_str(&rule);
+        }
+
+        format!(
+            "@keyframes {} {{{inner}}}",
+            super::as_css_identifier(name.0)
+        )
+    }
+
+    /// Add a selector
+    pub fn frame(mut self, percentage: Percentage, body: RuleBody) -> Self {
+        self.0.push((percentage, body));
+        self
     }
 }
 
@@ -43,13 +58,13 @@ impl KeyframeDefinition {
 /// This macro must not be called from within a function.
 #[macro_export]
 macro_rules! register_keyframe {
-    ($vis:vis const $name:ident = $def:expr;) => {
+    ($vis:vis const $name:ident = $def:expr) => {
         $vis const $name: $crate::macro_ref::css::keyframes::KeyFrame = $crate::macro_ref::css::keyframes::KeyFrame($crate::unique_str!());
         $crate::register_raw_css!({
             use $crate::macro_ref::css::prelude::*;
             use $crate::macro_ref::css::keyframes::KeyframeDefinition;
-            let result: $crate::macro_ref::css::keyframes::keyframeDefinition = $def;
-            result.to_css($name)
+            let result: $crate::macro_ref::css::keyframes::KeyframeDefinition = $def;
+            result.to_css(&$name)
         });
     };
 }

@@ -253,6 +253,7 @@ fn css_emit(css_string: &str) {
 ///
 /// const MY_CLASS: Class = class!(); // <-- uses `unique_str`
 /// ```
+// MAYBE: Have bundler collect these and determine the required length to avoid collisions.
 #[macro_export]
 macro_rules! unique_str {
     () => {{
@@ -336,6 +337,11 @@ mod tests {
                     BUTTON_CLASS.next_sibling(BUTTON_CLASS),
                     RuleBody::new().align_content(values::BaselinePosition::First)
                 )
+        );
+        crate::register_keyframe!(
+            const SLIDE = KeyframeDefinition::new()
+            .frame(crate::unit!(0.0%), RuleBody::new().align_content(values::Normal))
+            .frame(crate::unit!(100.0%), RuleBody::new().align_content(values::Normal))
         );
 
         #[test]

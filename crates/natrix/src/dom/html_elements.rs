@@ -239,9 +239,8 @@ impl<C: State, T> HtmlElement<C, T> {
         {
             if self.seen_attributes.contains(key) {
                 log::warn!(
-                    "Duplicate `{key}` attribute set on `<{}>` in `{}`",
+                    "Duplicate `{key}` attribute set on `<{}>`",
                     self.element.tag_name(),
-                    std::any::type_name::<C>()
                 );
             }
             self.seen_attributes.insert(key);
@@ -261,8 +260,7 @@ impl<C: State, T> HtmlElement<C, T> {
                 {
                     if self.reactive_attributes.contains(key) {
                         log_or_panic!(
-                            "Multiple reactive closures set on attributes `{key}`, this would cause un-deterministic state. (in component {} on a `<{}>` tag)",
-                            std::any::type_name::<C>(),
+                            "Multiple reactive closures set on attribute `{key}`, this would cause un-deterministic state. (on a `<{}>` tag)",
                             self.element.tag_name()
                         );
                     }

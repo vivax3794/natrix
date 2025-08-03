@@ -1,5 +1,7 @@
 //! Implement the various css units
 
+use crate::css::values::ToCssValue;
+
 /// Create a instance of a css unit, verifying at compile time the correct ranges.
 #[macro_export]
 macro_rules! unit {
@@ -17,6 +19,12 @@ macro_rules! unit {
 /// For compile-time validating a valid percentage use `unit!` macro
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug)]
 pub struct Percentage(pub f32);
+
+impl ToCssValue for Percentage {
+    fn to_css(self) -> String {
+        format!("{}%", self.0)
+    }
+}
 
 /// ```compile_fail
 /// use natrix::unit;

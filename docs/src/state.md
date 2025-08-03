@@ -107,8 +107,10 @@ struct App {
 
 fn render() -> impl Element<App> {
     e::div().child(|mut ctx: RenderCtx<App>| {
-        if let Some(guard) = ctx.guard(|ctx| field!(ctx.user).project_signal()) {
-            e::h1().text(|ctx: RenderCtx<App>| ctx.call_read(guard).name.clone())
+        if let Some(guard) = ctx.guard_option(|ctx| field!(ctx.user).project_signal()) {
+            e::h1().text(move |ctx: RenderCtx<App>| guard.call_read(&ctx).name.clone()).render()
+        } else {
+            "...".render()
         }
     })
 }
