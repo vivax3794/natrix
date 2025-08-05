@@ -13,3 +13,4 @@ book:
 # Run benchmarks 
 bench:
     dagger --quiet run cargo run -p dagger_pipeline -- bench
+

@@ -1,5 +1,5 @@
 ---
-source: natrix/src/css/selectors.rs
+source: crates/natrix/src/css/selectors.rs
 expression: PROFILE.after()
 ---
-#profile::after
+#\70 \72 \6f \66 \69 \6c \65 ::after

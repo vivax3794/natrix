@@ -40,9 +40,15 @@
 
               "rust-analyzer"
               "rustfmt"
+
+              "rust-src"
             ])
             pkgs.nur.repos.dagger.dagger
             just
+            bacon
+
+            wasm-bindgen-cli_0_2_100
+            binaryen
           ];
         };
       }

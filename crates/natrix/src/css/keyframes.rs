@@ -1,18 +1,19 @@
 //! Implement css keyframes
 
-use super::values::ToCssValue;
+use super::values::IntoCss;
 use crate::css::prelude::RuleBody;
 use crate::css::values::units::Percentage;
 
 /// The name of a keyframe
+#[derive(Clone, Copy, Debug)]
 pub struct KeyFrame(pub &'static str);
 
 // SPEC: Keyframes cant contain `!important`
 // (which we currently dont support setting on properties to begin with)
 // SPEC: Not all properties can be animated in keyframes
 
-impl ToCssValue for KeyFrame {
-    fn to_css(self) -> String {
+impl IntoCss for KeyFrame {
+    fn into_css(self) -> String {
         super::as_css_identifier(self.0)
     }
 }
@@ -34,7 +35,7 @@ impl KeyframeDefinition {
     pub fn to_css(self, name: &KeyFrame) -> String {
         let mut inner = String::new();
         for (frame, body) in self.0 {
-            let rule = format!("{}, {{{}}}", frame.to_css(), body.into_css());
+            let rule = format!("{}, {{{}}}", frame.into_css(), body.into_css());
             inner.push_str(&rule);
         }
 

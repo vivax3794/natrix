@@ -2,4 +2,4 @@
 source: crates/natrix/src/css/selectors.rs
 expression: TagDiv.descendant(BTN).descendant(PROFILE)
 ---
-div .btn #profile
+div .\62 \74 \6e  #\70 \72 \6f \66 \69 \6c \65

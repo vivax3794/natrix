@@ -1,5 +1,5 @@
 ---
-source: natrix/src/css/selectors.rs
+source: crates/natrix/src/css/selectors.rs
 expression: "TagDiv.and(PseudoClassNested::Has(selector_list![BTN, TagDiv]))"
 ---
-div:has(.btn,div)
+div:has(.\62 \74 \6e ,div)

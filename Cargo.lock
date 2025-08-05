@@ -168,17 +168,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "benchmark"
-version = "0.1.0"
-dependencies = [
- "log",
- "natrix",
- "pastey",
- "wasm-bindgen-test",
- "web-sys",
-]
-
-[[package]]
 name = "bincode"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

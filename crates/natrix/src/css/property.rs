@@ -2,6 +2,7 @@
 
 use super::values;
 use crate::css::selectors::IntoSelectorList;
+use crate::css::values::IntoCss;
 
 // TODO: Implement css properties
 // MAYBE: `!important`, it is a hack, and one shouldnt really need it.
@@ -37,11 +38,10 @@ impl RuleCollection {
 
         self
     }
+}
 
-    /// Convert this to css
-    #[doc(hidden)]
-    #[must_use]
-    pub fn to_css(self) -> String {
+impl IntoCss for RuleCollection {
+    fn into_css(self) -> String {
         self.sections.join("")
     }
 }
@@ -71,8 +71,30 @@ impl RuleBody {
         Self::default()
     }
 
-    /// Format this to css
-    pub(super) fn into_css(self) -> String {
+    /// Add on a property
+    ///
+    /// All defined properties have helper methods on this struct.
+    #[inline]
+    pub fn set<V, P>(mut self, property: P, value: V) -> Self
+    where
+        P: Property,
+        P: Supports<V>,
+        V: values::IntoCss,
+    {
+        self.properties.push((property.name(), value.into_css()));
+        self
+    }
+
+    /// Add a raw property
+    #[inline]
+    pub fn raw(mut self, property: &'static str, value: impl Into<String>) -> Self {
+        self.properties.push((property, value.into()));
+        self
+    }
+}
+
+impl IntoCss for RuleBody {
+    fn into_css(self) -> String {
         let mut result = String::new();
         for (property, value) in self.properties {
             result.push_str(property);
@@ -82,27 +104,6 @@ impl RuleBody {
         }
 
         result
-    }
-
-    /// Add on a property
-    ///
-    /// All defined properties have helper methods on this struct.
-    #[inline]
-    pub fn set<V, P>(mut self, property: P, value: V) -> Self
-    where
-        P: Property,
-        P: Supports<V>,
-        V: values::ToCssValue,
-    {
-        self.properties.push((property.name(), value.to_css()));
-        self
-    }
-
-    /// Add a raw property
-    #[inline]
-    pub fn raw(mut self, property: &'static str, value: impl Into<String>) -> Self {
-        self.properties.push((property, value.into()));
-        self
     }
 }
 
@@ -132,7 +133,7 @@ macro_rules! property {
                 #[doc = "<https://developer.mozilla.org/docs/Web/CSS/" $target ">"]
                 #[inline]
                 pub fn [< $name:snake >]<V>(self, value: V) -> Self
-                    where $name: Supports<V>, V: values::ToCssValue
+                    where $name: Supports<V>, V: values::IntoCss
                 {
                     self.set($name, value)
                 }
@@ -151,7 +152,7 @@ macro_rules! test_property {
                 fn [< test_ $prop:snake _ $name >](value: $value) {
                     let result = RuleCollection::new()
                         .rule(crate::dom::html_elements::TagDiv, RuleBody::new().set($prop, value))
-                        .to_css();
+                        .into_css();
                     crate::css::assert_valid_css(&result);
                 }
             }
@@ -205,6 +206,8 @@ support!(
 );
 
 property!(All => "all");
-// HACK: We cant test `WideKeyword` against everything because `lightningcss` doesnt include it
-// as a option for its ast nodes.
 test_property!(All, values::WideKeyword, wide);
+
+property!(Animation => "animation");
+support!(Animation, values::Animation, single);
+support!(Animation, Vec<values::Animation>, list);

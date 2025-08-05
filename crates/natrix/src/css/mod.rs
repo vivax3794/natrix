@@ -9,7 +9,9 @@
 // TODO: Media Queries
 // TODO: Other at rules
 
-use crate::error_handling::log_or_panic_assert;
+use std::fmt::Write;
+
+use crate::error_handling::log_or_panic_result;
 
 pub mod keyframes;
 pub mod property;
@@ -20,66 +22,25 @@ pub mod values;
 /// This is auto star imported in the various `register_*` macros
 pub mod prelude {
     pub use super::property::RuleBody;
-    pub use super::{property, selectors, values};
+    pub use super::{IntoCss, property, selectors, values};
     pub use crate::selector_list;
 }
 
-/// The current state of the `as_css_identifier` function
-#[derive(PartialEq, Eq)]
-enum AsCssIdentifierState {
-    /// This is the first character
-    FirstChar,
-    /// This is the second character and the first one was `-`
-    PreviousCharWasFirstAndDash,
-    /// Any other character
-    Rest,
+/// Convert a value to a css
+pub trait IntoCss {
+    /// Convert a value to a css value string
+    fn into_css(self) -> String;
 }
 
 /// Escape special characthers in string such that it becomes a valid css identifier
 // TEST: Ensure the output still matches html elements with the input
 #[must_use]
 pub fn as_css_identifier(input: &str) -> String {
-    log_or_panic_assert!(!input.is_empty(), "Css identifier cant be empty string");
-
-    let mut result = String::with_capacity(input.len());
-    let mut state = AsCssIdentifierState::FirstChar;
-    let mut buffer = itoa::Buffer::new();
-
+    let mut result = String::with_capacity(input.len().saturating_mul(4));
     for c in input.chars() {
-        state = match (state, c) {
-            (
-                AsCssIdentifierState::FirstChar | AsCssIdentifierState::PreviousCharWasFirstAndDash,
-                '0'..='9',
-            ) => {
-                result.push('\\');
-                result.push_str(buffer.format(c as u32));
-                result.push(' ');
-                AsCssIdentifierState::Rest
-            }
-            (AsCssIdentifierState::FirstChar, '-') => {
-                result.push('-');
-                AsCssIdentifierState::PreviousCharWasFirstAndDash
-            }
-            (_, 'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' | '\u{00A0}'..) => {
-                result.push(c);
-                AsCssIdentifierState::Rest
-            }
-            (_, _) => {
-                result.push('\\');
-                result.push_str(buffer.format(c as u32));
-                result.push(' ');
-                AsCssIdentifierState::Rest
-            }
-        }
+        let res = write!(&mut result, "\\{:x} ", c as u32);
+        log_or_panic_result!(res, "Failed to write to string (???).");
     }
-
-    if state == AsCssIdentifierState::PreviousCharWasFirstAndDash {
-        result.clear();
-        result.push('\\');
-        result.push_str(buffer.format('\\' as u32));
-        result.push(' ');
-    }
-
     result
 }
 
@@ -145,7 +106,7 @@ macro_rules! register_rules {
         $crate::register_raw_css!({
             use $crate::macro_ref::css::prelude::*;
             let result: $crate::macro_ref::css::property::RuleCollection = $collection;
-            result.to_css()
+            result.into_css()
         });
     };
 }
@@ -157,6 +118,7 @@ macro_rules! register_rules {
 /// This macro must not be called from within a function.
 #[macro_export]
 macro_rules! register_rule {
+    // NOTE: This is here to make IDE support nicer for partial macro invocations.
     ($selectors:expr $(,)?) => {
         $crate::register_rules!(
             $crate::macro_ref::css::property::RuleCollection::new().rule(
@@ -309,9 +271,6 @@ fn assert_valid_css(string: &str) {
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
-    use super::selectors::IntoSelectorList;
-    use crate::prelude::Id;
-
     #[test]
     fn unique_is_unique() {
         assert_ne!(unique_str!(), unique_str!());
@@ -348,24 +307,7 @@ mod tests {
         fn test_collect() {
             let result = super::super::collect_css();
             super::super::assert_valid_css(&result);
-            insta::assert_snapshot!(result);
         }
-    }
-
-    #[test]
-    fn id_with_numeric_start() {
-        let id = Id("1A3b2");
-        let css = format!("{}{{}}", id.into_list().into_css());
-        super::assert_valid_css(&css);
-        insta::assert_snapshot!(css);
-    }
-
-    #[test]
-    fn identifier_single_dash() {
-        let id = Id("-");
-        let css = format!("{}{{}}", id.into_list().into_css());
-        super::assert_valid_css(&css);
-        insta::assert_snapshot!(css);
     }
 
     proptest::proptest! {

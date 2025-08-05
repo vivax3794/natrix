@@ -2,6 +2,7 @@
 
 use std::ops::Deref;
 
+use crate::css::IntoCss;
 use crate::error_handling::log_or_panic_assert;
 
 // TODO: Document that you can clone selectors to get "nesting"
@@ -40,9 +41,8 @@ macro_rules! selector_list {
     }};
 }
 
-impl SelectorList {
-    /// Convert to css
-    pub(crate) fn into_css(self) -> String {
+impl IntoCss for SelectorList {
+    fn into_css(self) -> String {
         let result: Vec<_> = self
             .0
             .into_iter()
@@ -62,8 +62,7 @@ pub struct FinalizedSelector {
     pub element: Option<Box<str>>,
 }
 
-impl FinalizedSelector {
-    /// Convert this into css
+impl IntoCss for FinalizedSelector {
     fn into_css(self) -> String {
         let mut result = self.head.into_css();
         if let Some(element) = self.element {
@@ -83,14 +82,13 @@ pub struct ComplexSelector {
     pub tail: Vec<(Combinator, CompoundSelector)>,
 }
 
-impl ComplexSelector {
-    /// Convert into css
+impl IntoCss for ComplexSelector {
     fn into_css(self) -> String {
         let Self { first, tail } = self;
 
         let mut result = first.into_css();
         for (combinator, selector) in tail {
-            result.push_str(combinator.into_css());
+            result.push_str(&combinator.into_css());
             result.push_str(&selector.into_css());
         }
 
@@ -112,15 +110,15 @@ pub enum Combinator {
     Descendant,
 }
 
-impl Combinator {
-    /// Convert this combinator to css version
-    fn into_css(self) -> &'static str {
+impl IntoCss for Combinator {
+    fn into_css(self) -> String {
         match self {
             Self::NextSibling => "+",
             Self::DirectChild => ">",
             Self::SubsequentSibling => "~",
             Self::Descendant => " ",
         }
+        .into()
     }
 }
 
@@ -128,8 +126,7 @@ impl Combinator {
 #[derive(Debug, Clone)]
 pub struct CompoundSelector(pub Vec<SimpleSelector>);
 
-impl CompoundSelector {
-    /// Convert this to css
+impl IntoCss for CompoundSelector {
     fn into_css(self) -> String {
         self.0.into_iter().map(SimpleSelector::into_css).collect()
     }
@@ -152,8 +149,7 @@ pub enum SimpleSelector {
     Pseudo(Box<str>),
 }
 
-impl SimpleSelector {
-    /// Convert this to css
+impl IntoCss for SimpleSelector {
     fn into_css(self) -> String {
         match self {
             Self::Tag(value) => value.into(),

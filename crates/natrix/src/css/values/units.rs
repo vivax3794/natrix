@@ -1,6 +1,6 @@
 //! Implement the various css units
 
-use crate::css::values::ToCssValue;
+use crate::css::values::IntoCss;
 
 /// Create a instance of a css unit, verifying at compile time the correct ranges.
 #[macro_export]
@@ -18,10 +18,14 @@ macro_rules! unit {
 /// A css percentage.
 /// For compile-time validating a valid percentage use `unit!` macro
 #[derive(Clone, Copy, PartialEq, PartialOrd, Debug)]
+#[cfg_attr(
+    all(test, not(target_arch = "wasm32")),
+    derive(proptest_derive::Arbitrary)
+)]
 pub struct Percentage(pub f32);
 
-impl ToCssValue for Percentage {
-    fn to_css(self) -> String {
+impl IntoCss for Percentage {
+    fn into_css(self) -> String {
         format!("{}%", self.0)
     }
 }

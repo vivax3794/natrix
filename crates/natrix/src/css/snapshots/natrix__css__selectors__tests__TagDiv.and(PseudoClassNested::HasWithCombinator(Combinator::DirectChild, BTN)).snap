@@ -2,4 +2,4 @@
 source: crates/natrix/src/css/selectors.rs
 expression: "TagDiv.and(PseudoClassNested::HasWithCombinator(Combinator::DirectChild, BTN))"
 ---
-div:has(>.btn)
+div:has(>.\62 \74 \6e )
