@@ -19,7 +19,8 @@ allow = [
     "Unicode-DFS-2016",
     "ISC",
     "CC0-1.0",
-    "BSD-3-Clause"
+    "BSD-3-Clause",
+    "BSL-1.0"
 ]
 
 [bans]
