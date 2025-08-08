@@ -1,5 +1,4 @@
 //! Implement the various css units
-
 use crate::css::values::IntoCss;
 
 /// Create a instance of a css unit, verifying at compile time the correct ranges.
@@ -23,6 +22,20 @@ macro_rules! unit {
     derive(proptest_derive::Arbitrary)
 )]
 pub struct Percentage(pub f32);
+
+/// A css `<length>` value,
+// REFACTOR: I am not really happy with the current length setup.
+#[derive(Clone, Copy, PartialEq, Debug)]
+#[cfg_attr(
+    all(test, not(target_arch = "wasm32")),
+    derive(proptest_derive::Arbitrary)
+)]
+pub struct Length {
+    /// The value itself
+    pub value: f64,
+    /// The unit to use
+    pub unit: super::LengthUnit,
+}
 
 impl IntoCss for Percentage {
     fn into_css(self) -> String {

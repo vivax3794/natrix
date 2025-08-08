@@ -211,3 +211,16 @@ test_property!(All, values::WideKeyword, wide);
 property!(Animation => "animation");
 support!(Animation, values::Animation, single);
 support!(Animation, Vec<values::Animation>, list);
+
+property!(Appearance => "appearance");
+support!(Appearance, values::Auto, auto);
+support!(Appearance, values::Appearance, special);
+
+property!(AspectRatio => "aspect-ratio");
+support!(AspectRatio, f32, f32);
+support!(AspectRatio, f64, f64);
+support!(AspectRatio, values::Auto, auto);
+support!(AspectRatio, (values::Auto, f32), auto_f32);
+support!(AspectRatio, (values::Auto, f64), auto_f64);
+support!(AspectRatio, (f32, values::Auto), f32_auto);
+support!(AspectRatio, (f64, values::Auto), f64_auto);

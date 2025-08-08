@@ -20,7 +20,7 @@ pub(crate) struct RenameMap(HashMap<Box<str>, Box<str>>);
 
 /// A visitor to rename ast nodes
 struct RenameVisitor<'a> {
-    /// The alloactor to use
+    /// The allocator to use
     allocator: &'a oxc::allocator::Allocator,
     /// The resulting mapping.
     mapping: RenameMap,
@@ -107,7 +107,7 @@ pub(crate) fn minimize_js(js_file: &PathBuf, mapping: RenameMap) -> Result<(), a
             ..Default::default()
         }),
     });
-    let symbols = minifier.build(&allocator, &mut program).scoping;
+    let symbols = minifier.dce(&allocator, &mut program).scoping;
 
     let codegen = oxc::codegen::Codegen::new()
         .with_options(oxc::codegen::CodegenOptions {

@@ -30,7 +30,8 @@ pub struct RenderResult<C: State> {
 /// The render method is called lazily, for example its never called during css collection.
 ///
 /// IMPORTANT: This is the intended entry point for `natrix-cli` build applications, and the natrix
-/// cli build system expects this to be called. And you should not attempt to access browser ap
+/// cli build system expects this to be called. And you should not attempt to access browser apis
+/// before or after this call.
 ///
 /// This method implicitly leaks the memory of the root component
 ///
