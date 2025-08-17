@@ -5,8 +5,13 @@ edition = "2024"
 publish = false
 
 [dependencies]
-natrix = { path="../../crates/natrix", features = ["test_utils", "async_utils"] }
-log = {version = "0.4", features = ["release_max_level_off"]}
+# Framework
+natrix = { path = "../../crates/natrix", features = ["test_utils", "async_utils"] }
+
+# Testing
 wasm-bindgen-test = "0.3.50"
-web-sys = {version="0.3.77", features=["Performance"]}
+web-sys = { version = "0.3.77", features = ["Performance"] }
+
+# Utilities
+log = { version = "0.4.0", features = ["release_max_level_off"] }
 pastey = "0.1.0"

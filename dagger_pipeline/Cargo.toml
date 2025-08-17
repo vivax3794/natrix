@@ -5,15 +5,24 @@ edition = "2024"
 publish = false
 
 [dependencies]
+# CLI
 clap = { version = "4.5.45", features = ["derive"] }
-dagger-sdk = "0.18.14"
 eyre = "0.6.12"
+
+# CI/CD
+dagger-sdk = "0.18.14"
+
+# Async
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 futures = "0.3.31"
+
+# Utilities
 itertools = "0.14.0"
+uuid = { version = "1.18.0", features = ["v4"] }
+
+# Serialization
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.142"
-tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
-uuid = { version = "1.18.0", features = ["v4"] }
 
 [lints]
 workspace = true

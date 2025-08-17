@@ -10,27 +10,35 @@ include = ["src"]
 workspace = true
 
 [dependencies]
-natrix_shared = {path = "../natrix_shared", version="0.3.0", features=["macros"]}
+# Framework
+natrix_shared = { path = "../natrix_shared", version = "0.3.0", features = ["macros"] }
 
-anyhow = {version="1.0.99", default-features = false}
-clap = { version = "4.5.45", features = ["derive"], default-features = true}
+# CLI
+clap = { version = "4.5.45", features = ["derive"], default-features = true }
 indicatif = "0.18.0"
 owo-colors = { version = "4.2.2", default-features = false }
+anyhow = { version = "1.0.99", default-features = false }
+
+# Build Tools
+oxc = { version = "0.82.2", default-features = false, features = ["minifier", "codegen", "ast_visit"] }
+lightningcss = { version = "1.0.0-alpha.67", default-features = false, features = ["visitor"] }
+wasmparser = { version = "0.236.1", features = [], default-features = false }
+rustc_version = "0.4.1"
+cargo_metadata = "0.21.0"
+gimli = { version = "0.32.0", default-features = false, features = ["read", "read-all"] }
+sourcemap = "9.2.2"
+data-encoding = { version = "2.9.0", default-features = false, features = ["alloc"] }
+semver = { version = "1.0.26", default-features = false }
+
+# Dev Server
 notify = "8.2.0"
 tiny_http = "0.12.0"
-oxc = {version="0.82.2", default-features=false, features=["minifier", "codegen", "ast_visit"]}
-lightningcss = { version = "1.0.0-alpha.67", default-features = false, features = ["visitor"] }
-wasmparser = {version="0.236", features=[], default-features = false}
-rustc_version = "0.4.1"
-cargo_metadata = "0.21"
-tungstenite = { version = "0.27" }
-data-encoding = {version="2.9.0", default-features = false, features = ["alloc"]}
+tungstenite = { version = "0.27.0" }
 ignore = "0.4.23"
+
+# Serialization
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.142"
-sourcemap = "9.2.2"
-gimli = { version = "0.32.0", default-features = false, features = ["read", "read-all"] }
-semver = { version = "1.0.26", default-features = false }
 
 
 [[bin]]

@@ -14,13 +14,17 @@ workspace = true
 proc-macro = true
 
 [build-dependencies]
-natrix_shared = {path = "../natrix_shared", version="0.3.0"}
+# Framework
+natrix_shared = { path = "../natrix_shared", version = "0.3.0" }
 
 [dependencies]
-natrix_shared = {path = "../natrix_shared", version="0.3.0", features=["macros"]}
+# Framework
+natrix_shared = { path = "../natrix_shared", version = "0.3.0", features = ["macros"] }
 
-data-encoding = {version="2.9.0", default-features = false, features = ["alloc"]}
+# Proc Macros
+proc-macro2 = { version = "1.0.101", default-features = false }
+quote = { version = "1.0.40", default-features = false, features = ["proc-macro"] }
+syn = { version = "2.0.106", default-features = false, features = ["full", "printing", "parsing", "proc-macro"] }
 
-proc-macro2 = {version="1.0.101", default-features = false}
-quote = {version="1.0.40", default-features = false, features=["proc-macro"]}
-syn = { version = "2.0.106", default-features = false, features=["full", "printing", "parsing", "proc-macro"]}
+# Utilities
+data-encoding = { version = "2.9.0", default-features = false, features = ["alloc"] }
