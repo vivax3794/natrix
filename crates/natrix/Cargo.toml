@@ -23,9 +23,9 @@ natrix_shared = {path = "../natrix_shared", version="0.3.0"}
 # Core
 wasm-bindgen = {version= "0.2.100", features=["enable-interning", "msrv", "std"], default-features=false}
 itoa = "1.0.15"
-ryu = "1.0.0"
-pastey = "0.1"
-smallvec = "1.15.0"
+ryu = "1.0.20"
+pastey = "0.1.1"
+smallvec = "1.15.1"
 
 # Async
 wasm-bindgen-futures = { version = "0.4.50", default-features = false, optional = true}
@@ -35,15 +35,15 @@ pin-project = { version = "1.1.10", optional = true}
 # Css
 const_base = "0.2.0"
 const-sha1 = { version = "0.3.0", default-features = false }
-inventory = {version="0.3", optional = true}
+inventory = {version="0.3.20", optional = true}
 
 # Logging
-log = "0.4"
-console_log = {version = "1.0", optional=true, features=["color"]}
-simple_logger = {version="5.0", features=["stderr"], default-features=false, optional=true}
+log = "0.4.27"
+console_log = {version = "1.0.0", optional=true, features=["color"]}
+simple_logger = {version="5.0.0", features=["stderr"], default-features=false, optional=true}
 
 # Other
-cfg-if = "1.0.0"
+cfg-if = "1.0.1"
 serde = {version="1.0.219", optional=true, default-features = false, features = ["derive"]}
 
 [features]
@@ -67,8 +67,8 @@ wasm-bindgen-test ="0.3.50"
 static_assertions = "1"
 
 [target.'cfg(not(target_arch="wasm32"))'.dev-dependencies]
-lightningcss = { version = "1.0.0-alpha.66", default-features = false }
-proptest = "1.6"
+lightningcss = { version = "1.0.0-alpha.67", default-features = false }
+proptest = "1.7"
 proptest-derive = "0.6.0"
 insta = "1.43"
 
@@ -76,7 +76,7 @@ insta = "1.43"
 development = ["wasm-bindgen-test"]
 
 [build-dependencies]
-rustversion = "1.0.19"
+rustversion = "1.0.22"
 natrix_shared = {path = "../natrix_shared", version="0.3.0"}
 
 [dependencies.web-sys]

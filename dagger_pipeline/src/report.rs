@@ -55,6 +55,10 @@ fn all_tests<'q>(
         (Box::pin(crate::targets::native_tests(client)), false),
         (Box::pin(crate::targets::wasm_unit_tests(client)), false),
         (Box::pin(crate::targets::clippy_workspace(client)), false),
+        (
+            Box::pin(crate::targets::clippy_minimal_versions(client)),
+            false,
+        ),
         (Box::pin(crate::targets::clippy_natrix(client)), false),
         (Box::pin(crate::targets::test_docs(client)), false),
         (

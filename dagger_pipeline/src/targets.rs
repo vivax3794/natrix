@@ -15,6 +15,8 @@ use crate::prelude::*;
 // Actually that might just need to be a pure CI thing
 // I dont really see how useful it is to run it locally.
 
+// MAYBE: Run clippy all against min versions.
+
 /// Unit Test suite name
 const UNIT_TESTS: &str = "Unit Tests";
 /// Linters test suite name
@@ -511,6 +513,30 @@ pub async fn clippy_workspace(client: &Query) -> Result<Vec<TestResult>> {
                 "--",
                 "-Dwarnings",
             ],
+            ..Default::default()
+        },
+    )
+    .await
+}
+
+/// Run clippy on the workspace with minimal version
+pub async fn clippy_minimal_versions(client: &Query) -> Result<Vec<TestResult>> {
+    run_linter(
+        client,
+        LinterConfig {
+            name: "Clippy Minimal".to_string(),
+            command: vec![
+                "cargo",
+                "+nightly",
+                "minimal-versions",
+                "--direct",
+                "clippy",
+                "--all-features",
+                "--tests",
+                "--",
+                "-Dwarnings",
+            ],
+            needs_binstall: vec!["cargo-minimal-versions", "cargo-hack"],
             ..Default::default()
         },
     )
