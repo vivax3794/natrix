@@ -1,6 +1,10 @@
 # Run full CI pipeline with optional job count
-full jobs="1":
+test jobs="1":
     dagger --quiet run cargo run -p dagger_pipeline -- tests --jobs {{jobs}}
+
+# Run full CI pipeline with optional job count, just print out the result
+test_tui jobs="1":
+    dagger --quiet run cargo run -p dagger_pipeline -- tests --jobs {{jobs}} --tui
 
 # Apply automatic fixes
 fix:

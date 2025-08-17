@@ -10,18 +10,21 @@ mod report;
 mod targets;
 
 use clap::Parser;
+use eyre::eyre;
 use prelude::*;
+
+use crate::targets::TestStatus;
 
 /// Generate a test report, or simply run the tests
 #[derive(clap::Parser)]
 struct TestCommand {
-    /// Filter tests to run (comma-separated). If empty, runs all tests
-    #[arg(short, long, value_delimiter = ',')]
-    filter: Vec<String>,
     /// How many jobs to run in parallel.
     /// If not specified defaults to 1
     #[arg(short, long)]
     jobs: Option<usize>,
+    /// Output to a tui instead
+    #[arg(short, long)]
+    tui: bool,
 }
 
 /// Run a dagger pipeline too generate test reports.
@@ -112,8 +115,41 @@ async fn main() -> Result<()> {
         match arguments {
             Cli::Tests(arguments) => {
                 let reports = report::run_all_tests(&client, &arguments).await?;
-                let report = report::generate_report(&client, reports, &arguments)?;
-                report::serve_dist(&client, report).await?;
+                if arguments.tui {
+                    let total = reports.len();
+                    let mut pass = 0u16;
+                    let mut skip = 0u16;
+                    let mut fail = 0u16;
+
+                    for report in reports {
+                        match report.status {
+                            TestStatus::Passed => {
+                                pass = pass.saturating_add(1);
+                            }
+                            TestStatus::Skipped => {
+                                skip = skip.saturating_add(1);
+                            }
+                            TestStatus::Failed => {
+                                fail = fail.saturating_add(1);
+                                println!("FAIL {}", report.name);
+
+                                if let Some(message) = report.status_details {
+                                    println!("{}", message.message);
+                                    println!("{}", message.trace.unwrap_or_default());
+                                }
+                            }
+                        }
+                    }
+
+                    println!("RESULTS: {pass}/{total} ({fail} failed, {skip} skipped)");
+
+                    if fail != 0 {
+                        return Err(eyre!("Tests failed"));
+                    }
+                } else {
+                    let report = report::generate_allure_report(&client, reports).await?;
+                    report::serve_dist(&client, report).await?;
+                }
             }
             Cli::Fix => {
                 let source = client.host().directory_opts(

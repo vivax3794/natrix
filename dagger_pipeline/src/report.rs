@@ -4,13 +4,14 @@ use std::pin::Pin;
 
 use dagger_sdk::{ContainerWithExecOptsBuilder, PortForward, ReturnType, ServiceUpOpts};
 use futures::{StreamExt, stream};
+use itertools::Itertools;
 
 use crate::TestCommand;
 use crate::prelude::*;
-use crate::targets::IntegrationTestMode;
+use crate::targets::{IntegrationTestMode, TestResult};
 
 /// Run all tests and return a directory of allure reports
-pub async fn run_all_tests(client: &Query, arguments: &TestCommand) -> Result<Directory> {
+pub async fn run_all_tests(client: &Query, arguments: &TestCommand) -> Result<Vec<TestResult>> {
     // Create all possible test futures with their names
     let all_tests = all_tests(client, arguments);
 
@@ -18,33 +19,25 @@ pub async fn run_all_tests(client: &Query, arguments: &TestCommand) -> Result<Di
     let mut need_sequential: Vec<Pin<Box<dyn Future<Output = _>>>> = vec![];
 
     // Filter tests based on arguments
-    for (name, future, is_sequential) in all_tests {
-        let should_run = if arguments.filter.is_empty() {
-            true // Run all tests if no filter
+    for (future, is_sequential) in all_tests {
+        if is_sequential {
+            need_sequential.push(future);
         } else {
-            arguments.filter.iter().any(|filter| filter == name)
-        };
-
-        if should_run {
-            if is_sequential {
-                need_sequential.push(future);
-            } else {
-                tasks.push(future);
-            }
+            tasks.push(future);
         }
     }
 
-    let mut dir = client.directory();
+    let mut result = Vec::new();
     let mut stream = stream::iter(tasks).buffer_unordered(arguments.jobs.unwrap_or(1));
     while let Some(task) = stream.next().await {
-        dir = dir.with_directory(".", task?.sync().await?);
+        result.extend(task?);
     }
 
     for task in need_sequential {
-        dir = dir.with_directory(".", task.await?.sync().await?);
+        result.extend(task.await?);
     }
 
-    Ok(dir)
+    Ok(result)
 }
 
 /// Return a vector of all tests
@@ -52,81 +45,39 @@ fn all_tests<'q>(
     client: &'q Query,
     arguments: &'q TestCommand,
 ) -> Vec<(
-    &'static str,
-    Pin<Box<dyn Future<Output = Result<Directory>> + 'q>>,
+    Pin<Box<dyn Future<Output = Result<Vec<TestResult>>> + 'q>>,
     bool,
 )> {
-    let all_tests: Vec<(&str, Pin<Box<dyn Future<Output = _>>>, bool)> = vec![
-        // (name, future, is_sequential)
-        ("rustfmt", Box::pin(crate::targets::rustfmt(client)), false),
-        ("typos", Box::pin(crate::targets::typos(client)), false),
+    let all_tests: Vec<(Pin<Box<dyn Future<Output = _>>>, bool)> = vec![
+        // (future, is_sequential)
+        (Box::pin(crate::targets::rustfmt(client)), false),
+        (Box::pin(crate::targets::typos(client)), false),
+        (Box::pin(crate::targets::native_tests(client)), false),
+        (Box::pin(crate::targets::wasm_unit_tests(client)), false),
+        (Box::pin(crate::targets::clippy_workspace(client)), false),
+        (Box::pin(crate::targets::clippy_natrix(client)), false),
+        (Box::pin(crate::targets::test_docs(client)), false),
         (
-            "native_tests",
-            Box::pin(crate::targets::native_tests(client)),
-            false,
-        ),
-        (
-            "wasm_unit",
-            Box::pin(crate::targets::wasm_unit_tests(client)),
-            false,
-        ),
-        (
-            "clippy_workspace",
-            Box::pin(crate::targets::clippy_workspace(client)),
-            false,
-        ),
-        (
-            "clippy_natrix",
-            Box::pin(crate::targets::clippy_natrix(client)),
-            false,
-        ),
-        (
-            "test_docs",
-            Box::pin(crate::targets::test_docs(client)),
-            false,
-        ),
-        (
-            "cargo_deny_natrix",
             Box::pin(crate::targets::cargo_deny(client, "./crates/natrix")),
             false,
         ),
         (
-            "cargo_deny_natrix_cli",
             Box::pin(crate::targets::cargo_deny(client, "./crates/natrix-cli")),
             false,
         ),
+        (Box::pin(crate::targets::unused_deps(client)), false),
+        (Box::pin(crate::targets::outdated_deps(client)), false),
         (
-            "unused_deps",
-            Box::pin(crate::targets::unused_deps(client)),
-            false,
-        ),
-        (
-            "outdated_deps",
-            Box::pin(crate::targets::outdated_deps(client)),
-            false,
-        ),
-        (
-            "test_project_gen_stable",
             Box::pin(crate::targets::test_project_gen(client, "stable")),
             false,
         ),
         (
-            "test_project_gen_nightly",
             Box::pin(crate::targets::test_project_gen(client, "nightly")),
             false,
         ),
+        (Box::pin(crate::targets::test_book_links(client)), false),
+        (Box::pin(crate::targets::test_book_examples(client)), true),
         (
-            "test_book_links",
-            Box::pin(crate::targets::test_book_links(client)),
-            false,
-        ),
-        (
-            "test_book_examples",
-            Box::pin(crate::targets::test_book_examples(client)),
-            true,
-        ),
-        (
-            "integration_test_dev",
             Box::pin(crate::targets::integration_test(
                 client,
                 IntegrationTestMode::Dev,
@@ -135,7 +86,6 @@ fn all_tests<'q>(
             false,
         ),
         (
-            "integration_test_release",
             Box::pin(crate::targets::integration_test(
                 client,
                 IntegrationTestMode::Release,
@@ -144,7 +94,6 @@ fn all_tests<'q>(
             false,
         ),
         (
-            "integration_test_build",
             Box::pin(crate::targets::integration_test(
                 client,
                 IntegrationTestMode::Build,
@@ -157,19 +106,25 @@ fn all_tests<'q>(
 }
 
 /// Generate the final report
-pub fn generate_report(
-    client: &Query,
-    reports: Directory,
-    arguments: &TestCommand,
-) -> Result<Directory> {
+pub async fn generate_allure_report(client: &Query, results: Vec<TestResult>) -> Result<Directory> {
+    let mut reports = client.directory();
+    // HACK: Dagger doesnt like you creating 100+ files in one call.
+    // So we chunk it up.
+    for chunk in &results.into_iter().chunks(10) {
+        let mut chunked = client.directory();
+        for result in chunk {
+            chunked = chunked.with_directory(".", result.into_file(client)?);
+        }
+
+        reports = reports.with_directory(".", chunked.sync().await?);
+        reports.sync().await?;
+    }
+
     let result = client
         .container()
         .from("andgineer/allure")
         .with_directory("/reports", reports)
-        .with_mounted_cache(
-            "/history-cache/",
-            client.cache_volume(format!("allure-history-{}", arguments.filter.join(","))),
-        )
+        .with_mounted_cache("/history-cache/", client.cache_volume("allure-history"))
         .with_exec_opts(
             vec!["mv", "-v", "/history-cache/history", "/reports/history"],
             ContainerWithExecOptsBuilder::default()

@@ -25,7 +25,7 @@ const END_TO_END_TESTS: &str = "End To End Tests";
 /// Test status
 #[derive(Serialize)]
 #[serde(rename_all = "lowercase")]
-enum TestStatus {
+pub enum TestStatus {
     /// Test passed
     Passed,
     /// Test failed
@@ -105,12 +105,12 @@ struct TestLine {
 
 /// Status details for failed tests
 #[derive(Serialize)]
-struct StatusDetails {
+pub struct StatusDetails {
     /// Error message
-    message: String,
+    pub message: String,
     /// Optional trace information
     #[serde(skip_serializing_if = "Option::is_none")]
-    trace: Option<String>,
+    pub trace: Option<String>,
 }
 
 /// Test step
@@ -127,16 +127,16 @@ struct Step {
 
 /// Test result for allure reporting
 #[derive(Serialize)]
-struct TestResult {
+pub(crate) struct TestResult {
     /// Unique test identifier
     uuid: String,
     /// Test name
-    name: String,
+    pub name: String,
     /// Test status (passed/failed)
-    status: TestStatus,
+    pub status: TestStatus,
     /// Optional status details for failed tests
     #[serde(skip_serializing_if = "Option::is_none", rename = "statusDetails")]
-    status_details: Option<StatusDetails>,
+    pub status_details: Option<StatusDetails>,
     /// Test labels
     labels: Vec<LabelType>,
     /// Optional test steps
@@ -146,7 +146,7 @@ struct TestResult {
 
 impl TestResult {
     /// Convert test result to a directory containing the result file
-    fn into_file(self, client: &Query) -> Result<Directory> {
+    pub(crate) fn into_file(self, client: &Query) -> Result<Directory> {
         let content = serde_json::to_string(&self)?;
         let filename = format!("{}-result.json", self.uuid);
         Ok(client.directory().with_new_file(filename, content))
@@ -154,17 +154,12 @@ impl TestResult {
 }
 
 /// Parse libtest JSON output and create test result directory
-fn parse_libtest_json(
-    client: &Query,
-    output: &str,
-    labels: &[LabelType],
-    prefix: &str,
-) -> Result<Directory> {
+fn parse_libtest_json(output: &str, labels: &[LabelType], prefix: &str) -> Vec<TestResult> {
     // HACK: It seems that instead of reporting "ignored" events for skipped tests
     // nextest instead emits a "Started" event and then just never finish them.
     let mut not_finished = HashSet::new();
 
-    let mut dir = client.directory();
+    let mut result = Vec::new();
     for line in output.lines() {
         if let Ok(json) = serde_json::from_str::<TestLine>(line) {
             let event_result = match json.event {
@@ -201,7 +196,7 @@ fn parse_libtest_json(
                 steps: None,
             };
 
-            dir = dir.with_directory(".", test_result.into_file(client)?);
+            result.push(test_result);
         }
     }
 
@@ -218,10 +213,10 @@ fn parse_libtest_json(
             steps: None,
         };
 
-        dir = dir.with_directory(".", test_result.into_file(client)?);
+        result.push(test_result);
     }
 
-    Ok(dir)
+    result
 }
 
 /// Generic linter configuration
@@ -254,7 +249,7 @@ impl Default for LinterConfig {
 }
 
 /// Run a generic linter and return test result directory
-async fn run_linter(client: &Query, config: LinterConfig) -> Result<Directory> {
+async fn run_linter(client: &Query, config: LinterConfig) -> Result<Vec<TestResult>> {
     let mut container = if config.use_rust_image {
         crate::base_images::rust(client)
     } else {
@@ -304,11 +299,11 @@ async fn run_linter(client: &Query, config: LinterConfig) -> Result<Directory> {
         steps: None,
     };
 
-    test_result.into_file(client)
+    Ok(vec![test_result])
 }
 
 /// Run the native nextest tests
-pub async fn native_tests(client: &Query) -> Result<Directory> {
+pub async fn native_tests(client: &Query) -> Result<Vec<TestResult>> {
     let result = crate::base_images::rust(client)
         .with_directory(
             "/bin",
@@ -334,8 +329,7 @@ pub async fn native_tests(client: &Query) -> Result<Directory> {
         .stdout()
         .await?;
 
-    let dir = parse_libtest_json(
-        client,
+    let result = parse_libtest_json(
         &result,
         &[
             LabelType::Suite(UNIT_TESTS.to_string()),
@@ -343,12 +337,12 @@ pub async fn native_tests(client: &Query) -> Result<Directory> {
             LabelType::Severity(Severity::Normal),
         ],
         "natrix::natrix$",
-    )?;
-    Ok(dir)
+    );
+    Ok(result)
 }
 
 /// Wasm unit tests
-pub async fn wasm_unit_tests(client: &Query) -> Result<Directory> {
+pub async fn wasm_unit_tests(client: &Query) -> Result<Vec<TestResult>> {
     let output = crate::base_images::wasm(client)
         .with_workspace(client)
         .with_workdir("./crates/natrix")
@@ -365,13 +359,11 @@ pub async fn wasm_unit_tests(client: &Query) -> Result<Directory> {
         .stdout()
         .await?;
 
-    let dir = parse_wasmbindgen_test_output(client, &output)?;
-
-    Ok(dir)
+    Ok(parse_wasmbindgen_test_output(&output))
 }
 
 /// Extract the result of a `wasm-pack test` run
-fn parse_wasmbindgen_test_output(client: &Query, output: &str) -> Result<Directory, eyre::Error> {
+fn parse_wasmbindgen_test_output(output: &str) -> Vec<TestResult> {
     let mut traces = HashMap::new();
 
     let mut hit_first = false;
@@ -404,7 +396,7 @@ fn parse_wasmbindgen_test_output(client: &Query, output: &str) -> Result<Directo
         }
     }
 
-    let mut dir = client.directory();
+    let mut test_results = Vec::new();
     for line in output.lines() {
         if line.starts_with("test ") {
             let parts = line.split_whitespace().collect::<Vec<_>>();
@@ -449,7 +441,7 @@ fn parse_wasmbindgen_test_output(client: &Query, output: &str) -> Result<Directo
                     steps: None,
                 };
 
-                dir = dir.with_directory(".", test_result.into_file(client)?);
+                test_results.push(test_result);
             }
         }
     }
@@ -469,13 +461,13 @@ fn parse_wasmbindgen_test_output(client: &Query, output: &str) -> Result<Directo
         ],
         steps: None,
     };
-    dir = dir.with_directory(".", all_output.into_file(client)?);
+    test_results.push(all_output);
 
-    Ok(dir)
+    test_results
 }
 
 /// Run rustfmt on the workspace
-pub async fn rustfmt(client: &Query) -> Result<Directory> {
+pub async fn rustfmt(client: &Query) -> Result<Vec<TestResult>> {
     run_linter(
         client,
         LinterConfig {
@@ -489,7 +481,7 @@ pub async fn rustfmt(client: &Query) -> Result<Directory> {
 }
 
 /// Run typos on the workspace
-pub async fn typos(client: &Query) -> Result<Directory> {
+pub async fn typos(client: &Query) -> Result<Vec<TestResult>> {
     run_linter(
         client,
         LinterConfig {
@@ -505,7 +497,7 @@ pub async fn typos(client: &Query) -> Result<Directory> {
 }
 
 /// Run clippy on the workspace
-pub async fn clippy_workspace(client: &Query) -> Result<Directory> {
+pub async fn clippy_workspace(client: &Query) -> Result<Vec<TestResult>> {
     run_linter(
         client,
         LinterConfig {
@@ -526,7 +518,7 @@ pub async fn clippy_workspace(client: &Query) -> Result<Directory> {
 }
 
 /// Run clippy hack on natrix
-pub async fn clippy_natrix(client: &Query) -> Result<Directory> {
+pub async fn clippy_natrix(client: &Query) -> Result<Vec<TestResult>> {
     run_linter(
         client,
         LinterConfig {
@@ -549,7 +541,7 @@ pub async fn clippy_natrix(client: &Query) -> Result<Directory> {
 }
 
 /// Run `cargo-deny` on the given folder
-pub async fn cargo_deny(client: &Query, folder: &'static str) -> Result<Directory> {
+pub async fn cargo_deny(client: &Query, folder: &'static str) -> Result<Vec<TestResult>> {
     run_linter(
         client,
         LinterConfig {
@@ -564,7 +556,7 @@ pub async fn cargo_deny(client: &Query, folder: &'static str) -> Result<Director
 }
 
 /// Run `cargo-udeps` on the given folder
-pub async fn unused_deps(client: &Query) -> Result<Directory> {
+pub async fn unused_deps(client: &Query) -> Result<Vec<TestResult>> {
     run_linter(
         client,
         LinterConfig {
@@ -586,7 +578,7 @@ pub async fn unused_deps(client: &Query) -> Result<Directory> {
 }
 
 /// Run `cargo-udeps` on the given folder
-pub async fn outdated_deps(client: &Query) -> Result<Directory> {
+pub async fn outdated_deps(client: &Query) -> Result<Vec<TestResult>> {
     run_linter(
         client,
         LinterConfig {
@@ -627,7 +619,7 @@ pub fn cli(client: &Query) -> Directory {
 }
 
 /// Test that the natrix project generator works
-pub async fn test_project_gen(client: &Query, toolchain: &'static str) -> Result<Directory> {
+pub async fn test_project_gen(client: &Query, toolchain: &'static str) -> Result<Vec<TestResult>> {
     let container = crate::base_images::wasm(client)
         .with_exec(vec!["rustup", "default", toolchain])
         .with_directory("/bin", cli(client))
@@ -727,11 +719,11 @@ pub async fn test_project_gen(client: &Query, toolchain: &'static str) -> Result
         steps: Some(steps),
     };
 
-    test_result.into_file(client)
+    Ok(vec![test_result])
 }
 
 /// Run the cargo doc tests
-pub async fn test_docs(client: &Query) -> Result<Directory> {
+pub async fn test_docs(client: &Query) -> Result<Vec<TestResult>> {
     let output = crate::base_images::rust(client)
         .with_workspace(client)
         .with_exec_any(vec![
@@ -750,8 +742,7 @@ pub async fn test_docs(client: &Query) -> Result<Directory> {
         .stdout()
         .await?;
 
-    parse_libtest_json(
-        client,
+    Ok(parse_libtest_json(
         &output,
         &[
             LabelType::Suite(UNIT_TESTS.to_string()),
@@ -759,12 +750,12 @@ pub async fn test_docs(client: &Query) -> Result<Directory> {
             LabelType::Severity(Severity::Minor),
         ],
         "",
-    )
+    ))
 }
 
 /// Test the links in the mdbooks
 /// INVARIANT: Should not run in parallel as contains timeouts
-pub async fn test_book_links(client: &Query) -> Result<Directory> {
+pub async fn test_book_links(client: &Query) -> Result<Vec<TestResult>> {
     let result = crate::base_images::book(client)
         .with_exec_any(vec!["mdbook", "build"])?
         .get_result()
@@ -791,14 +782,14 @@ pub async fn test_book_links(client: &Query) -> Result<Directory> {
         labels: vec![LabelType::Suite(LINTERS.to_string())],
         steps: None,
     };
-    result.into_file(client)
+    Ok(vec![result])
 }
 
 /// Run the example tests in the book
 /// INVARIANT: This test is extremely flaky in terms of cache state.
 /// So should not be run in parallel.
 /// INVARIANT: `test_book_links` needs to have been run before hand to prime cache.
-pub async fn test_book_examples(client: &Query) -> Result<Directory> {
+pub async fn test_book_examples(client: &Query) -> Result<Vec<TestResult>> {
     let result = crate::base_images::book(client)
         .with_exec_any(vec!["sh", "-c", "rm -r ../target/debug/deps/*natrix*"])?
         .with_exec_any(vec![
@@ -842,7 +833,7 @@ pub async fn test_book_examples(client: &Query) -> Result<Directory> {
         ],
         steps: None,
     };
-    result.into_file(client)
+    Ok(vec![result])
 }
 
 /// A service that spins up `natrix dev` in the integration tests directory.
@@ -923,7 +914,7 @@ pub async fn integration_test(
     client: &Query,
     mode: IntegrationTestMode,
     arguments: &TestCommand,
-) -> Result<Directory> {
+) -> Result<Vec<TestResult>> {
     let page = match mode {
         IntegrationTestMode::Dev => natrix_dev(client, "dev"),
         IntegrationTestMode::Release => natrix_dev(client, "release"),
@@ -963,8 +954,7 @@ pub async fn integration_test(
     chrome.stop().await?;
     page.stop().await?;
 
-    parse_libtest_json(
-        client,
+    Ok(parse_libtest_json(
         &output,
         &[
             LabelType::Suite(END_TO_END_TESTS.to_string()),
@@ -972,7 +962,7 @@ pub async fn integration_test(
             LabelType::Severity(Severity::Critical),
         ],
         "integration_tests::integration_tests$",
-    )
+    ))
 }
 
 /// Run benchmarks
