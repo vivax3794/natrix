@@ -15,8 +15,6 @@ use crate::prelude::*;
 // Actually that might just need to be a pure CI thing
 // I dont really see how useful it is to run it locally.
 
-// MAYBE: Run clippy all against min versions.
-
 /// Unit Test suite name
 const UNIT_TESTS: &str = "Unit Tests";
 /// Linters test suite name

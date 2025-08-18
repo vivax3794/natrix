@@ -158,7 +158,6 @@ pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let mut hasher = DefaultHasher::default();
 
-    // TODO: Make assets respect cache bustin setting
     #[cfg(debug_assertions)]
     file_path.hash(&mut hasher);
     #[cfg(not(debug_assertions))]
