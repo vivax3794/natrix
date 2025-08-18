@@ -24,7 +24,7 @@ oxc = { version = "0.82.2", default-features = false, features = ["minifier", "c
 lightningcss = { version = "1.0.0-alpha.67", default-features = false, features = ["visitor"] }
 wasmparser = { version = "0.236.1", features = [], default-features = false }
 rustc_version = "0.4.1"
-cargo_metadata = "0.21.0"
+cargo_metadata = "0.22.0"
 gimli = { version = "0.32.0", default-features = false, features = ["read", "read-all"] }
 sourcemap = "9.2.2"
 data-encoding = { version = "2.9.0", default-features = false, features = ["alloc"] }
