@@ -114,14 +114,13 @@ pub async fn generate_allure_report(client: &Query, results: Vec<TestResult>) ->
     let mut reports = client.directory();
     // HACK: Dagger doesnt like you creating 100+ files in one call.
     // So we chunk it up.
-    for chunk in &results.into_iter().chunks(10) {
+    for chunk in &results.into_iter().chunks(50) {
         let mut chunked = client.directory();
         for result in chunk {
             chunked = chunked.with_directory(".", result.into_file(client)?);
         }
 
         reports = reports.with_directory(".", chunked.sync().await?);
-        reports.sync().await?;
     }
 
     let result = client
