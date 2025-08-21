@@ -10,14 +10,13 @@ use std::{fs, io};
 
 use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
-use syn::parse_quote;
 
 /// Create a array of elements based on the format string.
 /// The start of the macro is a closure argument list, which should generally be `|ctx: R<Self>|`
 /// or similar.
 ///
 /// ```ignore
-/// e::div().children(|ctx: R<Self>|, "progress: {}/{}", *ctx.current, *ctx.max)
+/// e::div().children(format_elements!(|ctx: R<Self>|, "progress: {}/{}", *ctx.current, *ctx.max))
 /// ```
 #[proc_macro]
 pub fn format_elements(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -25,19 +24,15 @@ pub fn format_elements(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 }
 
 /// Derive the `State` trait for a struct
+///
+/// This mainly just asserts that each field is also a `State`, and implements the `.set` method.
 #[proc_macro_derive(State)]
 pub fn state_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let item = syn::parse_macro_input!(item as syn::ItemStruct);
     let name = item.ident.clone();
     let fields = get_fields(item.fields);
 
-    let generics = {
-        let mut generics = item.generics;
-        for type_ in generics.type_params_mut() {
-            type_.bounds.push(parse_quote!('static));
-        }
-        generics
-    };
+    let generics = item.generics;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
     let mut where_clause = if let Some(where_clause) = where_clause {
@@ -65,6 +60,15 @@ pub fn state_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     }
     .into()
 }
+
+// /// Derive the `Projectable` trait for the given enum.
+// #[proc_macro_derive(Projectable)]
+// pub fn derive_projectable(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+//     let item = syn::parse_macro_input!(item as syn::ItemEnum);
+//     let name = item.ident.clone();
+//
+//
+// }
 
 /// Convert a struct name to its data variant.
 /// This is to allow you to implement methods on `ctx` without having to relay on implementation

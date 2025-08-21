@@ -90,7 +90,7 @@ impl<T: State> AsyncCtxHandle<T> {
     ///
     /// # Reactivity
     /// Calling this function clears the internal reactive flags.
-    /// Once this value is dropped it will trigger a reactive update for any changed fields.
+    /// And causes a update to the UI when the closure exists.
     #[must_use]
     pub fn update<R>(&self, func: impl FnOnce(AsyncCtx<T>) -> R) -> Option<R> {
         let rc = self.inner.upgrade()?;
