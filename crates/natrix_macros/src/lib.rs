@@ -3,13 +3,14 @@
 extern crate proc_macro;
 
 mod formatting;
-mod state;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::{fs, io};
 
-use quote::{format_ident, quote};
+use proc_macro2::TokenStream;
+use quote::{ToTokens, format_ident, quote};
+use syn::parse_quote;
 
 /// Create a array of elements based on the format string.
 /// The start of the macro is a closure argument list, which should generally be `|ctx: R<Self>|`
@@ -27,8 +28,42 @@ pub fn format_elements(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 #[proc_macro_derive(State)]
 pub fn state_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let item = syn::parse_macro_input!(item as syn::ItemStruct);
-    let result = state::state_derive_implementation(item);
-    result.into()
+    let name = item.ident.clone();
+    let fields = get_fields(item.fields);
+
+    let generics = {
+        let mut generics = item.generics;
+        for type_ in generics.type_params_mut() {
+            type_.bounds.push(parse_quote!('static));
+        }
+        generics
+    };
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
+
+    let mut where_clause = if let Some(where_clause) = where_clause {
+        quote! {#where_clause , }
+    } else {
+        quote! {where}
+    };
+    let mut set_statements = quote!();
+
+    for field in &fields {
+        let type_ = &field.type_;
+        let access = &field.access;
+
+        where_clause = quote!(#where_clause #type_: ::natrix::macro_ref::State ,);
+        set_statements = quote!(#set_statements self.#access.set(new.#access););
+    }
+
+    quote! {
+        #[automatically_derived]
+        impl #impl_generics ::natrix::macro_ref::State for #name #type_generics #where_clause {
+            fn set(&mut self, new: Self) {
+                #set_statements
+            }
+        }
+    }
+    .into()
 }
 
 /// Convert a struct name to its data variant.
@@ -200,4 +235,37 @@ pub fn asset(file_path: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     emit_file(asset, &settings);
     result
+}
+
+/// A abstract representation of a struct field
+struct Field {
+    /// The type of the field
+    type_: TokenStream,
+    /// How to access the field
+    access: TokenStream,
+}
+
+/// Retrieve abstract fields from a struct, as well as a boolean indicating whether its a named
+/// struct or not (unit structs are considered named)
+pub(crate) fn get_fields(fields: syn::Fields) -> Vec<Field> {
+    match fields {
+        syn::Fields::Unit => vec![],
+        syn::Fields::Named(fields) => fields
+            .named
+            .into_iter()
+            .map(|field| Field {
+                type_: field.ty.into_token_stream(),
+                access: field.ident.to_token_stream(),
+            })
+            .collect(),
+        syn::Fields::Unnamed(fields) => fields
+            .unnamed
+            .into_iter()
+            .enumerate()
+            .map(|(index, field)| Field {
+                type_: field.ty.to_token_stream(),
+                access: proc_macro2::Literal::usize_unsuffixed(index).to_token_stream(),
+            })
+            .collect(),
+    }
 }
