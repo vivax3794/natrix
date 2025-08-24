@@ -12,6 +12,105 @@ use proc_macro2::TokenStream;
 use quote::{ToTokens, format_ident, quote};
 use syn::parse_quote;
 
+/// Generate projected variant, read/mut arms, and faillable arms for a named field variant
+fn generate_named_variant_code(
+    variant_name: &syn::Ident,
+    fields: &syn::FieldsNamed,
+    name: &syn::Ident,
+    projected_name: &syn::Ident,
+) -> (TokenStream, TokenStream, TokenStream, TokenStream, TokenStream) {
+    let field_names: Vec<_> = fields.named.iter().map(|f| f.ident.as_ref().unwrap()).collect();
+    let field_types: Vec<_> = fields.named.iter().map(|f| &f.ty).collect();
+    
+    let projected_variant = quote! {
+        #variant_name { #(#field_names: ::natrix::access::Ref<'a, #field_types>),* }
+    };
+
+    let read_arm = quote! {
+        #name::#variant_name { #(#field_names),* } => #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::Read(#field_names)),* }
+    };
+
+    let mut_arm = quote! {
+        #name::#variant_name { #(#field_names),* } => #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::Mut(#field_names)),* }
+    };
+
+    let faillable_none_arm = if fields.named.is_empty() {
+        quote! { #projected_name::#variant_name }
+    } else {
+        let none_field_inits: Vec<_> = field_names.iter().map(|name| quote!(#name: ::natrix::access::Ref::FaillableMut(None))).collect();
+        quote! { #projected_name::#variant_name { #(#none_field_inits),* } }
+    };
+
+    let faillable_some_arm = quote! {
+        #name::#variant_name { #(#field_names),* } => #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::FaillableMut(Some(#field_names))),* }
+    };
+
+    (projected_variant, read_arm, mut_arm, faillable_none_arm, faillable_some_arm)
+}
+
+/// Generate projected variant, read/mut arms, and faillable arms for an unnamed field variant
+fn generate_unnamed_variant_code(
+    variant_name: &syn::Ident,
+    fields: &syn::FieldsUnnamed,
+    name: &syn::Ident,
+    projected_name: &syn::Ident,
+) -> (TokenStream, TokenStream, TokenStream, TokenStream, TokenStream) {
+    let field_types: Vec<_> = fields.unnamed.iter().map(|f| &f.ty).collect();
+    let field_names: Vec<_> = (0..fields.unnamed.len()).map(|i| format_ident!("field_{}", i)).collect();
+    
+    let projected_variant = quote! {
+        #variant_name(#(::natrix::access::Ref<'a, #field_types>),*)
+    };
+
+    let read_arm = quote! {
+        #name::#variant_name(#(#field_names),*) => #projected_name::#variant_name(#(::natrix::access::Ref::Read(#field_names)),*)
+    };
+
+    let mut_arm = quote! {
+        #name::#variant_name(#(#field_names),*) => #projected_name::#variant_name(#(::natrix::access::Ref::Mut(#field_names)),*)
+    };
+
+    let faillable_none_arm = if fields.unnamed.is_empty() {
+        quote! { #projected_name::#variant_name }
+    } else {
+        let none_refs: Vec<_> = (0..fields.unnamed.len()).map(|_| quote!(::natrix::access::Ref::FaillableMut(None))).collect();
+        quote! { #projected_name::#variant_name(#(#none_refs),*) }
+    };
+
+    let faillable_some_arm = quote! {
+        #name::#variant_name(#(#field_names),*) => #projected_name::#variant_name(#(::natrix::access::Ref::FaillableMut(Some(#field_names))),*)
+    };
+
+    (projected_variant, read_arm, mut_arm, faillable_none_arm, faillable_some_arm)
+}
+
+/// Generate projected variant, read/mut arms, and faillable arms for a unit variant
+fn generate_unit_variant_code(
+    variant_name: &syn::Ident,
+    name: &syn::Ident,
+    projected_name: &syn::Ident,
+) -> (TokenStream, TokenStream, TokenStream, TokenStream, TokenStream) {
+    let projected_variant = quote! { #variant_name };
+
+    let read_arm = quote! {
+        #name::#variant_name => #projected_name::#variant_name
+    };
+
+    let mut_arm = quote! {
+        #name::#variant_name => #projected_name::#variant_name
+    };
+
+    let faillable_none_arm = quote! {
+        #projected_name::#variant_name
+    };
+
+    let faillable_some_arm = quote! {
+        #name::#variant_name => #projected_name::#variant_name
+    };
+
+    (projected_variant, read_arm, mut_arm, faillable_none_arm, faillable_some_arm)
+}
+
 /// Create a array of elements based on the format string.
 /// The start of the macro is a closure argument list, which should generally be `|ctx: R<Self>|`
 /// or similar.
@@ -84,91 +183,23 @@ pub fn project_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
 
     for variant in &item.variants {
         let variant_name = &variant.ident;
-        match &variant.fields {
+        let (projected_variant, read_arm, mut_arm, faillable_none_arm, faillable_some_arm) = match &variant.fields {
             syn::Fields::Named(fields) => {
-                let field_names: Vec<_> = fields.named.iter().map(|f| f.ident.as_ref().unwrap()).collect();
-                let field_types: Vec<_> = fields.named.iter().map(|f| &f.ty).collect();
-                
-                projected_variants.push(quote! {
-                    #variant_name { #(#field_names: ::natrix::access::Ref<'a, #field_types>),* }
-                });
-
-                read_arms.push(quote! {
-                    #name::#variant_name { #(#field_names),* } => #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::Read(#field_names)),* }
-                });
-
-                mut_arms.push(quote! {
-                    #name::#variant_name { #(#field_names),* } => #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::Mut(#field_names)),* }
-                });
-
-                if fields.named.is_empty() {
-                    faillable_none_arms.push(quote! {
-                        #projected_name::#variant_name
-                    });
-                } else {
-                    let none_field_inits: Vec<_> = field_names.iter().map(|name| quote!(#name: ::natrix::access::Ref::FaillableMut(None))).collect();
-                    faillable_none_arms.push(quote! {
-                        #projected_name::#variant_name { #(#none_field_inits),* }
-                    });
-                }
-
-                faillable_some_arms.push(quote! {
-                    #name::#variant_name { #(#field_names),* } => #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::FaillableMut(Some(#field_names))),* }
-                });
+                generate_named_variant_code(variant_name, fields, name, &projected_name)
             },
             syn::Fields::Unnamed(fields) => {
-                let field_types: Vec<_> = fields.unnamed.iter().map(|f| &f.ty).collect();
-                let field_names: Vec<_> = (0..fields.unnamed.len()).map(|i| format_ident!("field_{}", i)).collect();
-                
-                projected_variants.push(quote! {
-                    #variant_name(#(::natrix::access::Ref<'a, #field_types>),*)
-                });
-
-                read_arms.push(quote! {
-                    #name::#variant_name(#(#field_names),*) => #projected_name::#variant_name(#(::natrix::access::Ref::Read(#field_names)),*)
-                });
-
-                mut_arms.push(quote! {
-                    #name::#variant_name(#(#field_names),*) => #projected_name::#variant_name(#(::natrix::access::Ref::Mut(#field_names)),*)
-                });
-
-                if fields.unnamed.is_empty() {
-                    faillable_none_arms.push(quote! {
-                        #projected_name::#variant_name
-                    });
-                } else {
-                    let none_refs: Vec<_> = (0..fields.unnamed.len()).map(|_| quote!(::natrix::access::Ref::FaillableMut(None))).collect();
-                    faillable_none_arms.push(quote! {
-                        #projected_name::#variant_name(#(#none_refs),*)
-                    });
-                }
-
-                faillable_some_arms.push(quote! {
-                    #name::#variant_name(#(#field_names),*) => #projected_name::#variant_name(#(::natrix::access::Ref::FaillableMut(Some(#field_names))),*)
-                });
+                generate_unnamed_variant_code(variant_name, fields, name, &projected_name)
             },
             syn::Fields::Unit => {
-                projected_variants.push(quote! {
-                    #variant_name
-                });
-
-                read_arms.push(quote! {
-                    #name::#variant_name => #projected_name::#variant_name
-                });
-
-                mut_arms.push(quote! {
-                    #name::#variant_name => #projected_name::#variant_name
-                });
-
-                faillable_none_arms.push(quote! {
-                    #projected_name::#variant_name
-                });
-
-                faillable_some_arms.push(quote! {
-                    #name::#variant_name => #projected_name::#variant_name
-                });
+                generate_unit_variant_code(variant_name, name, &projected_name)
             }
-        }
+        };
+
+        projected_variants.push(projected_variant);
+        read_arms.push(read_arm);
+        mut_arms.push(mut_arm);
+        faillable_none_arms.push(faillable_none_arm);
+        faillable_some_arms.push(faillable_some_arm);
     }
 
     // For FaillableMut(None), we need to return a valid variant that contains refs
