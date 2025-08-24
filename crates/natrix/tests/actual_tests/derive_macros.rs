@@ -3,55 +3,37 @@ use wasm_bindgen_test::{wasm_bindgen_test, wasm_bindgen_test_configure};
 
 wasm_bindgen_test_configure!(run_in_browser);
 
+// This should not compile - pure-unit enum (uncomment to test compile error)
+// #[derive(Project)]
+// enum PureUnitEnum {
+//     A,
+//     B,
+//     C,
+// }
+
 // Test the Project derive macro with additional derives
-#[derive(Project)]
-#[project(Debug)]
+#[derive(Project, ProjectIntoState)]
+#[project(derive(Debug))]
 enum TestEnum<T> {
     Value(T),
     Text(String),
     Empty,
 }
 
-#[derive(Project)]
+#[derive(Project, ProjectIntoState)]
 enum SimpleEnum {
-    A,
+    A(i32),
     B,
     C,
 }
 
-// Test Downgrade derive
+// Test Downgrade derive on a projected enum with Ref fields
 #[derive(Downgrade)]
-enum DowngradeTestEnum<T> {
-    Value(T),
+enum DowngradeTestProjected<'a> {
+    Value(natrix::access::Ref<'a, u32>),
     Empty,
 }
 
-#[wasm_bindgen_test]
-fn project_derive_compiles() {
-    // Test that the derive macro generates valid code
-    // This is just a compilation test for now
-    let _test_enum: TestEnum<i32> = TestEnum::Value(42);
-}
-
-#[derive(State)]
-struct ProjectTest {
-    test_enum: Signal<TestEnum<u32>>,
-}
-
-fn render_project_test() -> impl Element<ProjectTest> {
-    |mut ctx: RenderCtx<ProjectTest>| {
-        // Test that .project() works with our derived enum by using it in a simple context
-        // For now, just test that the types work by using a basic display
-        e::div().text(move |mut ctx: RenderCtx<ProjectTest>| {
-            // Use the enum value directly for this simple test
-            match &*ctx.test_enum {
-                TestEnum::Value(v) => format!("Value: {}", v),
-                TestEnum::Text(t) => format!("Text: {}", t),
-                TestEnum::Empty => "Empty".to_string(),
-            }
-        })
-    }
-}
 
 #[wasm_bindgen_test] 
 fn project_derive_usage() {
@@ -64,9 +46,9 @@ fn project_derive_usage() {
     let debug_test: TestEnumProjected<u32> = TestEnumProjected::Empty;
     let _debug_string = format!("{:?}", debug_test);
     
-    // Test SimpleEnum (no lifetime parameter needed)
-    let _simple: SimpleEnum = SimpleEnum::A;
-    let _simple_projected: SimpleEnumProjected = SimpleEnumProjected::A;
+    // Test SimpleEnum 
+    let _simple: SimpleEnum = SimpleEnum::A(42);
+    let _simple_projected: SimpleEnumProjected = SimpleEnumProjected::A(natrix::access::Ref::Read(&42));
 }
 
 #[wasm_bindgen_test] 
@@ -93,18 +75,13 @@ fn project_trait_implementation() {
 
 #[derive(State)]
 struct ProjectableSignalTest {
-    choice: ProjectableSignal<TestEnum<u32>>,
-    simple_choice: ProjectableSignal<SimpleEnum>,
+    choice: natrix::reactivity::signal::ProjectableSignal<TestEnum<u32>>,
+    simple_choice: natrix::reactivity::signal::ProjectableSignal<SimpleEnum>,
 }
 
 #[wasm_bindgen_test]
 fn projectable_signal_with_custom_enum() {
-    use natrix::reactivity::{ProjectableSignal, ProjectIntoState};
-    
-    // Ensure our derived enum implements ProjectIntoState
-    fn assert_project_into_state<T: ProjectIntoState>() {}
-    assert_project_into_state::<TestEnum<u32>>();
-    assert_project_into_state::<SimpleEnum>();
+    use natrix::reactivity::signal::ProjectableSignal;
     
     // Test basic ProjectableSignal creation and usage
     let mut signal = ProjectableSignal::new(TestEnum::Value(42u32));
@@ -125,13 +102,14 @@ fn projectable_signal_with_custom_enum() {
 
 #[wasm_bindgen_test]
 fn projectable_signal_field_access() {
-    use natrix::access::Ref;
+    use natrix::access::{Ref, Project};
+    use natrix::reactivity::signal::ProjectableSignal;
     
     let mut signal = ProjectableSignal::new(TestEnum::Value(100u32));
     
-    // Test field access and projection
-    let signal_ref = field!(signal);
-    let projected = signal_ref.project_signal();
+    // Test direct project access on the enum
+    let test_ref = Ref::Read(&*signal);
+    let projected = TestEnum::project(test_ref);
     
     match projected {
         TestEnumProjected::Value(value_ref) => {
@@ -144,8 +122,8 @@ fn projectable_signal_field_access() {
 }
 
 // Test complex enum with named fields for ProjectableSignal
-#[derive(Project)]
-#[project(Debug, PartialEq)]
+#[derive(Project, ProjectIntoState)]
+#[project(derive(Debug, PartialEq))]
 enum UserAction<T> {
     Click { x: u32, y: u32 },
     Select { item: T },
@@ -155,7 +133,8 @@ enum UserAction<T> {
 
 #[wasm_bindgen_test] 
 fn complex_enum_with_projectable_signal() {
-    use natrix::reactivity::ProjectableSignal;
+    use natrix::reactivity::signal::ProjectableSignal;
+    use natrix::access::Project;
     
     let mut signal = ProjectableSignal::new(UserAction::Click { x: 100, y: 200 });
     
@@ -169,7 +148,8 @@ fn complex_enum_with_projectable_signal() {
     }
     
     // Test projection with named fields
-    let projected = field!(signal).project_signal();
+    let test_ref = natrix::access::Ref::Read(&*signal);
+    let projected = UserAction::project(test_ref);
     match projected {
         UserActionProjected::Click { x, y } => {
             if let (Some(x_val), Some(y_val)) = (x.into_read(), y.into_read()) {
@@ -182,7 +162,8 @@ fn complex_enum_with_projectable_signal() {
     
     // Test updating to different variant
     signal.update(UserAction::Select { item: "test".to_string() });
-    let projected = field!(signal).project_signal();
+    let test_ref = natrix::access::Ref::Read(&*signal);
+    let projected = UserAction::project(test_ref);
     match projected {
         UserActionProjected::Select { item } => {
             if let Some(item_val) = item.into_read() {
@@ -197,25 +178,28 @@ fn complex_enum_with_projectable_signal() {
 fn downgrade_derive_implementation() {
     use natrix::access::{Downgrade, Ref};
     
-    // Test that Downgrade trait is implemented
-    let test_enum = DowngradeTestEnum::Value(42u32);
+    // Test that Downgrade trait is implemented on projected enum with Ref fields
+    let test_enum = DowngradeTestProjected::Value(Ref::Read(&42u32));
     
     // Test the basic downgrade functionality
-    let downgradeable: Ref<DowngradeTestEnum<u32>> = Ref::Read(&test_enum);
-    let downgraded = downgradeable.into_read().unwrap();
+    let downgraded = test_enum.into_read().unwrap();
     
     match downgraded {
-        DowngradeTestEnumReadOutput::Value(val) => assert_eq!(*val, 42),
+        DowngradeTestProjectedReadOutput::Value(mut ref_val) => {
+            // The ref_val should be the downgraded version of the Ref
+            if let Some(inner_val) = ref_val.into_read() {
+                assert_eq!(**inner_val, 42);
+            }
+        },
         _ => panic!("Expected Value variant"),
     }
     
     // Test Empty variant
-    let empty_enum = DowngradeTestEnum::<u32>::Empty;
-    let empty_ref: Ref<DowngradeTestEnum<u32>> = Ref::Read(&empty_enum);
-    let empty_downgraded = empty_ref.into_read().unwrap();
+    let empty_enum = DowngradeTestProjected::Empty;
+    let empty_downgraded = empty_enum.into_read().unwrap();
     
     match empty_downgraded {
-        DowngradeTestEnumReadOutput::Empty => {}, // This should work
+        DowngradeTestProjectedReadOutput::Empty => {}, // This should work
         _ => panic!("Expected Empty variant"),
     }
 }

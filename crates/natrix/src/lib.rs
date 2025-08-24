@@ -58,7 +58,7 @@ pub(crate) fn get_window() -> web_sys::Window {
 
 /// Commonly used types and traits.
 pub mod prelude {
-    pub use natrix_macros::{State, Project, Downgrade};
+    pub use natrix_macros::{State, Project, Downgrade, ProjectIntoState};
 
     pub use super::access::{Downgrade, Getter, Project, Ref, RefClosure};
     pub use super::css::selectors::{
@@ -76,7 +76,7 @@ pub mod prelude {
 }
 
 pub use dom::Element;
-pub use natrix_macros::{State, Project, Downgrade, asset, data, format_elements};
+pub use natrix_macros::{State, Project, Downgrade, ProjectIntoState, asset, data, format_elements};
 pub use reactivity::mount::mount;
 pub use reactivity::state::{EventCtx, RenderCtx};
 

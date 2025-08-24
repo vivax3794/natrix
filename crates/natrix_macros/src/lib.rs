@@ -32,22 +32,47 @@ pub fn project_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
     let generics = &item.generics;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
-    // Parse additional derives from attributes
-    let mut additional_derives = quote!();
+    // Parse additional attributes from #[project(...)] 
+    let mut additional_attrs = Vec::new();
     for attr in &item.attrs {
         if attr.path().is_ident("project") {
             if let syn::Meta::List(meta_list) = &attr.meta {
-                // Extract the tokens and create a derive attribute
-                let tokens = &meta_list.tokens;
-                additional_derives = quote!(#[derive(#tokens)]);
+                // Parse the meta list for derive(...) and other attributes
+                let nested = meta_list.parse_args_with(syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated);
+                if let Ok(nested_metas) = nested {
+                    for meta in nested_metas {
+                        match meta {
+                            syn::Meta::List(list) if list.path.is_ident("derive") => {
+                                // Handle derive(...) specially
+                                let derive_tokens = &list.tokens;
+                                additional_attrs.push(quote!(#[derive(#derive_tokens)]));
+                            }
+                            _ => {
+                                // Handle other attributes like serde(...)
+                                additional_attrs.push(quote!(#[#meta]));
+                            }
+                        }
+                    }
+                }
             }
         }
     }
+    let additional_derives = quote!(#(#additional_attrs)*);
 
-    // Generate projected enum generics with lifetime only if needed
-    let needs_lifetime = item.variants.iter().any(|variant| {
+    // Check if this is a pure-unit enum (all variants are unit variants)
+    let has_fields = item.variants.iter().any(|variant| {
         !matches!(variant.fields, syn::Fields::Unit)
     });
+
+    if !has_fields {
+        // Pure-unit enums break invariants with FaillableMut(None)
+        return quote! {
+            compile_error!("Cannot derive Project for pure-unit enums (enums with only unit variants). Project derive requires at least one variant with fields to maintain FaillableMut(None) invariants.")
+        }.into();
+    }
+
+    // Generate projected enum generics with lifetime only if needed
+    let needs_lifetime = has_fields;
 
     // Generate the projected enum
     let projected_name = format_ident!("{}Projected", name);
@@ -217,10 +242,21 @@ pub fn project_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
                 }
             }
         }
-        
-        // Also implement ProjectIntoState to allow usage with ProjectableSignal
+    }
+    .into()
+}
+
+/// Derive the `ProjectIntoState` trait for an enum to enable ProjectableSignal usage
+#[proc_macro_derive(ProjectIntoState)]
+pub fn project_into_state_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let item = syn::parse_macro_input!(item as syn::ItemEnum);
+    let name = &item.ident;
+    let generics = &item.generics;
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
+
+    quote! {
         #[automatically_derived]
-        impl #impl_generics ::natrix::reactivity::ProjectIntoState for #name #type_generics #where_clause {}
+        impl #impl_generics ::natrix::reactivity::signal::ProjectIntoState for #name #type_generics #where_clause {}
     }
     .into()
 }
@@ -264,6 +300,8 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
     }
 
     // Generate ReadOutput and MutOutput enum variants
+    let read_output_name = format_ident!("{}ReadOutput", name);
+    let mut_output_name = format_ident!("{}MutOutput", name);
     let mut read_output_variants = Vec::new();
     let mut mut_output_variants = Vec::new();
     let mut into_read_arms = Vec::new();
@@ -286,7 +324,7 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
                 
                 into_read_arms.push(quote! {
                     Self::#variant_name { #(#field_names),* } => {
-                        Some(ReadOutput::#variant_name {
+                        Some(#read_output_name::#variant_name {
                             #(#field_names: #field_names.into_read()?),*
                         })
                     }
@@ -294,7 +332,7 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
                 into_mut_arms.push(quote! {
                     Self::#variant_name { #(#field_names),* } => {
-                        Some(MutOutput::#variant_name {
+                        Some(#mut_output_name::#variant_name {
                             #(#field_names: #field_names.into_mut()?),*
                         })
                     }
@@ -314,7 +352,7 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
                 
                 into_read_arms.push(quote! {
                     Self::#variant_name(#(#field_names),*) => {
-                        Some(ReadOutput::#variant_name(
+                        Some(#read_output_name::#variant_name(
                             #(#field_names.into_read()?),*
                         ))
                     }
@@ -322,7 +360,7 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
                 into_mut_arms.push(quote! {
                     Self::#variant_name(#(#field_names),*) => {
-                        Some(MutOutput::#variant_name(
+                        Some(#mut_output_name::#variant_name(
                             #(#field_names.into_mut()?),*
                         ))
                     }
@@ -338,18 +376,15 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
                 });
                 
                 into_read_arms.push(quote! {
-                    Self::#variant_name => Some(ReadOutput::#variant_name)
+                    Self::#variant_name => Some(#read_output_name::#variant_name)
                 });
 
                 into_mut_arms.push(quote! {
-                    Self::#variant_name => Some(MutOutput::#variant_name)
+                    Self::#variant_name => Some(#mut_output_name::#variant_name)
                 });
             }
         }
     }
-
-    let read_output_name = format_ident!("{}ReadOutput", name);
-    let mut_output_name = format_ident!("{}MutOutput", name);
 
     quote! {
         // Generate the ReadOutput enum
@@ -370,14 +405,12 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
             type MutOutput = #mut_output_name #type_generics;
 
             fn into_read(self) -> Option<Self::ReadOutput> {
-                use Self::ReadOutput;
                 match self {
                     #(#into_read_arms),*
                 }
             }
 
             fn into_mut(self) -> Option<Self::MutOutput> {
-                use Self::MutOutput;
                 match self {
                     #(#into_mut_arms),*
                 }
