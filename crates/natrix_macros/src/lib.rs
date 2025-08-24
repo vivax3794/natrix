@@ -146,10 +146,22 @@ pub fn project_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
         }
     }
 
-    // For FaillableMut(None), we need to return a valid variant but we don't know which one
-    // Following the pattern from Result, we'll return the first variant
+    // For FaillableMut(None), we need to return a valid variant that contains refs
+    // Find the first variant that contains fields (not a unit variant)
+    let first_variant_with_fields = item.variants.iter().enumerate().find_map(|(idx, variant)| {
+        match &variant.fields {
+            syn::Fields::Unit => None,
+            _ => Some(idx),
+        }
+    });
+    
     let default_faillable_none = quote!(unreachable!());
-    let first_faillable_none = faillable_none_arms.first().unwrap_or(&default_faillable_none);
+    let first_faillable_none = if let Some(field_variant_idx) = first_variant_with_fields {
+        faillable_none_arms.get(field_variant_idx).unwrap_or(&default_faillable_none)
+    } else {
+        // If no variants have fields, just use the first variant (unit variants are fine)
+        faillable_none_arms.first().unwrap_or(&default_faillable_none)
+    };
 
     // Generate the final TokenStream
     let (projected_enum_def, projected_type_for_trait) = if needs_lifetime {
@@ -205,6 +217,10 @@ pub fn project_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
                 }
             }
         }
+        
+        // Also implement ProjectIntoState to allow usage with ProjectableSignal
+        #[automatically_derived]
+        impl #impl_generics ::natrix::reactivity::ProjectIntoState for #name #type_generics #where_clause {}
     }
     .into()
 }
@@ -215,7 +231,7 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
     let item = syn::parse_macro_input!(item as syn::ItemEnum);
     let name = &item.ident;
     let generics = &item.generics;
-    let (_impl_generics, type_generics, where_clause) = generics.split_for_impl();
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
     // Build where clause for Downgrade bounds on all field types
     let mut downgrade_where_clause = if let Some(where_clause) = where_clause {
@@ -247,7 +263,9 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
         downgrade_where_clause = quote! { #downgrade_where_clause #field_type: ::natrix::access::Downgrade<'a>, };
     }
 
-    // Generate arms for into_read and into_mut
+    // Generate ReadOutput and MutOutput enum variants
+    let mut read_output_variants = Vec::new();
+    let mut mut_output_variants = Vec::new();
     let mut into_read_arms = Vec::new();
     let mut into_mut_arms = Vec::new();
 
@@ -256,10 +274,19 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
         match &variant.fields {
             syn::Fields::Named(fields) => {
                 let field_names: Vec<_> = fields.named.iter().map(|f| f.ident.as_ref().unwrap()).collect();
+                let field_types: Vec<_> = fields.named.iter().map(|f| &f.ty).collect();
+                
+                read_output_variants.push(quote! {
+                    #variant_name { #(#field_names: <#field_types as ::natrix::access::Downgrade<'a>>::ReadOutput),* }
+                });
+                
+                mut_output_variants.push(quote! {
+                    #variant_name { #(#field_names: <#field_types as ::natrix::access::Downgrade<'a>>::MutOutput),* }
+                });
                 
                 into_read_arms.push(quote! {
                     Self::#variant_name { #(#field_names),* } => {
-                        Some(Self::#variant_name {
+                        Some(ReadOutput::#variant_name {
                             #(#field_names: #field_names.into_read()?),*
                         })
                     }
@@ -267,7 +294,7 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
                 into_mut_arms.push(quote! {
                     Self::#variant_name { #(#field_names),* } => {
-                        Some(Self::#variant_name {
+                        Some(MutOutput::#variant_name {
                             #(#field_names: #field_names.into_mut()?),*
                         })
                     }
@@ -275,10 +302,19 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
             },
             syn::Fields::Unnamed(fields) => {
                 let field_names: Vec<_> = (0..fields.unnamed.len()).map(|i| format_ident!("field_{}", i)).collect();
+                let field_types: Vec<_> = fields.unnamed.iter().map(|f| &f.ty).collect();
+                
+                read_output_variants.push(quote! {
+                    #variant_name(#(<#field_types as ::natrix::access::Downgrade<'a>>::ReadOutput),*)
+                });
+                
+                mut_output_variants.push(quote! {
+                    #variant_name(#(<#field_types as ::natrix::access::Downgrade<'a>>::MutOutput),*)
+                });
                 
                 into_read_arms.push(quote! {
                     Self::#variant_name(#(#field_names),*) => {
-                        Some(Self::#variant_name(
+                        Some(ReadOutput::#variant_name(
                             #(#field_names.into_read()?),*
                         ))
                     }
@@ -286,37 +322,62 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
                 into_mut_arms.push(quote! {
                     Self::#variant_name(#(#field_names),*) => {
-                        Some(Self::#variant_name(
+                        Some(MutOutput::#variant_name(
                             #(#field_names.into_mut()?),*
                         ))
                     }
                 });
             },
             syn::Fields::Unit => {
+                read_output_variants.push(quote! {
+                    #variant_name
+                });
+                
+                mut_output_variants.push(quote! {
+                    #variant_name
+                });
+                
                 into_read_arms.push(quote! {
-                    Self::#variant_name => Some(Self::#variant_name)
+                    Self::#variant_name => Some(ReadOutput::#variant_name)
                 });
 
                 into_mut_arms.push(quote! {
-                    Self::#variant_name => Some(Self::#variant_name)
+                    Self::#variant_name => Some(MutOutput::#variant_name)
                 });
             }
         }
     }
 
+    let read_output_name = format_ident!("{}ReadOutput", name);
+    let mut_output_name = format_ident!("{}MutOutput", name);
+
     quote! {
+        // Generate the ReadOutput enum
+        #[automatically_derived]
+        pub enum #read_output_name #impl_generics #where_clause {
+            #(#read_output_variants),*
+        }
+        
+        // Generate the MutOutput enum
+        #[automatically_derived]
+        pub enum #mut_output_name #impl_generics #where_clause {
+            #(#mut_output_variants),*
+        }
+
         #[automatically_derived]
         impl<'a> ::natrix::access::Downgrade<'a> for #name #type_generics #downgrade_where_clause {
-            type ReadOutput = Self;
-            type MutOutput = Self;
+            type ReadOutput = #read_output_name #type_generics;
+            type MutOutput = #mut_output_name #type_generics;
 
             fn into_read(self) -> Option<Self::ReadOutput> {
+                use Self::ReadOutput;
                 match self {
                     #(#into_read_arms),*
                 }
             }
 
             fn into_mut(self) -> Option<Self::MutOutput> {
+                use Self::MutOutput;
                 match self {
                     #(#into_mut_arms),*
                 }
