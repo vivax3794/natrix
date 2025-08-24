@@ -24,6 +24,260 @@ pub fn format_elements(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     formatting::format_elements(input)
 }
 
+/// Derive the `Project` trait for an enum
+#[proc_macro_derive(Project, attributes(project))]
+pub fn project_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let item = syn::parse_macro_input!(item as syn::ItemEnum);
+    let name = &item.ident;
+    let generics = &item.generics;
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
+
+    // Parse additional derives from attributes
+    let mut additional_derives = quote!();
+    for attr in &item.attrs {
+        if attr.path().is_ident("project") {
+            if let syn::Meta::List(ref meta_list) = attr.meta {
+                additional_derives = quote!(#[derive #meta_list]);
+            }
+        }
+    }
+
+    // Generate the projected enum - same structure but with Ref<> around field types
+    let projected_name = format_ident!("{}Projected", name);
+    let mut projected_variants = Vec::new();
+    let mut read_arms = Vec::new();
+    let mut mut_arms = Vec::new();
+    let mut faillable_none_arms = Vec::new();
+    let mut faillable_some_arms = Vec::new();
+
+    for variant in &item.variants {
+        let variant_name = &variant.ident;
+        match &variant.fields {
+            syn::Fields::Named(fields) => {
+                let field_names: Vec<_> = fields.named.iter().map(|f| f.ident.as_ref().unwrap()).collect();
+                let field_types: Vec<_> = fields.named.iter().map(|f| &f.ty).collect();
+                
+                projected_variants.push(quote! {
+                    #variant_name { #(#field_names: ::natrix::access::Ref<'a, #field_types>),* }
+                });
+
+                read_arms.push(quote! {
+                    #name::#variant_name { #(#field_names),* } => #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::Read(#field_names)),* }
+                });
+
+                mut_arms.push(quote! {
+                    #name::#variant_name { #(#field_names),* } => #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::Mut(#field_names)),* }
+                });
+
+                faillable_none_arms.push(quote! {
+                    #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::FaillableMut(None)),* }
+                });
+
+                faillable_some_arms.push(quote! {
+                    #name::#variant_name { #(#field_names),* } => #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::FaillableMut(Some(#field_names))),* }
+                });
+            },
+            syn::Fields::Unnamed(fields) => {
+                let field_types: Vec<_> = fields.unnamed.iter().map(|f| &f.ty).collect();
+                let field_names: Vec<_> = (0..fields.unnamed.len()).map(|i| format_ident!("field_{}", i)).collect();
+                
+                projected_variants.push(quote! {
+                    #variant_name(#(::natrix::access::Ref<'a, #field_types>),*)
+                });
+
+                read_arms.push(quote! {
+                    #name::#variant_name(#(#field_names),*) => #projected_name::#variant_name(#(::natrix::access::Ref::Read(#field_names)),*)
+                });
+
+                mut_arms.push(quote! {
+                    #name::#variant_name(#(#field_names),*) => #projected_name::#variant_name(#(::natrix::access::Ref::Mut(#field_names)),*)
+                });
+
+                faillable_none_arms.push(quote! {
+                    #projected_name::#variant_name(#(::natrix::access::Ref::FaillableMut(None)),*)
+                });
+
+                faillable_some_arms.push(quote! {
+                    #name::#variant_name(#(#field_names),*) => #projected_name::#variant_name(#(::natrix::access::Ref::FaillableMut(Some(#field_names))),*)
+                });
+            },
+            syn::Fields::Unit => {
+                projected_variants.push(quote! {
+                    #variant_name
+                });
+
+                read_arms.push(quote! {
+                    #name::#variant_name => #projected_name::#variant_name
+                });
+
+                mut_arms.push(quote! {
+                    #name::#variant_name => #projected_name::#variant_name
+                });
+
+                faillable_none_arms.push(quote! {
+                    #projected_name::#variant_name
+                });
+
+                faillable_some_arms.push(quote! {
+                    #name::#variant_name => #projected_name::#variant_name
+                });
+            }
+        }
+    }
+
+    // For FaillableMut(None), we need to return a valid variant but we don't know which one
+    // Following the pattern from Result, we'll return the first variant
+    let first_faillable_none = faillable_none_arms.first().unwrap_or(&quote!(unreachable!()));
+
+    quote! {
+        #additional_derives
+        #[automatically_derived]
+        pub enum #projected_name #generics {
+            #(#projected_variants),*
+        }
+
+        #[automatically_derived]
+        impl #impl_generics ::natrix::access::Project for #name #type_generics #where_clause {
+            type Projected<'a> = #projected_name #type_generics where Self: 'a;
+
+            fn project(value: ::natrix::access::Ref<'_, Self>) -> Self::Projected<'_> {
+                match value {
+                    ::natrix::access::Ref::Read(v) => match v {
+                        #(#read_arms),*
+                    },
+                    ::natrix::access::Ref::Mut(v) => match v {
+                        #(#mut_arms),*
+                    },
+                    ::natrix::access::Ref::FaillableMut(None) => {
+                        #first_faillable_none
+                    },
+                    ::natrix::access::Ref::FaillableMut(Some(v)) => match v {
+                        #(#faillable_some_arms),*
+                    },
+                }
+            }
+        }
+    }
+    .into()
+}
+
+/// Derive the `Downgrade` trait for an enum
+#[proc_macro_derive(Downgrade)]
+pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let item = syn::parse_macro_input!(item as syn::ItemEnum);
+    let name = &item.ident;
+    let generics = &item.generics;
+    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
+
+    // Build where clause for Downgrade bounds on all field types
+    let mut downgrade_where_clause = if let Some(where_clause) = where_clause {
+        quote! { #where_clause, }
+    } else {
+        quote! { where }
+    };
+
+    // Collect all field types that need Downgrade bounds - use strings for deduplication
+    let mut field_type_strings = std::collections::HashSet::new();
+    for variant in &item.variants {
+        match &variant.fields {
+            syn::Fields::Named(fields) => {
+                for field in &fields.named {
+                    field_type_strings.insert(field.ty.to_token_stream().to_string());
+                }
+            },
+            syn::Fields::Unnamed(fields) => {
+                for field in &fields.unnamed {
+                    field_type_strings.insert(field.ty.to_token_stream().to_string());
+                }
+            },
+            syn::Fields::Unit => {}
+        }
+    }
+
+    for field_type_str in &field_type_strings {
+        let field_type: syn::Type = syn::parse_str(field_type_str).unwrap();
+        downgrade_where_clause = quote! { #downgrade_where_clause #field_type: ::natrix::access::Downgrade<'a>, };
+    }
+
+    // Generate arms for into_read and into_mut
+    let mut into_read_arms = Vec::new();
+    let mut into_mut_arms = Vec::new();
+
+    for variant in &item.variants {
+        let variant_name = &variant.ident;
+        match &variant.fields {
+            syn::Fields::Named(fields) => {
+                let field_names: Vec<_> = fields.named.iter().map(|f| f.ident.as_ref().unwrap()).collect();
+                
+                into_read_arms.push(quote! {
+                    Self::#variant_name { #(#field_names),* } => {
+                        Some(Self::#variant_name {
+                            #(#field_names: #field_names.into_read()?),*
+                        })
+                    }
+                });
+
+                into_mut_arms.push(quote! {
+                    Self::#variant_name { #(#field_names),* } => {
+                        Some(Self::#variant_name {
+                            #(#field_names: #field_names.into_mut()?),*
+                        })
+                    }
+                });
+            },
+            syn::Fields::Unnamed(fields) => {
+                let field_names: Vec<_> = (0..fields.unnamed.len()).map(|i| format_ident!("field_{}", i)).collect();
+                
+                into_read_arms.push(quote! {
+                    Self::#variant_name(#(#field_names),*) => {
+                        Some(Self::#variant_name(
+                            #(#field_names.into_read()?),*
+                        ))
+                    }
+                });
+
+                into_mut_arms.push(quote! {
+                    Self::#variant_name(#(#field_names),*) => {
+                        Some(Self::#variant_name(
+                            #(#field_names.into_mut()?),*
+                        ))
+                    }
+                });
+            },
+            syn::Fields::Unit => {
+                into_read_arms.push(quote! {
+                    Self::#variant_name => Some(Self::#variant_name)
+                });
+
+                into_mut_arms.push(quote! {
+                    Self::#variant_name => Some(Self::#variant_name)
+                });
+            }
+        }
+    }
+
+    quote! {
+        #[automatically_derived]
+        impl<'a> ::natrix::access::Downgrade<'a> for #name #type_generics #downgrade_where_clause {
+            type ReadOutput = Self;
+            type MutOutput = Self;
+
+            fn into_read(self) -> Option<Self::ReadOutput> {
+                match self {
+                    #(#into_read_arms),*
+                }
+            }
+
+            fn into_mut(self) -> Option<Self::MutOutput> {
+                match self {
+                    #(#into_mut_arms),*
+                }
+            }
+        }
+    }
+    .into()
+}
+
 /// Derive the `State` trait for a struct
 #[proc_macro_derive(State)]
 pub fn state_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
