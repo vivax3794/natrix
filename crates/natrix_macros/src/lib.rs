@@ -32,28 +32,24 @@ pub fn project_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
     let generics = &item.generics;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
-    // Generate projected enum generics with lifetime
-    let mut projected_generics = generics.clone();
-    let lifetime_param = syn::GenericParam::Lifetime(syn::LifetimeParam {
-        attrs: vec![],
-        lifetime: syn::Lifetime::new("'a", proc_macro2::Span::call_site()),
-        colon_token: None,
-        bounds: syn::punctuated::Punctuated::new(),
-    });
-    projected_generics.params.insert(0, lifetime_param);
-    let (_projected_impl_generics, projected_type_generics, _projected_where_clause) = projected_generics.split_for_impl();
-
     // Parse additional derives from attributes
     let mut additional_derives = quote!();
     for attr in &item.attrs {
         if attr.path().is_ident("project") {
-            if let syn::Meta::List(ref meta_list) = attr.meta {
-                additional_derives = quote!(#[derive #meta_list]);
+            if let syn::Meta::List(meta_list) = &attr.meta {
+                // Extract the tokens and create a derive attribute
+                let tokens = &meta_list.tokens;
+                additional_derives = quote!(#[derive(#tokens)]);
             }
         }
     }
 
-    // Generate the projected enum - same structure but with Ref<> around field types
+    // Generate projected enum generics with lifetime only if needed
+    let needs_lifetime = item.variants.iter().any(|variant| {
+        !matches!(variant.fields, syn::Fields::Unit)
+    });
+
+    // Generate the projected enum
     let projected_name = format_ident!("{}Projected", name);
     let mut projected_variants = Vec::new();
     let mut read_arms = Vec::new();
@@ -155,16 +151,42 @@ pub fn project_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
     let default_faillable_none = quote!(unreachable!());
     let first_faillable_none = faillable_none_arms.first().unwrap_or(&default_faillable_none);
 
+    // Generate the final TokenStream
+    let (projected_enum_def, projected_type_for_trait) = if needs_lifetime {
+        let mut projected_generics = item.generics.clone();
+        let lifetime_param = syn::GenericParam::Lifetime(syn::LifetimeParam {
+            attrs: vec![],
+            lifetime: syn::Lifetime::new("'a", proc_macro2::Span::call_site()),
+            colon_token: None,
+            bounds: syn::punctuated::Punctuated::new(),
+        });
+        projected_generics.params.insert(0, lifetime_param);
+        let (proj_impl_generics, proj_type_generics, proj_where_clause) = projected_generics.split_for_impl();
+        
+        (quote! {
+            #additional_derives
+            #[automatically_derived]
+            pub enum #projected_name #proj_impl_generics #proj_where_clause {
+                #(#projected_variants),*
+            }
+        }, proj_type_generics.to_token_stream())
+    } else {
+        let (proj_impl_generics, proj_type_generics, proj_where_clause) = generics.split_for_impl();
+        (quote! {
+            #additional_derives
+            #[automatically_derived]
+            pub enum #projected_name #proj_impl_generics #proj_where_clause {
+                #(#projected_variants),*
+            }
+        }, proj_type_generics.to_token_stream())
+    };
+
     quote! {
-        #additional_derives
-        #[automatically_derived]
-        pub enum #projected_name #projected_type_generics {
-            #(#projected_variants),*
-        }
+        #projected_enum_def
 
         #[automatically_derived]
         impl #impl_generics ::natrix::access::Project for #name #type_generics #where_clause {
-            type Projected<'a> = #projected_name #projected_type_generics where Self: 'a;
+            type Projected<'a> = #projected_name #projected_type_for_trait where Self: 'a;
 
             fn project(value: ::natrix::access::Ref<'_, Self>) -> Self::Projected<'_> {
                 match value {
