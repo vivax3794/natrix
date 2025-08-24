@@ -1,7 +1,7 @@
 // Simple test file to understand the patterns
 use natrix::prelude::*;
 
-#[derive(Project, Downgrade)]
+#[derive(Project)]
 enum MyEnum<T> {
     Variant1(T),
     Variant2(String),

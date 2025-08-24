@@ -32,6 +32,17 @@ pub fn project_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
     let generics = &item.generics;
     let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
+    // Generate projected enum generics with lifetime
+    let mut projected_generics = generics.clone();
+    let lifetime_param = syn::GenericParam::Lifetime(syn::LifetimeParam {
+        attrs: vec![],
+        lifetime: syn::Lifetime::new("'a", proc_macro2::Span::call_site()),
+        colon_token: None,
+        bounds: syn::punctuated::Punctuated::new(),
+    });
+    projected_generics.params.insert(0, lifetime_param);
+    let (_projected_impl_generics, projected_type_generics, _projected_where_clause) = projected_generics.split_for_impl();
+
     // Parse additional derives from attributes
     let mut additional_derives = quote!();
     for attr in &item.attrs {
@@ -69,9 +80,16 @@ pub fn project_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
                     #name::#variant_name { #(#field_names),* } => #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::Mut(#field_names)),* }
                 });
 
-                faillable_none_arms.push(quote! {
-                    #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::FaillableMut(None)),* }
-                });
+                if fields.named.is_empty() {
+                    faillable_none_arms.push(quote! {
+                        #projected_name::#variant_name
+                    });
+                } else {
+                    let none_field_inits: Vec<_> = field_names.iter().map(|name| quote!(#name: ::natrix::access::Ref::FaillableMut(None))).collect();
+                    faillable_none_arms.push(quote! {
+                        #projected_name::#variant_name { #(#none_field_inits),* }
+                    });
+                }
 
                 faillable_some_arms.push(quote! {
                     #name::#variant_name { #(#field_names),* } => #projected_name::#variant_name { #(#field_names: ::natrix::access::Ref::FaillableMut(Some(#field_names))),* }
@@ -93,9 +111,16 @@ pub fn project_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
                     #name::#variant_name(#(#field_names),*) => #projected_name::#variant_name(#(::natrix::access::Ref::Mut(#field_names)),*)
                 });
 
-                faillable_none_arms.push(quote! {
-                    #projected_name::#variant_name(#(::natrix::access::Ref::FaillableMut(None)),*)
-                });
+                if fields.unnamed.is_empty() {
+                    faillable_none_arms.push(quote! {
+                        #projected_name::#variant_name
+                    });
+                } else {
+                    let none_refs: Vec<_> = (0..fields.unnamed.len()).map(|_| quote!(::natrix::access::Ref::FaillableMut(None))).collect();
+                    faillable_none_arms.push(quote! {
+                        #projected_name::#variant_name(#(#none_refs),*)
+                    });
+                }
 
                 faillable_some_arms.push(quote! {
                     #name::#variant_name(#(#field_names),*) => #projected_name::#variant_name(#(::natrix::access::Ref::FaillableMut(Some(#field_names))),*)
@@ -127,18 +152,19 @@ pub fn project_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStream 
 
     // For FaillableMut(None), we need to return a valid variant but we don't know which one
     // Following the pattern from Result, we'll return the first variant
-    let first_faillable_none = faillable_none_arms.first().unwrap_or(&quote!(unreachable!()));
+    let default_faillable_none = quote!(unreachable!());
+    let first_faillable_none = faillable_none_arms.first().unwrap_or(&default_faillable_none);
 
     quote! {
         #additional_derives
         #[automatically_derived]
-        pub enum #projected_name #generics {
+        pub enum #projected_name #projected_type_generics {
             #(#projected_variants),*
         }
 
         #[automatically_derived]
         impl #impl_generics ::natrix::access::Project for #name #type_generics #where_clause {
-            type Projected<'a> = #projected_name #type_generics where Self: 'a;
+            type Projected<'a> = #projected_name #projected_type_generics where Self: 'a;
 
             fn project(value: ::natrix::access::Ref<'_, Self>) -> Self::Projected<'_> {
                 match value {
@@ -167,7 +193,7 @@ pub fn downgrade_derive(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
     let item = syn::parse_macro_input!(item as syn::ItemEnum);
     let name = &item.ident;
     let generics = &item.generics;
-    let (impl_generics, type_generics, where_clause) = generics.split_for_impl();
+    let (_impl_generics, type_generics, where_clause) = generics.split_for_impl();
 
     // Build where clause for Downgrade bounds on all field types
     let mut downgrade_where_clause = if let Some(where_clause) = where_clause {

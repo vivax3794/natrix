@@ -2,6 +2,7 @@ mod async_callbacks;
 mod attributes;
 mod classes;
 mod computed;
+mod derive_macros;
 mod events;
 mod generic_component;
 mod guards;
