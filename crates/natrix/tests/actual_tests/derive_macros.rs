@@ -19,6 +19,14 @@ enum SimpleEnum {
     C,
 }
 
+// Test Downgrade derive - basic compilation test  
+// Note: Downgrade derive is experimental and may have limitations
+// #[derive(Downgrade)]
+// enum DowngradeTestEnum<T> {
+//     Value(T),
+//     Empty,
+// }
+
 #[wasm_bindgen_test]
 fn project_derive_compiles() {
     // Test that the derive macro generates valid code
