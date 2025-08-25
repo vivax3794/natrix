@@ -4,10 +4,6 @@
     reason = "The whole point of guards is doing unwraps internally."
 )]
 
-// TODO: Make guards "derivable"
-// We can prolly generate a extension trait and impl it for `RenderCtx` automatically from a
-// derive.
-
 use super::{RenderCtx, State};
 use crate::access::Ref;
 
@@ -76,7 +72,6 @@ impl<C: State> RenderCtx<'_, '_, C> {
     /// # Panics
     /// The return method will panic if called outside intended scope.
     /// Which in most cases means async.
-    // TODO: Lint against manual guard impl.
     #[inline]
     pub fn guard_option<F, T>(
         &mut self,

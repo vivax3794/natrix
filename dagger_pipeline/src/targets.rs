@@ -8,13 +8,6 @@ use serde::{Deserialize, Serialize};
 use crate::TestCommand;
 use crate::prelude::*;
 
-// MAYBE: Unused features
-// MAYBE: Record timing info
-
-// MAYBE: Check for semver breaking changes.
-// Actually that might just need to be a pure CI thing
-// I dont really see how useful it is to run it locally.
-
 /// Unit Test suite name
 const UNIT_TESTS: &str = "Unit Tests";
 /// Linters test suite name
@@ -929,11 +922,6 @@ pub enum IntegrationTestMode {
 /// Run the integration tests against `natrix dev`
 /// INVARIANT: This should not run in parallel as it has timeouts that could be affected by CPU
 /// churn
-// TEST: We cant do the reload test with this containerzed setup.
-// As the integration test needs to modify the files the dev server is watching.
-// TEST: Does not allow the `dist` tests.
-// PERF: the chromedriver sercice seemingly takes a while to pass health checks for some
-// reason.
 pub async fn integration_test(
     client: &Query,
     mode: IntegrationTestMode,
@@ -990,8 +978,6 @@ pub async fn integration_test(
 }
 
 /// Run benchmarks
-// TODO: This doesnt run with the full natrix optimization settings.
-// TODO: Make benchmarks more stable (limit cpu?)
 pub async fn benchmark(client: &Query) -> Result<String> {
     let result = crate::base_images::wasm(client)
         .with_exec(vec!["rustup", "default", "nightly"])

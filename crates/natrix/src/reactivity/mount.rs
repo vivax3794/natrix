@@ -1,7 +1,5 @@
 //! State traits
 
-// TODO: remove reference to "component"
-
 use std::cell::RefCell;
 use std::rc::Rc;
 

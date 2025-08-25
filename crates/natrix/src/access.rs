@@ -1,10 +1,6 @@
 //! Various traits and functions for writing reusable getter closures.
 //! Most abstractions here are built around the `Ref` enum.
 
-// TODO: (opt-in) Lint for non-maximally flexible closure forms.
-// * `-> Ref<Option<T>>` if the `Option` variant is never changed (prefer `-> Option<Ref<T>>`)
-// (same for Result)
-// * `-> Ref<Signal<T>>` (prefer `-> Ref<T>`) (`Ref<T>` where `T` is a non-signal `State` is fine)
 use std::ops::{Deref, DerefMut};
 
 /// Either a `&T` or a `&mut T`
@@ -25,13 +21,11 @@ pub enum Ref<'a, T: ?Sized> {
     Mut(&'a mut T),
     /// a `Option<&mut T>` (used in async)
     FaillableMut(Option<&'a mut T>),
-    // MAYBE: A owned variant?
 }
 
 impl<'a, T: ?Sized> Ref<'a, T> {
     /// Run a given function depending on whether its a `&` or `&mut`.
     /// These need to return the same type.
-    // TODO: Lint against doing mutations in `write` (might be hard to detect.)
     #[inline]
     #[must_use]
     pub fn map<R: ?Sized>(
@@ -91,7 +85,6 @@ impl<'a, T: ?Sized> From<&'a mut T> for Ref<'a, T> {
 
 /// for example `Ref<Option<T>>` to `Option<Ref<T>>`, basically a abstraction over the various
 /// `as_mut`/`as_ref` methods.
-// TODO: Make this deriveble.
 pub trait Project: Sized {
     /// The result of the projection, should contain `Ref`s with the `'a` lifetime.
     type Projected<'a>
@@ -146,7 +139,6 @@ impl<T, E> Project for Result<T, E> {
 ///
 /// Note, to avoid unwraps in your code for this you can use `RefClosure` apis instead.
 /// Which hides the unwrap behind the assumption the closure is well behaved (maintains variant.)
-// MAYBE: Make derivable
 pub trait Downgrade<'a> {
     /// The `&` version of this type.
     type ReadOutput;
@@ -247,7 +239,6 @@ where
 /// And allows calling them with normal references and getting normal references back.
 ///
 /// You should generally not use this bounds, and instead opt for the `impl Fn...` syntax.
-// TODO: Create lint against using `call_read` and `call_mut` in async context.
 pub trait RefClosure<'a, I: ?Sized, T: Downgrade<'a>> {
     /// Call the read path of this closure.
     /// This will never fail

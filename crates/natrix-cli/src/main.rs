@@ -16,8 +16,6 @@ mod options;
 mod project_gen;
 mod utils;
 
-// TODO: Disable colors in non-interactive terminals.
-
 fn main() -> Result<()> {
     let cli = options::Cli::parse();
 

@@ -6,11 +6,6 @@ use syn::parse::Parse;
 use syn::punctuated::Punctuated;
 use syn::{Expr, LitStr, Token};
 
-// MAYBE: Similar macro for `<ruby>` element
-// Because when used it requires a lot of wrapping,
-// what might naturally be written as "明日 (Ashita)" needs to be converted to
-// `<ruby> 明日 <rp>(</rp><rt>Ashita</rt><rp>)</rp> </ruby>`
-
 /// Input to the macro
 struct Input {
     /// Maybe a `move` beforehand

@@ -8,8 +8,6 @@ use crate::error_handling::{log_or_panic, log_or_panic_assert};
 use crate::reactivity::State;
 use crate::reactivity::render_callbacks::ReactiveHook;
 
-// MAYBE: feature flag to extend to larger types
-
 /// The slot of the key
 /// This is the number of concurrent hooks we can have.
 /// atm around 65k
@@ -93,11 +91,8 @@ impl<T> Default for Slot<T> {
 /// A manager for storing hooks
 pub(crate) struct HookStore<T: State> {
     /// The hooks themself
-    // PERF: Vector does not need len/capactiy of `usize`, can use `KeySlot`
-    // PERF: Vector doesnt need to store len, we can always just fully fill with with null pointers
     hooks: Vec<Slot<T>>,
     /// The free spots in the hooks.
-    // PERF: We dont need `Empty` variant in theory
     free: Vec<KeySlot>,
     /// The next key in the insertion order
     next_insertion_order: InsertionOrder,

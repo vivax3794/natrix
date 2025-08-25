@@ -74,7 +74,6 @@ impl<C: State> RenderCtx<'_, '_, C> {
     /// }
     /// # }}
     /// ```
-    // TODO: Lint against non-trivial (bools) conditions with complex results. (suggest using watch)
     #[inline]
     pub fn watch<T, F>(&mut self, func: F) -> T
     where

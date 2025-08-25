@@ -8,10 +8,6 @@ use crate::css::values::units::Percentage;
 #[derive(Clone, Copy, Debug)]
 pub struct KeyFrame(pub &'static str);
 
-// SPEC: Keyframes cant contain `!important`
-// (which we currently dont support setting on properties to begin with)
-// SPEC: Not all properties can be animated in keyframes
-
 impl IntoCss for KeyFrame {
     fn into_css(self) -> String {
         super::as_css_identifier(self.0)

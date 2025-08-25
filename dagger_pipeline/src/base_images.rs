@@ -163,7 +163,6 @@ fn chrome(client: &Query, container: &Container) -> Container {
 }
 
 /// Install a tool with binstall and return a bin folder
-// MAYBE: Lock version and specify hashes using a "CI Lockfile"
 pub fn binstall(client: &Query, tool: &'static str) -> Directory {
     rust(client)
         .with_exec(vec!["cargo", "install", "cargo-binstall"])

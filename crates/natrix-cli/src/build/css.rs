@@ -1,7 +1,5 @@
 //! Bundle and optimize css
 
-// TODO: Add option to check css for correctness.
-
 use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;

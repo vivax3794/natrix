@@ -4,9 +4,6 @@ use super::values;
 use crate::css::selectors::IntoSelectorList;
 use crate::css::values::IntoCss;
 
-// TODO: Implement css properties
-// MAYBE: `!important`, it is a hack, and one shouldnt really need it.
-
 /// A collection of css rules
 #[must_use]
 pub struct RuleCollection {

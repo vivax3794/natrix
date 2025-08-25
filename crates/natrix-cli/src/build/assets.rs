@@ -1,9 +1,5 @@
 //! Assets bundling and optimization
 
-// TODO: Dead code eliminate assets.
-// TODO: Asset optimizations
-// TODO: Allow marking certain assets for pre-loading (using link tag in `<head>`)
-
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;

@@ -11,9 +11,6 @@ use crate::prelude::*;
 use crate::project_gen::FEATURE_NO_SGG;
 use crate::{options, utils};
 
-// PERF: Instead of passing files around see if we are able to use pipes to keep stuff in memory
-// Might be hard with `optimize_wasm` due to us also needing to read the rename map from stdout.
-
 /// A renaming map for the wasm-bindgen glue code.
 #[derive(Debug)]
 pub(crate) struct RenameMap(HashMap<Box<str>, Box<str>>);

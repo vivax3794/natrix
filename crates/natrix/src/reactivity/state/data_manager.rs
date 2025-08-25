@@ -111,9 +111,6 @@ impl HookQueue {
             log::trace!("current queue: {:?}", self.queue);
             let (hook, source_index) = self.queue.pop()?.data;
 
-            // PERF: We know the `source_index` is valid, but I dont think there is a nice way in rust
-            // to enforce that invariant (maybe something fancy with marker lifetimes)
-            // Hopefully rust optimizes out the bounds check?
             if let Some(vector) = self.vectors.get_mut(source_index) {
                 while let Some((next_hook, ordering)) = get_next_valid(hook_store, vector) {
                     if Some(next_hook) != self.last_hook {
@@ -143,8 +140,6 @@ impl HookQueue {
 }
 
 /// Trait automatically implemented on reactive structs by the derive macro.
-// TODO: lint again direct overwriting States.
-// TODO: lint against using `.set` when not required. (on signals)
 pub trait State: Sized + 'static {
     /// Overwrite the value of this state while preserving reactive tracking.
     /// Generally prefer derefences.

@@ -9,12 +9,7 @@ use crate::prelude::State;
 use crate::reactivity::state::SignalDepList;
 use crate::reactivity::statics;
 
-// TODO: Signal list
-// TODO: Signal hashmap
-// MAYBE: A way to make the above work with stdlib types?
-
 /// A signal tracks reads and writes to a value, as well as dependencies.
-// TODO: Create lint against using interor mutability in signals.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Signal<T> {

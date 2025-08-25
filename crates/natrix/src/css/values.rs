@@ -1,10 +1,5 @@
 //! Types for the various css values
 
-// TODO: Implement all css values
-// TODO: Css variables
-// TODO: Numeric calculations
-// TODO: More "color" types such as gradients.
-
 mod animations;
 mod colors;
 pub mod units;
@@ -156,7 +151,6 @@ define_enum! {
     {
         Baseline => "baseline",
         First => "first baseline",
-        // SPEC: Last-baseline not supported on `align-content`
         Last => "last baseline",
     }
 }
@@ -456,7 +450,6 @@ define_enum! {
         Inch => "in",
         Pica => "pc",
         Point => "pt",
-        // SPEC: Not valid in `@page` blocks
         ViewportHeight => "vh",
         ViewportWidth => "vw",
         ViewportMax => "vmax",

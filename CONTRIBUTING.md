@@ -61,53 +61,9 @@ When implementing new features, try to build on existing functionality in order 
 ## Comment style
 Natrix has a few "comment tags" we use:
 
-> [!NOTE]
-> While the codebase currently uses this, once we hit a proper public release we plan to migrate to github issues.
-
 * `NOTE` - Justifications or context for surrounding code 
 * `HACK` - Working around a third party bug, link to relevant issues.
 * `INVARIANT` - A *internal* invariant that must be upheld by calling code, these a good target for refactor to move invariants to compile time.
-
-* `TEST` - A test that should get written
-* `TODO` - Unimplemented planned feature
-* `MAYBE` - Features we might or might not implement
-* `BUG` - Something is broken
-
-* `REFACTOR` - A fully working feature that could be improved.
-* `PERF` - Potential for optimization
-* `SPEC` - A un-enforced web-standard invariant, these are candidates for introducing more compile-time or runtime-checks, but are not hard todos. They should be considered a blend of `TODO`, `MAYBE`, and `BUG`
-
-### Editor Setup for Comment Tags
-
-Most editors have plugins that can highlight and navigate these comment tags. Here are some common setups:
-
-**Neovim (todo-comments.nvim):**
-```lua
-{
-    "folke/todo-comments.nvim",
-    dependencies = { "nvim-lua/plenary.nvim" },
-    opts = {
-        keywords = {
-            REFACTOR = { icon="󰃣" },
-            MAYBE = { icon="?" },
-            INVARIANT = { icon = " ", color = "warning" },
-            SPEC = {
-                icon=" ",
-                color = "error",
-            },
-        }
-    },
-}
-```
-
-**VS Code:** Install the "Todo Tree" extension and add the custom keywords to your settings.json:
-```json
-{
-    "todo-tree.general.tags": [
-        "NOTE", "HACK", "INVARIANT", "TEST", "TODO", "MAYBE", "BUG", "REFACTOR", "PERF", "SPEC"
-    ]
-}
-```
 
 ## Pull Request Process
 1. If possible please try to run test suits before creating a PR. If you local machine takes too long the tests will always be run on CI anyway.

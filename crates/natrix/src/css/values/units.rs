@@ -24,7 +24,6 @@ macro_rules! unit {
 pub struct Percentage(pub f32);
 
 /// A css `<length>` value,
-// REFACTOR: I am not really happy with the current length setup.
 #[derive(Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(
     all(test, not(target_arch = "wasm32")),

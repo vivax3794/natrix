@@ -1,10 +1,5 @@
 //! Various internal error handling mechanisms
 
-// TODO: Make logging configurable with feature flags.
-// * always - warnings and errors
-// * public - logs useful for users to see
-// * internal - logs from internals that are generally only useful for debugging natrix itself.
-
 /// Cold path hint, causes compiler to better optimize unlikely error paths.
 #[cold]
 pub(crate) fn cold_path() {}

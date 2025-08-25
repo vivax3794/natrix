@@ -5,10 +5,6 @@
 // The code in this module is intended to be used at bundling time, and hence will not be included
 // in production applications.
 
-// TODO: Allow composing css rules similar to css-modules `composes`
-// TODO: Media Queries
-// TODO: Other at rules
-
 use std::fmt::Write;
 
 use crate::error_handling::log_or_panic_result;
@@ -33,7 +29,6 @@ pub trait IntoCss {
 }
 
 /// Escape special characthers in string such that it becomes a valid css identifier
-// TEST: Ensure the output still matches html elements with the input
 #[must_use]
 pub fn as_css_identifier(input: &str) -> String {
     let mut result = String::with_capacity(input.len().saturating_mul(4));
@@ -215,7 +210,6 @@ fn css_emit(css_string: &str) {
 ///
 /// const MY_CLASS: Class = class!(); // <-- uses `unique_str`
 /// ```
-// MAYBE: Have bundler collect these and determine the required length to avoid collisions.
 #[macro_export]
 macro_rules! unique_str {
     () => {{
@@ -258,7 +252,6 @@ fn assert_valid_css(string: &str) {
                 panic!("The following code produced warnings\n{string}");
             }
 
-            // REFACTOR: Use a proper visitor for this.
             let debug_reps = format!("{stylesheet:?}");
             let invalid = debug_reps.contains("Unparsed") || debug_reps.contains("Unknown");
             assert!(

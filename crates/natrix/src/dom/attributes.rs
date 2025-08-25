@@ -161,8 +161,6 @@ where
     }
 }
 
-// TEST: Auto generate tests for validity
-
 /// Defines an enum that represents the value of an enumerated HTML attribute.
 macro_rules! define_attribute_enum {
     (

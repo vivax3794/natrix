@@ -1,9 +1,5 @@
 //! Build a natrix project
 
-// MAYBE: Allow selecting target browser version
-// All we can really do is polyfill css, and error if wasm isnt supported.
-// But like we cant easially polyfill html attributes, html tags, etc, since thats all runtime.
-
 use std::fs;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -98,7 +94,6 @@ pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManife
 }
 
 /// Generate the html file to be used
-// TODO: Allow users to customize html file contents.
 pub(crate) fn generate_html(
     config: &options::BuildConfig,
     wasm_file: &Path,

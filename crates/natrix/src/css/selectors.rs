@@ -5,13 +5,6 @@ use std::ops::Deref;
 use crate::css::IntoCss;
 use crate::error_handling::log_or_panic_assert;
 
-// TODO: Document that you can clone selectors to get "nesting"
-
-// MAYBE: Make selector generic over target elements allowing us to constrain properties that are
-// allowed on them.
-
-// TEST: Property test
-
 /// A list of selectors (`,`)
 #[derive(Debug, Clone)]
 pub struct SelectorList(pub Vec<FinalizedSelector>);
@@ -133,10 +126,6 @@ impl IntoCss for CompoundSelector {
 }
 
 /// A simple selector
-// MAYBE: Data selector
-// SPEC: The `Tag*` types do *not* implement `IntoSimpleSelector`, because they can
-// only be at the start of a compound selector, but the lower level api still allows
-// `BTN.and(SimpleSlector::Tag(...))`, unsure whether we should bother changing this.
 #[derive(Debug, Clone)]
 pub enum SimpleSelector {
     /// A css tag
@@ -280,7 +269,6 @@ impl NthArgument {
     }
 }
 
-// TEST: Auto generate validity tests
 define_pseudo_class!(
     active, autofill, checked, default, defined, disabled, empty, enabled, first, focus,
     hover, indeterminate, invalid, link, modal, optional, required, root, scope, target,
@@ -311,7 +299,6 @@ impl IntoSimpleSelector for PseudoClass {
 }
 
 /// Define `PseudoClassNested`
-// TEST: Auto generate validity tests
 macro_rules! define_pseudo_class_nested {
     (
         $($c_def:ident($($c_arg:ty),*): $c_pat:pat => $c_expr:expr, $c_doc:literal);*;
@@ -339,9 +326,7 @@ macro_rules! define_pseudo_class_nested {
     };
 }
 
-// SPEC: can not contain pseudo-elements;
 define_pseudo_class_nested!(
-    // SPEC: `has` can not be nested inside another `has`
     Has(S): Has(list) => format!("has({})", list.into_list().into_css()), "has";
     HasWithCombinator(Combinator, S): HasWithCombinator(combinator, list) => format!("has({}{})", combinator.into_css(), list.into_list().into_css()), "has";
     Is(S): Is(list) => format!("is({})", list.into_list().into_css()), "is";
@@ -456,8 +441,6 @@ impl From<Id> for &'static str {
 /// # use natrix::prelude::*;
 /// const MY_ID: Id = natrix::id!();
 /// ```
-// MAYBE: Runtime unique ids as well?
-// Might be useful for certain usecases
 #[macro_export]
 macro_rules! id {
     () => {
@@ -512,7 +495,6 @@ impl<T: IntoSimpleSelector> IntoCompoundSelector for T {
 }
 
 /// Define pseudo element methods
-// TEST: Auto generate validity tests
 macro_rules! pseudo_elements {
     ($($element:ident),*; $($element_lit:literal => $method:ident),*) => {
         pastey::paste! {

@@ -1,7 +1,5 @@
 //! Implementation of event traits as well as a helper trait for event handlers.
 
-// SPEC: certain events can only be put on certain elements.
-
 use wasm_bindgen::JsCast;
 
 use crate::reactivity::state::EventCtx;

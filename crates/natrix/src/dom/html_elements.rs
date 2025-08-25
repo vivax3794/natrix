@@ -186,9 +186,6 @@ impl<C: State, T> HtmlElement<C, T> {
     ///     })
     /// # }
     /// ```
-    // SPEC: Some html elements are only allowed inside specific other ones.
-    // SPEC: Some html elements only allow specific other elements
-    // MAYBE: Allow passing a closure returning a iterator (and somehow make that reactive)
     #[inline]
     pub fn child<E: Element<C> + 'static>(mut self, child: E) -> Self
     where
@@ -417,8 +414,6 @@ macro_rules! aria_attrs {
 // "sane defaults" should not be the defaults for element constructors.
 // and should instead be implemented via extra methods, such as `.secure`
 
-// MAYBE: Implement aliases for html tags. such as `heading1` >= `h1`.
-
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Element
 elements! {
     h1, h2, h3, h4, h5, h6,
@@ -451,13 +446,6 @@ can_have_children! {
     button, datalist, fieldset, form, label, legend, meter, optgroup, option, output, progress, select, textarea,
     details, dialog, summary
 }
-
-// MAYBE: Implement aliases for attributes, such as `relation` => `rel`.
-// To be clear, we do currently rename attributes, such as `auto_focus` => `autofocus`,
-// But for the "well-known" attributes we arent expanding abbrivations, because if we are being
-// honest people know what `rel` is, they might even be confused by `relation`.
-// But stuff like `encoding_type` is much better than `enctype`
-// TEST: Somehow verify that all these attribute names are accurate.
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes
 global_attrs! {
@@ -516,7 +504,6 @@ impl<C: State> HtmlElement<C, TagA> {
     }
 }
 
-// SPEC: type safe coords
 attr_helpers!(area =>
     alt(String, "alt"), coords(String, "coords"), download(bool, "download"),
     href(String, "href"), ping(String, "ping"), referrer_policy(attributes::ReferrerPolicy, "referrerpolicy"),
@@ -540,9 +527,9 @@ attr_helpers!(canvas => height(attributes::Integer, "height"), width(attributes:
 attr_helpers!(col => span(attributes::Integer, "span"));
 attr_helpers!(colgroup => span(attributes::Integer, "span"));
 attr_helpers!(data => value(String, "data"));
-attr_helpers!(del => cite(String, "cite")); // TODO: datetime
-attr_helpers!(details => open(bool, "open"), name(String, "name")); // SPEC: Enforce `unique_str`
-attr_helpers!(dialog => open(bool, "open")); // SPEC: deny tabindex
+attr_helpers!(del => cite(String, "cite"));
+attr_helpers!(details => open(bool, "open"), name(String, "name"));
+attr_helpers!(dialog => open(bool, "open"));
 attr_helpers!(embed =>
     height(attributes::Integer, "height"), width(attributes::Integer, "width"),
     src(String, "src"), mime_type(String, "type")
@@ -554,7 +541,6 @@ attr_helpers!(form =>
     no_validate(bool, "novalidate"), target(attributes::Target, "target")
 );
 
-// TODO: allow
 attr_helpers!(iframe =>
     height(attributes::Integer, "height"), loading(attributes::Loading, "loading"),
     name(String, "name"), referrer_policy(attributes::ReferrerPolicy, "referrerpolicy"),
@@ -572,7 +558,6 @@ impl<C: State> HtmlElement<C, TagIframe> {
     }
 }
 
-// TODO: sizes, srcset
 attr_helpers!(img =>
     alt(String, "alt"), cross_origin(attributes::CrossOrigin, "crossorigin"), decoding(attributes::ImageDecoding, "decoding"),
     fetch_priority(attributes::FetchPriority, "fetchpriority"), height(attributes::Integer, "height"), is_map(bool, "ismap"),
@@ -580,12 +565,10 @@ attr_helpers!(img =>
     src(String, "src"), width(attributes::Integer, "width"), use_map(String, "usemap")
 );
 
-// TODO: All of input, we want to special case it.
-
-attr_helpers!(ins => cite(String, "cite")); // TODO: datetime
+attr_helpers!(ins => cite(String, "cite"));
 attr_helpers!(label => is_for(Id, "for"));
 attr_helpers!(li => value(attributes::Integer, "value"));
-attr_helpers!(map => name(String, "name")); // SPEC: name and id need to be identical
+attr_helpers!(map => name(String, "name"));
 
 attr_helpers!(meter =>
     value(attributes::Float, "value"),
@@ -618,7 +601,6 @@ attr_helpers!(select =>
     name(String, "name"), required(bool, "required"), size(attributes::Integer, "size")
 );
 
-// TODO: srcset, sizes, media
 attr_helpers!(source =>
     source_type(String, "type"), src(String, "src"),
     height(attributes::Integer, "height"), width(attributes::Integer, "width")

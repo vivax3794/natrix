@@ -1,8 +1,5 @@
 //! Reactivity system for tracking dependencies and updates.
 
-// TODO: A router, using global state stores
-// TODO: Allow setting `<head>` content reactively
-
 pub mod mount;
 pub mod render_callbacks;
 pub mod signal;

@@ -1,7 +1,5 @@
 //! Types for handling the component state
 
-// TODO: Reacting to reactive changes
-
 #[cfg(feature = "async")]
 mod async_state;
 mod core;

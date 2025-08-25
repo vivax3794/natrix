@@ -1,9 +1,5 @@
 //! Run the CI pipeline using dagger
 
-// TODO: `cargo-sweep` caches.
-// TODO: Run in github actions
-// TODO: Publish book in github actions.
-
 mod base_images;
 mod fix;
 mod report;
@@ -70,7 +66,6 @@ mod prelude {
     }
 
     impl ContainerExtension for Container {
-        // MAYBE: Allow to specify needed crates.
         fn with_workspace(&self, client: &Query) -> Container {
             let workspace = client.host().directory_opts(
                 ".",
