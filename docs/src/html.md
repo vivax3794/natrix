@@ -177,7 +177,7 @@ e::div()
 # ;
 ```
 
-Attributes can be set by anything that implements the [`ToAttribute`](dom::ToAttribute) trait, this includes numberics, [`Option`](std::option::Option), and [`bool`](std::primitive::bool), and others.
+Attributes can be set by anything that implements the [`ToAttribute`](dom::ToAttribute) trait, this includes numerics, [`Option`](std::option::Option), and [`bool`](std::primitive::bool), and others.
 Attributes can also be reactive as closures implement the [`ToAttribute`](dom::ToAttribute) trait.
 
 ```rust,no_run
