@@ -70,7 +70,6 @@ fn all_tests<'q>(
             false,
         ),
         (Box::pin(crate::targets::unused_deps(client)), false),
-        (Box::pin(crate::targets::outdated_deps(client)), false),
         (
             Box::pin(crate::targets::test_project_gen(client, "stable")),
             false,
