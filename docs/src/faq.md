@@ -23,7 +23,7 @@ As well as using various cargo and rust build flags to optimize the binary size.
 Yes, all css defined in dependencies is bunlded (and DCE-ed!) automatically if you use a dependency from crates.io with no extra setup needed. Similar to what you might be familiar with from component libraries in the js world. This is a unique feature of natrix, as most other rust frameworks require you to manually add the css to your project.
 
 ## Can you use natrix without `#[derive(State)]`?
-Totally, `State` is just a marker trait, and the derive macros job is ensuring you dont accidently use non-`State` fields. 
+Totally, `State` is just a marker trait, and the derive macros job is ensuring you dont accidentally use non-`State` fields. 
 
 ## Can you use `natrix` with other frameworks?
 

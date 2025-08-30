@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 # CLI
-clap = { version = "4.5.45", features = ["derive"] }
+clap = { version = "4.5.46", features = ["derive"] }
 eyre = "0.6.12"
 
 # CI/CD
