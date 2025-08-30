@@ -594,30 +594,6 @@ pub async fn unused_deps(client: &Query) -> Result<Vec<TestResult>> {
     .await
 }
 
-/// Run `cargo-udeps` on the given folder
-pub async fn outdated_deps(client: &Query) -> Result<Vec<TestResult>> {
-    run_linter(
-        client,
-        LinterConfig {
-            name: "Outdated dependencies".to_string(),
-            needs_binstall: vec!["cargo-outdated"],
-            command: vec![
-                "cargo",
-                "outdated",
-                "--workspace",
-                "--root-deps-only",
-                "--exit-code",
-                "1",
-                "--exclude",
-                "thirtyfour", // HACK: Newest version breaks CI.
-            ],
-            capture_stderr: false,
-            ..Default::default()
-        },
-    )
-    .await
-}
-
 /// Build the cli
 pub fn cli(client: &Query) -> Directory {
     let file = crate::base_images::rust(client)
