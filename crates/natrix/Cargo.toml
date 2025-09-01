@@ -27,6 +27,7 @@ ryu = "1.0.20"
 smallvec = "1.15.1"
 pastey = "0.1.1"
 cfg-if = "1.0.3"
+nohash = "0.2.0"
 
 # CSS
 const_base = "0.2.0"

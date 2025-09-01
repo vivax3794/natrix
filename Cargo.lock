@@ -1857,6 +1857,7 @@ dependencies = [
  "log",
  "natrix_macros",
  "natrix_shared",
+ "nohash",
  "pastey",
  "pin-project",
  "proptest",
@@ -1916,6 +1917,12 @@ version = "0.3.0"
 dependencies = [
  "bincode",
 ]
+
+[[package]]
+name = "nohash"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0f889fb66f7acdf83442c35775764b51fed3c606ab9cee51500dbde2cf528ca"
 
 [[package]]
 name = "nonmax"
