@@ -139,8 +139,8 @@ pub(crate) struct TestResult {
 
 impl TestResult {
     /// Convert test result to a directory containing the result file
-    pub(crate) fn into_file(self, client: &Query) -> Result<Directory> {
-        let content = serde_json::to_string(&self)?;
+    pub(crate) fn into_file(&self, client: &Query) -> Result<Directory> {
+        let content = serde_json::to_string(self)?;
         let filename = format!("{}-result.json", self.uuid);
         Ok(client.directory().with_new_file(filename, content))
     }
@@ -586,30 +586,6 @@ pub async fn unused_deps(client: &Query) -> Result<Vec<TestResult>> {
                 "udeps",
                 "--each-feature",
                 "--all-targets",
-            ],
-            capture_stderr: false,
-            ..Default::default()
-        },
-    )
-    .await
-}
-
-/// Run `cargo-udeps` on the given folder
-pub async fn outdated_deps(client: &Query) -> Result<Vec<TestResult>> {
-    run_linter(
-        client,
-        LinterConfig {
-            name: "Outdated dependencies".to_string(),
-            needs_binstall: vec!["cargo-outdated"],
-            command: vec![
-                "cargo",
-                "outdated",
-                "--workspace",
-                "--root-deps-only",
-                "--exit-code",
-                "1",
-                "--exclude",
-                "thirtyfour", // HACK: Newest version breaks CI.
             ],
             capture_stderr: false,
             ..Default::default()

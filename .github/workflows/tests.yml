@@ -1,0 +1,34 @@
+name: Tests and lints
+
+on:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Install dagger
+        run: curl -fsSL https://dl.dagger.io/dagger/install.sh | BIN_DIR=$HOME/.local/bin sh
+
+      - name: Run tests
+        id: tests
+        run: dagger run cargo run -p dagger_pipeline -- tests --export
+        continue-on-error: true
+        env:
+          _EXPERIMENTAL_DAGGER_BUILDKIT_FLAGS: --cache-to type=gha --cache-from type=gha
+
+      
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: ./allure_report
+
+      - name: Fail Workflow
+        if: steps.tests.outcome == 'failure'
+        run: exit 1

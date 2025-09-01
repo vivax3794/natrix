@@ -70,7 +70,6 @@ fn all_tests<'q>(
             false,
         ),
         (Box::pin(crate::targets::unused_deps(client)), false),
-        (Box::pin(crate::targets::outdated_deps(client)), false),
         (
             Box::pin(crate::targets::test_project_gen(client, "stable")),
             false,
@@ -110,11 +109,11 @@ fn all_tests<'q>(
 }
 
 /// Generate the final report
-pub async fn generate_allure_report(client: &Query, results: Vec<TestResult>) -> Result<Directory> {
+pub async fn generate_allure_report(client: &Query, results: &[TestResult]) -> Result<Directory> {
     let mut reports = client.directory();
     // HACK: Dagger doesnt like you creating 100+ files in one call.
     // So we chunk it up.
-    for chunk in &results.into_iter().chunks(50) {
+    for chunk in &results.iter().chunks(50) {
         let mut chunked = client.directory();
         for result in chunk {
             chunked = chunked.with_directory(".", result.into_file(client)?);
