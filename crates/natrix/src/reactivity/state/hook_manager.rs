@@ -1,6 +1,5 @@
 //! Handles state hooks
 
-use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
 use super::InnerCtx;
@@ -301,23 +300,21 @@ impl<T: State> InnerCtx<T> {
 /// More likely it will efficiently re-use memory even if rarely drained.
 pub(crate) struct SignalDepList {
     /// The allocations of the nodes themself
-    nodes: Vec<SignalDepNode>,
+    items: nohash::IntMap<KeySlot, SignalDepNode>,
     /// The start of the list
-    head: Option<usize>,
+    head: Option<KeySlot>,
     /// The end of the list
-    tail: Option<usize>,
-    /// mapping from slot to index.
-    items: HashMap<KeySlot, usize>,
+    tail: Option<KeySlot>,
 }
 
 /// A node in the linked list
 struct SignalDepNode {
     /// The actual full hookkey
-    key: HookKey,
+    version: KeyVersion,
     /// The index of the previous node
-    previous: Option<usize>,
+    previous: Option<KeySlot>,
     /// The index of the next node
-    next: Option<usize>,
+    next: Option<KeySlot>,
 }
 
 impl Default for SignalDepList {
@@ -330,17 +327,16 @@ impl SignalDepList {
     /// Create a new empty signal dep list
     pub(crate) fn new() -> Self {
         Self {
-            nodes: Vec::new(),
+            items: nohash::IntMap::default(),
             head: None,
             tail: None,
-            items: HashMap::new(),
         }
     }
 
     /// Get the amount of current hooks (including stale ones.)
     #[cfg(test)]
     fn len(&self) -> usize {
-        self.nodes.len()
+        self.items.len()
     }
 
     /// Insert a new key into the linked list.
@@ -348,75 +344,70 @@ impl SignalDepList {
     pub(crate) fn insert(&mut self, key: HookKey) {
         match self.items.entry(key.slot) {
             Entry::Vacant(entry) => {
-                let new_index = self.nodes.len();
                 let node = SignalDepNode {
-                    key,
+                    version: key.version,
                     previous: self.tail,
                     next: None,
                 };
-                self.nodes.push(node);
-                entry.insert(new_index);
+                entry.insert(node);
 
-                if let Some(tail_index) = self.tail.replace(new_index) {
-                    if let Some(tail) = self.nodes.get_mut(tail_index) {
-                        tail.next = Some(new_index);
+                if let Some(tail_slot) = self.tail.replace(key.slot) {
+                    if let Some(tail) = self.items.get_mut(&tail_slot) {
+                        tail.next = Some(key.slot);
                     } else {
                         log_or_panic!("Tail for signal dep list not found");
                     }
                 }
 
                 if self.head.is_none() {
-                    self.head = Some(new_index);
+                    self.head = Some(key.slot);
                 }
             }
-            Entry::Occupied(entry) => {
-                let Some(node) = self.nodes.get_mut(*entry.get()) else {
-                    log_or_panic!("Slot hashmap entry out of bounds");
-                    return;
-                };
+            Entry::Occupied(mut entry) => {
+                let node = entry.get_mut();
 
                 // No need to move to end as there is no change
                 // then this should already be in the correct relative position.
-                if node.key.version == key.version {
+                if node.version == key.version {
                     return;
                 }
-                node.key.version = key.version;
+                node.version = key.version;
 
                 // if `next` is `None` we are tail.
-                if let Some(next_index) = node.next.take() {
-                    let tail = self.tail.replace(*entry.get());
+                if let Some(next_slot) = node.next.take() {
+                    let tail = self.tail.replace(key.slot);
                     let previous = std::mem::replace(&mut node.previous, tail);
                     if let Some(tail) = tail {
-                        let Some(tail) = self.nodes.get_mut(tail) else {
+                        let Some(tail) = self.items.get_mut(&tail) else {
                             log_or_panic!("Next not found");
                             return;
                         };
-                        tail.next = Some(*entry.get());
+                        tail.next = Some(key.slot);
                     }
 
                     match previous {
                         // We are head
                         None => {
-                            let Some(next) = self.nodes.get_mut(next_index) else {
+                            let Some(next) = self.items.get_mut(&next_slot) else {
                                 log_or_panic!("Next not found");
                                 return;
                             };
                             next.previous = None;
-                            self.head = Some(next_index);
+                            self.head = Some(next_slot);
                         }
                         // We are somewhere else
-                        Some(previous_index) => {
-                            let Some(next) = self.nodes.get_mut(next_index) else {
+                        Some(previous_slot) => {
+                            let Some(next) = self.items.get_mut(&next_slot) else {
                                 log_or_panic!("Next not found");
                                 return;
                             };
-                            next.previous = Some(previous_index);
+                            next.previous = Some(previous_slot);
 
-                            let Some(previous) = self.nodes.get_mut(previous_index) else {
+                            let Some(previous) = self.items.get_mut(&previous_slot) else {
                                 log_or_panic!("Previous not found");
                                 return;
                             };
-                            previous.next = Some(next_index);
+                            previous.next = Some(next_slot);
                         }
                     }
                 }
@@ -430,12 +421,14 @@ impl SignalDepList {
     /// and allocates a new vec with the same capactiy (since its likely we will get close to the
     /// same amount of signals.)
     pub(crate) fn create_iter_and_clear(&mut self) -> IterSignalList {
-        let new_vec = Vec::with_capacity(self.nodes.len());
+        let new_map = nohash::IntMap::with_capacity_and_hasher(
+            self.items.len(),
+            nohash::BuildNoHashHasher::new(),
+        );
         let iterator = IterSignalList {
-            nodes: std::mem::replace(&mut self.nodes, new_vec),
+            nodes: std::mem::replace(&mut self.items, new_map),
             next: self.head,
         };
-        self.items.clear();
         self.head = None;
         self.tail = None;
         iterator
@@ -445,18 +438,22 @@ impl SignalDepList {
 /// A iterator over the `HookKey`s in a `SignalDeoList`
 pub(crate) struct IterSignalList {
     /// The linked list nodes
-    nodes: Vec<SignalDepNode>,
+    nodes: nohash::IntMap<KeySlot, SignalDepNode>,
     /// The index of the next node.
-    next: Option<usize>,
+    next: Option<KeySlot>,
 }
 
 impl Iterator for IterSignalList {
     type Item = HookKey;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(next) = self.nodes.get(self.next?) {
+        let slot = self.next?;
+        if let Some(next) = self.nodes.get(&slot) {
             self.next = next.next;
-            Some(next.key)
+            Some(HookKey {
+                slot,
+                version: next.version,
+            })
         } else {
             log_or_panic!("Next item not found in signal iterator.");
             None
