@@ -9,7 +9,7 @@ use crate::reactivity::State;
 use crate::reactivity::render_callbacks::RenderingState;
 use crate::reactivity::state::hook_manager::HookStore;
 
-/// The core component state, stores all framework data
+/// The core framework state, also holds user data.
 pub(crate) struct InnerCtx<T: State> {
     /// The user (macro) defined reactive struct
     pub(crate) data: T,

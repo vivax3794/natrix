@@ -1,4 +1,4 @@
-//! Types for handling the component state
+//! Types for handling the application state
 
 #[cfg(feature = "async")]
 mod async_state;
