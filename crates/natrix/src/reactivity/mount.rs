@@ -9,22 +9,22 @@ use crate::reactivity::KeepAlive;
 use crate::reactivity::render_callbacks::RenderingState;
 use crate::reactivity::state::{InnerCtx, State};
 
-/// The result of rendering a component
+/// The result of rendering a root element
 ///
-/// This should be kept in memory for as long as the component is in the dom.
-#[must_use = "Dropping this before the component is unmounted will cause panics"]
+/// This should be kept in memory for as long as the element is in the dom.
+#[must_use = "Dropping this before the element is unmounted will cause panics"]
 #[expect(
     dead_code,
-    reason = "This is used to keep the component alive and we do not need to use it"
+    reason = "This is used to keep the element alive and we do not need to use it"
 )]
 pub struct RenderResult<C: State> {
-    /// The component data
+    /// The state
     data: Rc<RefCell<InnerCtx<C>>>,
     /// The various things that need to be kept alive
     keep_alive: Vec<KeepAlive>,
 }
 
-/// Mount the specified component at natrixses default location. and calls `setup_runtime`
+/// Mount the specified element at natrixses default location. and calls `setup_runtime`
 /// This is what should be used when building with the natrix cli.
 ///
 /// The render method is called lazily, for example its never called during css collection.
@@ -33,7 +33,7 @@ pub struct RenderResult<C: State> {
 /// cli build system expects this to be called. And you should not attempt to access browser apis
 /// before or after this call.
 ///
-/// This method implicitly leaks the memory of the root component
+/// This method implicitly leaks the memory of the state
 ///
 /// # Panics
 /// If the mount point is not found, which should never happen if using `natrix build`
@@ -41,7 +41,7 @@ pub struct RenderResult<C: State> {
     clippy::expect_used,
     reason = "This will never happen if `natrix build` is used, and also happens early in the app lifecycle"
 )]
-pub fn mount<C: State, E: Element<C>>(component: C, tree: impl FnOnce() -> E) {
+pub fn mount<C: State, E: Element<C>>(state: C, tree: impl FnOnce() -> E) {
     crate::panics::set_panic_hook();
     #[cfg(feature = "console_log")]
     if cfg!(target_arch = "wasm32")
@@ -62,41 +62,39 @@ pub fn mount<C: State, E: Element<C>>(component: C, tree: impl FnOnce() -> E) {
         return;
     }
 
-    mount_at(component, tree(), natrix_shared::MOUNT_POINT).expect("Failed to mount");
+    mount_at(state, tree(), natrix_shared::MOUNT_POINT).expect("Failed to mount");
 }
 
-/// Mounts the component at the target id
-/// Replacing the element with the component
+/// Mounts the element at the target id
 ///
-/// This method implicitly leaks the memory of the root component
+/// This method implicitly leaks the memory of the root state
 ///
 /// # Errors
 /// If target mount point is not found.
 pub fn mount_at<C: State>(
-    component: C,
+    state: C,
     tree: impl Element<C>,
     target_id: &'static str,
 ) -> Result<(), &'static str> {
-    let result = render_component(component, tree, target_id)?;
+    let result = render_state(state, tree, target_id)?;
 
     std::mem::forget(result);
     Ok(())
 }
 
-/// Mounts the component at the target id
-/// Replacing the element with the component
+/// Mounts the element at the target id
 /// # Errors
 /// If target mount point is not found.
-pub fn render_component<C: State>(
-    component: C,
+pub fn render_state<C: State>(
+    state: C,
     tree: impl Element<C>,
     target_id: &str,
 ) -> Result<RenderResult<C>, &'static str> {
     log::info!(
-        "Mounting root component {} at #{target_id}",
+        "Mounting root state {} at #{target_id}",
         std::any::type_name::<C>()
     );
-    let data = InnerCtx::new(component);
+    let data = InnerCtx::new(state);
 
     let mut borrow_data = data.borrow_mut();
 

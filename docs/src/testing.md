@@ -41,7 +41,7 @@ mod tests {
 # fn main() {}
 ```
 
-This will mount the `HelloWorld` component and then check if the text content of the element with id `HELLO` is "Hello World". This is a simple test, but it shows how to use the `test_utils` module to test your components.
+This will mount the `render_hello_world` element and then check if the text content of the element with id `HELLO` is "Hello World". This is a simple test, but it shows how to use the `test_utils` module to test your components.
 These tests can be run as follows:
 
 ```bash

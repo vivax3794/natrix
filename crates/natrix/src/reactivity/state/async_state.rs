@@ -86,7 +86,7 @@ impl<T: State> Clone for AsyncCtxHandle<T> {
 }
 
 impl<T: State> AsyncCtxHandle<T> {
-    /// Run a function on the component state, returning `None` if the component was dropped.
+    /// Run a function on the state, returning `None` if the element was dropped.
     ///
     /// # Reactivity
     /// Calling this function clears the internal reactive flags.

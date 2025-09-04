@@ -8,13 +8,13 @@ use wasm_bindgen::JsCast;
 use web_sys::HtmlElement;
 
 use crate::prelude::State;
-use crate::reactivity::mount::render_component;
+use crate::reactivity::mount::render_state;
 use crate::reactivity::{KeepAlive, statics};
 use crate::{Element, get_document};
 
 /// The parent of the testing env
 const MOUNT_PARENT: &str = "__TESTING_PARENT";
-/// The var where you should mount your component
+/// The var where you should mount your element
 /// This is auto created and cleaned up by `setup`
 pub const MOUNT_POINT: &str = "__TESTING_MOUNT_POINT";
 
@@ -50,10 +50,10 @@ impl log::Log for SimpleLogger {
     }
 }
 
-/// Mount a component at the test location (creating/resetting it if needed)
+/// Mount a element at the test location (creating/resetting it if needed)
 /// # Panics
 /// If the js is in a invalid state or the element is not found
-pub fn mount_test<C: State>(component: C, tree: impl Element<C>) {
+pub fn mount_test<C: State>(state: C, tree: impl Element<C>) {
     let was_logger_active = LOGGER_ACTIVE.fetch_or(true, std::sync::atomic::Ordering::Relaxed);
     if !was_logger_active {
         log::set_logger(&SimpleLogger).expect("Failed to set logger");
@@ -62,8 +62,8 @@ pub fn mount_test<C: State>(component: C, tree: impl Element<C>) {
 
     setup();
 
-    log::debug!("Mounting test component {}", std::any::type_name::<C>());
-    let result = render_component(component, tree, MOUNT_POINT).expect("Failed to mount");
+    log::debug!("Mounting test state {}", std::any::type_name::<C>());
+    let result = render_state(state, tree, MOUNT_POINT).expect("Failed to mount");
     CURRENT_COMP.with(|cell| cell.set(Box::new(result)));
 }
 

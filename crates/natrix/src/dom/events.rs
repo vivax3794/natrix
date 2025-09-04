@@ -11,9 +11,9 @@ pub trait Event {
     /// The actual name
     const EVENT_NAME: &str;
 }
-/// Utility trait for use in stateless components
+/// Utility trait for defining event handler in arguments.
 ///
-/// When defining a stateless component it is much easier to use `impl Event<C>` than writing out
+/// When defining a render function it is much easier to use `impl Event<C>` than writing out
 /// the whole function trait yourself.
 ///
 /// ```

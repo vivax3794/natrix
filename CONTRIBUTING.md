@@ -5,7 +5,7 @@ Thank you for considering contributing to Natrix! This guide will help you get s
 ## Project Structure
 
 - **crates/natrix/**: Core framework library
-- **crates/natrix_macros/**: Procedural macros for components and assets
+- **crates/natrix_macros/**: Procedural macros for state and assets
 - **crates/natrix_shared/**: Shared utilities between core and CLI
 - **crates/natrix-cli/**: CLI tool for project management
 - **ci/**: End-to-end testing, benchmarks, etc
@@ -53,7 +53,7 @@ For quick iteration during development, you can also use standard Rust commands 
 Natrix uses a wide range of clippy lints. But we do often use `#[expect]` on certain areas.
 **But, this should be done sparingly.**
 
-In most cases make use of `log_or_panic_*` macros to panic on debug builds, but only log error in production. Allowing production panics should only be done in extremely specific cases, effectively only when said panic would also **instantly** be hit in debug builds, for example problems mounting the root component.
+In most cases make use of `log_or_panic_*` macros to panic on debug builds, but only log error in production. Allowing production panics should only be done in extremely specific cases, effectively only when said panic would also **instantly** be hit in debug builds, for example problems mounting the root element.
 
 Additionally natrix has important invariants in terms of its reactivity system that must not be invalidated.
 When implementing new features, try to build on existing functionality in order to minimize the risk of breaking these invariants.
