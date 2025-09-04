@@ -469,64 +469,6 @@ define_enum! {
     }
 }
 
-define_enum! {
-    #[derive(Copy)]
-    enum LengthUnit,
-    "*",
-    "https://developer.mozilla.org/en-US/docs/Web/CSS/length",
-    {
-        CapitalHeight => "cap",
-        Character => "ch",
-        FontSize => "em",
-        Xheight => "ex",
-        IdealCharacter => "ic",
-        Lineheight => "lh",
-        RootCapHeight => "rcap",
-        RootCharacter => "rch",
-        RootFontSize => "rem",
-        RootXheight => "rex",
-        RootIdealCharacter => "ric",
-        RootLineheight => "rlh",
-        ContainerQueryWidth => "cqw",
-        ContainerQueryHeight => "cqh",
-        ContainerQueryInlineSize => "cqi",
-        ContainerQueryBlockSize => "cqb",
-        ContainerQueryMax => "cqmax",
-        ContainerQueryMin => "cqmin",
-        Pixel => "px",
-        CentiMeter => "cm",
-        Millimeter => "mm",
-        QuarterMillimeter => "Q",
-        Inch => "in",
-        Pica => "pc",
-        Point => "pt",
-        ViewportHeight => "vh",
-        ViewportWidth => "vw",
-        ViewportMax => "vmax",
-        ViewportMin => "vmin",
-        ViewportBlockAxis => "vb",
-        ViewportInlineAxis => "vi",
-        SmallViewportHeight => "svh",
-        SmallViewportWidth => "svw",
-        SmallViewportMax => "svmax",
-        SmallViewportMin => "svmin",
-        SmallViewportBlockAxis => "svb",
-        SmallViewportInlineAxis => "svi",
-        LargeViewportHeight => "lvh",
-        LargeViewportWidth => "lvw",
-        LargeViewportMax => "lvmax",
-        LargeViewportMin => "lvmin",
-        LargeViewportBlockAxis => "lvb",
-        LargeViewportInlineAxis => "lvi",
-        DynamicViewportHeight => "dvh",
-        DynamicViewportWidth => "dvw",
-        DynamicViewportMax => "dvmax",
-        DynamicViewportMin => "dvmin",
-        DynamicViewportBlockAxis => "dvb",
-        DynamicViewportInlineAxis => "dvi",
-    }
-}
-
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use proptest::proptest;

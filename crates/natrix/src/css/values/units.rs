@@ -3,7 +3,7 @@ use crate::css::values::IntoCss;
 
 /// Create a instance of a css unit, verifying at compile time the correct ranges.
 #[macro_export]
-macro_rules! unit {
+macro_rules! percentage {
     ($value:literal %) => {{
         #[expect(dead_code, reason="cargo check/clippy only checks const expressions if actually assigned to a constant.")]
         const CHECK: () = const {
@@ -23,6 +23,12 @@ macro_rules! unit {
 )]
 pub struct Percentage(pub f32);
 
+impl IntoCss for Percentage {
+    fn into_css(self) -> String {
+        format!("{}%", self.0)
+    }
+}
+
 /// A css `<length>` value,
 #[derive(Clone, Copy, PartialEq, Debug)]
 #[cfg_attr(
@@ -32,15 +38,67 @@ pub struct Percentage(pub f32);
 pub struct Length {
     /// The value itself
     pub value: f64,
-    /// The unit to use
-    pub unit: super::LengthUnit,
 }
 
-impl IntoCss for Percentage {
-    fn into_css(self) -> String {
-        format!("{}%", self.0)
+/*
+define_enum! {
+    #[derive(Copy)]
+    enum LengthUnit,
+    "*",
+    "https://developer.mozilla.org/en-US/docs/Web/CSS/length",
+    {
+        CapitalHeight => "cap",
+        Character => "ch",
+        FontSize => "em",
+        Xheight => "ex",
+        IdealCharacter => "ic",
+        Lineheight => "lh",
+        RootCapHeight => "rcap",
+        RootCharacter => "rch",
+        RootFontSize => "rem",
+        RootXheight => "rex",
+        RootIdealCharacter => "ric",
+        RootLineheight => "rlh",
+        ContainerQueryWidth => "cqw",
+        ContainerQueryHeight => "cqh",
+        ContainerQueryInlineSize => "cqi",
+        ContainerQueryBlockSize => "cqb",
+        ContainerQueryMax => "cqmax",
+        ContainerQueryMin => "cqmin",
+        Pixel => "px",
+        CentiMeter => "cm",
+        Millimeter => "mm",
+        QuarterMillimeter => "Q",
+        Inch => "in",
+        Pica => "pc",
+        Point => "pt",
+        ViewportHeight => "vh",
+        ViewportWidth => "vw",
+        ViewportMax => "vmax",
+        ViewportMin => "vmin",
+        ViewportBlockAxis => "vb",
+        ViewportInlineAxis => "vi",
+        SmallViewportHeight => "svh",
+        SmallViewportWidth => "svw",
+        SmallViewportMax => "svmax",
+        SmallViewportMin => "svmin",
+        SmallViewportBlockAxis => "svb",
+        SmallViewportInlineAxis => "svi",
+        LargeViewportHeight => "lvh",
+        LargeViewportWidth => "lvw",
+        LargeViewportMax => "lvmax",
+        LargeViewportMin => "lvmin",
+        LargeViewportBlockAxis => "lvb",
+        LargeViewportInlineAxis => "lvi",
+        DynamicViewportHeight => "dvh",
+        DynamicViewportWidth => "dvw",
+        DynamicViewportMax => "dvmax",
+        DynamicViewportMin => "dvmin",
+        DynamicViewportBlockAxis => "dvb",
+        DynamicViewportInlineAxis => "dvi",
     }
 }
+*/
 
 /// ```compile_fail
 /// use natrix::unit;
