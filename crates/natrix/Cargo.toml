@@ -21,7 +21,7 @@ natrix_macros = { path = "../natrix_macros", version = "0.3.0" }
 natrix_shared = { path = "../natrix_shared", version = "0.3.0" }
 
 # Core
-wasm-bindgen = { version = "0.2.100", features = ["enable-interning", "msrv", "std"], default-features = false }
+wasm-bindgen = { version = "0.2.101", features = ["enable-interning", "msrv", "std"], default-features = false }
 itoa = "1.0.15"
 ryu = "1.0.20"
 smallvec = "1.15.1"
@@ -35,12 +35,12 @@ const-sha1 = { version = "0.3.0", default-features = false }
 inventory = { version = "0.3.21", optional = true }
 
 # Async (Optional)
-wasm-bindgen-futures = { version = "0.4.50", default-features = false, optional = true }
+wasm-bindgen-futures = { version = "0.4.51", default-features = false, optional = true }
 futures-channel = { version = "0.3.31", optional = true }
 pin-project = { version = "1.1.10", optional = true }
 
 # Logging
-log = "0.4.27"
+log = "0.4.28"
 console_log = { version = "1.0.0", optional = true, features = ["color"] }
 simple_logger = { version = "5.0.0", features = ["stderr"], default-features = false, optional = true }
 
@@ -65,7 +65,7 @@ _internal_bundle = ["_internal_collect_css", "dep:simple_logger"]
 
 [dev-dependencies]
 # Testing
-wasm-bindgen-test = "0.3.50"
+wasm-bindgen-test = "0.3.51"
 static_assertions = "1.1.0"
 
 [target.'cfg(not(target_arch="wasm32"))'.dev-dependencies]
@@ -73,7 +73,7 @@ static_assertions = "1.1.0"
 lightningcss = { version = "1.0.0-alpha.67", default-features = false }
 proptest = "1.7.0"
 proptest-derive = "0.6.0"
-insta = "1.43.1"
+insta = "1.43.2"
 
 [package.metadata.cargo-udeps.ignore]
 development = ["wasm-bindgen-test"]
@@ -84,7 +84,7 @@ rustversion = "1.0.22"
 natrix_shared = { path = "../natrix_shared", version = "0.3.0" }
 
 [dependencies.web-sys]
-version = "0.3.77"
+version = "0.3.78"
 features = [
     "Comment",
     "Text",
