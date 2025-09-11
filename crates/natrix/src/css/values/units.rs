@@ -117,6 +117,12 @@ impl CssPropertyValue for Length {
     type Kind = Length;
 }
 
+/// A marker/alias trait for types that are either kind length or kind percentage.
+pub trait LengthPercentage {}
+
+impl LengthPercentage for Length {}
+impl LengthPercentage for Percentage {}
+
 define_length_enum! {
     CapitalHeight => "cap",
     Character => "ch",

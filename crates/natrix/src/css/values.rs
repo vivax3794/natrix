@@ -1,19 +1,20 @@
 //! Types for the various css values
 
 mod animations;
+mod background;
 mod colors;
-pub mod units;
+mod units;
 
 use std::fmt::Write;
 use std::marker::PhantomData;
 use std::time::Duration;
 
-pub use animations::*;
+pub use animations::Animation;
+pub use background::Background;
 pub use colors::Color;
-pub use units::{Length, Percentage};
+pub use units::{Angle, Length, LengthPercentage, Percentage};
 
 pub use super::IntoCss;
-use crate::css::values::units::Angle;
 use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::type_macros;
 
@@ -46,6 +47,21 @@ pub trait CssPropertyValue: IntoCss {
     /// The kind of value, this is used to enable some stuff like css variables.
     /// But also allow us to easialy do things like declare a property supports numeics.
     type Kind;
+}
+
+impl<T, const N: usize> IntoCss for [T; N]
+where
+    Vec<T>: IntoCss,
+{
+    fn into_css(self) -> String {
+        Vec::from(self).into_css()
+    }
+}
+impl<T, const N: usize> CssPropertyValue for [T; N]
+where
+    Vec<T>: CssPropertyValue,
+{
+    type Kind = <Vec<T> as CssPropertyValue>::Kind;
 }
 
 impl IntoCss for Duration {
@@ -594,6 +610,141 @@ impl IntoCss for Vec<Filter> {
 
 impl CssPropertyValue for Vec<Filter> {
     type Kind = Filter;
+}
+
+define_enum! {
+    #[derive(Copy, Default)]
+    enum Visibility,
+    "backface-visibility",
+    "https://developer.mozilla.org/en-US/docs/Web/CSS/backface-visibility",
+    {
+        #[default]
+        Visible => "visible",
+        Hidden => "hidden"
+    }
+}
+
+define_enum! {
+    #[derive(Copy, Default)]
+    enum Attachment,
+    "background-attachment",
+    "https://developer.mozilla.org/en-US/docs/Web/CSS/background-attachment",
+    {
+        #[default]
+        Scroll => "scroll",
+        Fixed => "fixed",
+        Local => "local"
+    }
+}
+
+define_enum! {
+    #[derive(Copy)]
+    enum VisualBox,
+    "background-clip",
+    "https://developer.mozilla.org/en-US/docs/Web/CSS/background-clip",
+    {
+        BorderBox => "boder-box",
+        PaddingBox => "padding-box",
+        ContentBox => "content-box",
+        Text => "text",
+        BorderArea => "border-area"
+    }
+}
+
+/// The horizontal edge to use for a position.
+pub enum HorizontalEdge {
+    /// The left edge of the container
+    Left,
+    /// The right edge of the container.
+    Right,
+}
+
+/// The vertical edge to use for a position.
+pub enum VerticalEdge {
+    /// The top edge of the container
+    Top,
+    /// The bottom edge of the container.
+    Bottom,
+}
+
+/// A `<position>` for placing stuff like backgrounds, and images.
+/// <https://developer.mozilla.org/en-US/docs/Web/CSS/background-position>
+#[must_use]
+pub struct Position {
+    /// The horizontal edge the offset is based on.
+    pub horizontal_edge: HorizontalEdge,
+    /// The vertical edge the offset is based on.
+    pub vertical_edge: VerticalEdge,
+    /// The horizontal offest of the position, either a length or a percentage.
+    offset_x: String,
+    /// The vertical offest of the position, either a length or a percentage.
+    offset_y: String,
+}
+
+impl Position {
+    /// Place the target in the corner specified by the two edges.
+    pub fn corner(horizontal: HorizontalEdge, vertical: VerticalEdge) -> Self {
+        Self {
+            horizontal_edge: horizontal,
+            vertical_edge: vertical,
+            offset_x: "0".into(),
+            offset_y: "0".into(),
+        }
+    }
+
+    /// Create a position representing a set of percentages, from the top-left of the container.
+    pub fn percentage(
+        x: impl CssPropertyValue<Kind = Percentage>,
+        y: impl CssPropertyValue<Kind = Percentage>,
+    ) -> Self {
+        Self {
+            horizontal_edge: HorizontalEdge::Left,
+            vertical_edge: VerticalEdge::Top,
+            offset_x: x.into_css(),
+            offset_y: y.into_css(),
+        }
+    }
+
+    /// Create a exact popsition by specifying two edges and the offset from them either in a
+    /// percentage or a length
+    pub fn precise(
+        (h_edge, h_offset): (
+            HorizontalEdge,
+            impl CssPropertyValue<Kind = impl LengthPercentage>,
+        ),
+        (v_edge, v_offset): (
+            VerticalEdge,
+            impl CssPropertyValue<Kind = impl LengthPercentage>,
+        ),
+    ) -> Self {
+        Self {
+            horizontal_edge: h_edge,
+            vertical_edge: v_edge,
+            offset_x: h_offset.into_css(),
+            offset_y: v_offset.into_css(),
+        }
+    }
+}
+
+impl IntoCss for Position {
+    fn into_css(self) -> String {
+        let horizontal = match self.horizontal_edge {
+            HorizontalEdge::Left => "left",
+            HorizontalEdge::Right => "right",
+        };
+        let vertical = match self.vertical_edge {
+            VerticalEdge::Top => "top",
+            VerticalEdge::Bottom => "bottom",
+        };
+        format!(
+            "{horizontal} {} {vertical} {}",
+            self.offset_x, self.offset_y
+        )
+    }
+}
+
+impl CssPropertyValue for Position {
+    type Kind = Position;
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]

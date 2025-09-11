@@ -1,9 +1,8 @@
 //! Implement css keyframes
 
 use super::values::IntoCss;
-use crate::css::prelude::RuleBody;
-use crate::css::values::CssPropertyValue;
-use crate::css::values::units::Percentage;
+use crate::css::property::RuleBody;
+use crate::css::values::{CssPropertyValue, Percentage};
 
 /// The name of a keyframe
 #[derive(Clone, Copy, Debug)]

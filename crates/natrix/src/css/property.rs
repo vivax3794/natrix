@@ -287,3 +287,10 @@ test_property!(AspectRatio, (f32, values::Auto), f32_auto);
 property!(BackdropFilter => "backdrop-filter");
 support!(BackdropFilter, values::Filter, filter);
 test_property!(BackdropFilter, Vec<values::Filter>, filter_vec);
+
+property!(BackfaceVisibility => "backface-visibility");
+support!(BackfaceVisibility, values::Visibility, visibility);
+
+property!(Background => "background");
+support!(Background, values::Background, signel);
+support!(Background, Vec<values::Background>, vec);
