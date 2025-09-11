@@ -14,7 +14,7 @@ natrix = { path = "../../crates/natrix", features = ["default_app"] }
 integration_tests_dependency = { path = "../integration_tests_dependency" }
 
 # Logging
-log = { version = "0.4.27", features = ["max_level_trace"] }
+log = { version = "0.4.28", features = ["max_level_trace"] }
 
 [dev-dependencies]
 # Testing
