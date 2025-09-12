@@ -1,18 +1,68 @@
 //! Types for the various css values
 
 mod animations;
+mod background;
 mod colors;
-pub mod units;
+mod units;
 
 use std::fmt::Write;
+use std::marker::PhantomData;
 use std::time::Duration;
 
-pub use animations::*;
+pub use animations::Animation;
+pub use background::Background;
 pub use colors::Color;
+pub use units::{Angle, Length, LengthPercentage, Percentage};
 
 pub use super::IntoCss;
 use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::type_macros;
+
+/// Force a unwrap to happen at const time.
+/// If the value isnt a valid const expression this wont compile.
+///
+/// This is to allow you to use the various failable constructors with literal values
+/// without hawving to disable any lints you have enabled against unwraps/expects
+///
+/// ```
+/// natrix::const_unwrap!(natrix::css::values::Color::rgba(100, 100, 100, 0.5));
+/// ```
+/// ```compile_fail
+/// natrix::const_unwrap!(natrix::css::values::Color::rgba(100, 100, 100, 120.0));
+/// ```
+#[macro_export]
+macro_rules! const_unwrap {
+    ($value:expr) => {
+        const {
+            match $value {
+                Some(value) => value,
+                None => panic!("`const_unwrap! on None value"),
+            }
+        }
+    };
+}
+
+/// A css value thats valid in a property
+pub trait CssPropertyValue: IntoCss {
+    /// The kind of value, this is used to enable some stuff like css variables.
+    /// But also allow us to easialy do things like declare a property supports numeics.
+    type Kind;
+}
+
+impl<T, const N: usize> IntoCss for [T; N]
+where
+    Vec<T>: IntoCss,
+{
+    fn into_css(self) -> String {
+        Vec::from(self).into_css()
+    }
+}
+impl<T, const N: usize> CssPropertyValue for [T; N]
+where
+    Vec<T>: CssPropertyValue,
+{
+    type Kind = <Vec<T> as CssPropertyValue>::Kind;
+}
 
 impl IntoCss for Duration {
     fn into_css(self) -> String {
@@ -20,7 +70,14 @@ impl IntoCss for Duration {
     }
 }
 
-/// generate `ToAttribute` for a numeric
+impl CssPropertyValue for Duration {
+    type Kind = Duration;
+}
+
+/// The type used in `CssPropertyValue` to signal a numeric, such as u8, i16, f32, etc.
+pub struct KindNumeric;
+
+/// generate css traits for a numeric
 macro_rules! impl_numerics {
     ($t:ident, $fmt:ident, $name:ident) => {
         impl IntoCss for $t {
@@ -31,6 +88,9 @@ macro_rules! impl_numerics {
                 result.to_string()
             }
         }
+        impl CssPropertyValue for $t {
+            type Kind = KindNumeric;
+        }
     };
 }
 type_macros::numerics!(impl_numerics);
@@ -39,6 +99,9 @@ impl<A: IntoCss, B: IntoCss> IntoCss for (A, B) {
     fn into_css(self) -> String {
         format!("{} {}", self.0.into_css(), self.1.into_css())
     }
+}
+impl<A: CssPropertyValue, B: CssPropertyValue> CssPropertyValue for (A, B) {
+    type Kind = (A::Kind, B::Kind);
 }
 
 /// Define a `ToCssValue` enum
@@ -89,6 +152,10 @@ macro_rules! define_enum {
                     }
                 }
             }
+
+            impl CssPropertyValue for $name {
+                type Kind = $name;
+            }
         }
     }
 }
@@ -111,22 +178,47 @@ macro_rules! zero_sized_value {
                     $value.into()
                 }
             }
+            impl CssPropertyValue for $name {
+                type Kind = $name;
+            }
         }
     };
 }
 
-define_enum! {
-    #[derive(Copy)]
-    enum WideKeyword,
-    "*",
-    "https://developer.mozilla.org/docs/Web/CSS/CSS_Values_and_Units/CSS_data_types#css-wide_keywords",
-    {
-        Initial => "initial",
-        Inherit => "inherit",
-        Revert => "revert",
-        RevertLayer => "revert-layer",
-        Unset => "unset",
+/// A wide keyword is valid in every property.
+/// We make it generic to make the trait system work out.
+///
+/// <https://developer.mozilla.org/docs/Web/CSS/CSS_Values_and_Units/CSS_data_types#css-wide_keywords>
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum WideKeyword<K> {
+    /// `initial`
+    Initial,
+    /// `inherit`
+    Inherit,
+    /// `revert`
+    Revert,
+    /// `revert-layer`
+    RevertLayer,
+    /// `unset`
+    Unset,
+    /// This is purely here for the phantom data
+    Phantom(PhantomData<K>, std::convert::Infallible),
+}
+impl<K> IntoCss for WideKeyword<K> {
+    #[inline]
+    fn into_css(self) -> String {
+        match self {
+            Self::Initial => "initial".into(),
+            Self::Inherit => "inherit".into(),
+            Self::Revert => "revert".into(),
+            Self::RevertLayer => "revert-layer".into(),
+            Self::Unset => "unset".into(),
+        }
     }
+}
+
+impl<K> CssPropertyValue for WideKeyword<K> {
+    type Kind = K;
 }
 
 define_enum! {
@@ -209,6 +301,10 @@ impl<T: IntoCss> IntoCss for OverflowPosition<T> {
 
         format!("{prefix} {}", value.into_css())
     }
+}
+
+impl<T: CssPropertyValue> CssPropertyValue for OverflowPosition<T> {
+    type Kind = Self;
 }
 
 define_enum!(
@@ -337,6 +433,10 @@ impl IntoCss for EasingFunction {
     }
 }
 
+impl CssPropertyValue for EasingFunction {
+    type Kind = EasingFunction;
+}
+
 /// The `animation-iteration-count` value.
 /// <https://developer.mozilla.org/en-US/docs/Web/CSS/animation-iteration-count>
 #[derive(Debug, Clone, Copy)]
@@ -365,6 +465,10 @@ impl IntoCss for AnimationIterationCount {
             Self::Finite(value) => value.to_string(),
         }
     }
+}
+
+impl CssPropertyValue for AnimationIterationCount {
+    type Kind = AnimationIterationCount;
 }
 
 define_enum! {
@@ -419,80 +523,290 @@ define_enum! {
     }
 }
 
-define_enum! {
-    #[derive(Copy)]
-    enum LengthUnit,
-    "*",
-    "https://developer.mozilla.org/en-US/docs/Web/CSS/length",
-    {
-        CapitalHeight => "cap",
-        Character => "ch",
-        FontSize => "em",
-        Xheight => "ex",
-        IdealCharacter => "ic",
-        Lineheight => "lh",
-        RootCapHeight => "rcap",
-        RootCharacter => "rch",
-        RootFontSize => "rem",
-        RootXheight => "rex",
-        RootIdealCharacter => "ric",
-        RootLineheight => "rlh",
-        ContainerQueryWidth => "cqw",
-        ContainerQueryHeight => "cqh",
-        ContainerQueryInlineSize => "cqi",
-        ContainerQueryBlockSize => "cqb",
-        ContainerQueryMax => "cqmax",
-        ContainerQueryMin => "cqmin",
-        Pixel => "px",
-        CentiMeter => "cm",
-        Millimeter => "mm",
-        QuarterMillimeter => "Q",
-        Inch => "in",
-        Pica => "pc",
-        Point => "pt",
-        ViewportHeight => "vh",
-        ViewportWidth => "vw",
-        ViewportMax => "vmax",
-        ViewportMin => "vmin",
-        ViewportBlockAxis => "vb",
-        ViewportInlineAxis => "vi",
-        SmallViewportHeight => "svh",
-        SmallViewportWidth => "svw",
-        SmallViewportMax => "svmax",
-        SmallViewportMin => "svmin",
-        SmallViewportBlockAxis => "svb",
-        SmallViewportInlineAxis => "svi",
-        LargeViewportHeight => "lvh",
-        LargeViewportWidth => "lvw",
-        LargeViewportMax => "lvmax",
-        LargeViewportMin => "lvmin",
-        LargeViewportBlockAxis => "lvb",
-        LargeViewportInlineAxis => "lvi",
-        DynamicViewportHeight => "dvh",
-        DynamicViewportWidth => "dvw",
-        DynamicViewportMax => "dvmax",
-        DynamicViewportMin => "dvmin",
-        DynamicViewportBlockAxis => "dvb",
-        DynamicViewportInlineAxis => "dvi",
+/// <https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function>
+#[derive(Clone, Debug)]
+pub struct Filter(String);
+
+impl Filter {
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function/blur>
+    pub fn blur(value: impl CssPropertyValue<Kind = Length>) -> Self {
+        Self(format!("blur({})", value.into_css()))
+    }
+
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function/brightness>
+    pub fn brightness(value: impl CssPropertyValue<Kind = Percentage>) -> Self {
+        Self(format!("brightness({})", value.into_css()))
+    }
+
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function/contrast>
+    pub fn contrast(value: impl CssPropertyValue<Kind = Percentage>) -> Self {
+        Self(format!("contrast({})", value.into_css()))
+    }
+
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function/drop-shadow>
+    pub fn drop_shadow(
+        x_offset: impl CssPropertyValue<Kind = Length>,
+        y_offset: impl CssPropertyValue<Kind = Length>,
+        blur: impl CssPropertyValue<Kind = Length>,
+        color: impl CssPropertyValue<Kind = Color>,
+    ) -> Self {
+        Self(format!(
+            "drop-shadow({} {} {} {})",
+            x_offset.into_css(),
+            y_offset.into_css(),
+            blur.into_css(),
+            color.into_css(),
+        ))
+    }
+
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function/grayscale>
+    pub fn grayscale(value: impl CssPropertyValue<Kind = Percentage>) -> Self {
+        Self(format!("grayscale({})", value.into_css()))
+    }
+
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function/hue-rotate>
+    pub fn hue_rotate(value: impl CssPropertyValue<Kind = Angle>) -> Self {
+        Self(format!("hue-rotate({})", value.into_css()))
+    }
+
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function/invert>
+    pub fn invert(value: impl CssPropertyValue<Kind = Percentage>) -> Self {
+        Self(format!("invert({})", value.into_css()))
+    }
+
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function/opacity>
+    pub fn opacity(value: impl CssPropertyValue<Kind = Percentage>) -> Self {
+        Self(format!("opacity({})", value.into_css()))
+    }
+
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function/saturate>
+    pub fn saturate(value: impl CssPropertyValue<Kind = Percentage>) -> Self {
+        Self(format!("saturate({})", value.into_css()))
+    }
+
+    /// <https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function/sepia>
+    pub fn sepia(value: impl CssPropertyValue<Kind = Percentage>) -> Self {
+        Self(format!("sepia({})", value.into_css()))
     }
 }
 
-/// <https://developer.mozilla.org/en-US/docs/Web/CSS/filter-function>
-#[derive(Clone)]
-pub enum Filter {}
+impl IntoCss for Filter {
+    fn into_css(self) -> String {
+        self.0
+    }
+}
+
+impl CssPropertyValue for Filter {
+    type Kind = Filter;
+}
+impl IntoCss for Vec<Filter> {
+    fn into_css(self) -> String {
+        self.into_iter()
+            .map(|filter| filter.0)
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+}
+
+impl CssPropertyValue for Vec<Filter> {
+    type Kind = Filter;
+}
+
+define_enum! {
+    #[derive(Copy, Default)]
+    enum Visibility,
+    "backface-visibility",
+    "https://developer.mozilla.org/en-US/docs/Web/CSS/backface-visibility",
+    {
+        #[default]
+        Visible => "visible",
+        Hidden => "hidden"
+    }
+}
+
+define_enum! {
+    #[derive(Copy, Default)]
+    enum Attachment,
+    "background-attachment",
+    "https://developer.mozilla.org/en-US/docs/Web/CSS/background-attachment",
+    {
+        #[default]
+        Scroll => "scroll",
+        Fixed => "fixed",
+        Local => "local"
+    }
+}
+
+define_enum! {
+    #[derive(Copy)]
+    enum VisualBox,
+    "background-clip",
+    "https://developer.mozilla.org/en-US/docs/Web/CSS/background-clip",
+    {
+        BorderBox => "boder-box",
+        PaddingBox => "padding-box",
+        ContentBox => "content-box",
+        Text => "text",
+        BorderArea => "border-area"
+    }
+}
+
+/// The horizontal edge to use for a position.
+pub enum HorizontalEdge {
+    /// The left edge of the container
+    Left,
+    /// The right edge of the container.
+    Right,
+}
+
+/// The vertical edge to use for a position.
+pub enum VerticalEdge {
+    /// The top edge of the container
+    Top,
+    /// The bottom edge of the container.
+    Bottom,
+}
+
+/// A `<position>` for placing stuff like backgrounds, and images.
+/// <https://developer.mozilla.org/en-US/docs/Web/CSS/background-position>
+#[must_use]
+pub struct Position {
+    /// The horizontal edge the offset is based on.
+    pub horizontal_edge: HorizontalEdge,
+    /// The vertical edge the offset is based on.
+    pub vertical_edge: VerticalEdge,
+    /// The horizontal offest of the position, either a length or a percentage.
+    offset_x: String,
+    /// The vertical offest of the position, either a length or a percentage.
+    offset_y: String,
+}
+
+impl Position {
+    /// Place the target in the corner specified by the two edges.
+    pub fn corner(horizontal: HorizontalEdge, vertical: VerticalEdge) -> Self {
+        Self {
+            horizontal_edge: horizontal,
+            vertical_edge: vertical,
+            offset_x: "0".into(),
+            offset_y: "0".into(),
+        }
+    }
+
+    /// Create a position representing a set of percentages, from the top-left of the container.
+    pub fn percentage(
+        x: impl CssPropertyValue<Kind = Percentage>,
+        y: impl CssPropertyValue<Kind = Percentage>,
+    ) -> Self {
+        Self {
+            horizontal_edge: HorizontalEdge::Left,
+            vertical_edge: VerticalEdge::Top,
+            offset_x: x.into_css(),
+            offset_y: y.into_css(),
+        }
+    }
+
+    /// Create a exact popsition by specifying two edges and the offset from them either in a
+    /// percentage or a length
+    pub fn precise(
+        (h_edge, h_offset): (
+            HorizontalEdge,
+            impl CssPropertyValue<Kind = impl LengthPercentage>,
+        ),
+        (v_edge, v_offset): (
+            VerticalEdge,
+            impl CssPropertyValue<Kind = impl LengthPercentage>,
+        ),
+    ) -> Self {
+        Self {
+            horizontal_edge: h_edge,
+            vertical_edge: v_edge,
+            offset_x: h_offset.into_css(),
+            offset_y: v_offset.into_css(),
+        }
+    }
+}
+
+impl IntoCss for Position {
+    fn into_css(self) -> String {
+        let horizontal = match self.horizontal_edge {
+            HorizontalEdge::Left => "left",
+            HorizontalEdge::Right => "right",
+        };
+        let vertical = match self.vertical_edge {
+            VerticalEdge::Top => "top",
+            VerticalEdge::Bottom => "bottom",
+        };
+        format!(
+            "{horizontal} {} {vertical} {}",
+            self.offset_x, self.offset_y
+        )
+    }
+}
+
+impl CssPropertyValue for Position {
+    type Kind = Position;
+}
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
-    use proptest::proptest;
+    use proptest::prelude::*;
 
     use super::*;
     use crate::css::assert_valid_css;
+
+    impl Arbitrary for Filter {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with((): ()) -> Self::Strategy {
+            // One strategy per constructor; adapt names if yours differ.
+            let blur = any::<Length>().prop_map(Filter::blur);
+            let brightness = any::<Percentage>().prop_map(Filter::brightness);
+            let contrast = any::<Percentage>().prop_map(Filter::contrast);
+
+            let drop_shadow = (
+                any::<Length>(),
+                any::<Length>(),
+                any::<Length>(),
+                any::<Color>(),
+            )
+                .prop_map(|(x, y, b, c)| Filter::drop_shadow(x, y, b, c));
+
+            let grayscale = any::<Percentage>().prop_map(Filter::grayscale);
+            let hue_rotate = any::<Angle>().prop_map(Filter::hue_rotate);
+            let invert = any::<Percentage>().prop_map(Filter::invert);
+            let opacity = any::<Percentage>().prop_map(Filter::opacity);
+            let saturate = any::<Percentage>().prop_map(Filter::saturate);
+            let sepia = any::<Percentage>().prop_map(Filter::sepia);
+
+            proptest::prop_oneof![
+                blur,
+                brightness,
+                contrast,
+                drop_shadow,
+                grayscale,
+                hue_rotate,
+                invert,
+                opacity,
+                saturate,
+                sepia,
+            ]
+            .boxed()
+        }
+    }
 
     proptest! {
         #[test]
         fn duration_into_css(duration: Duration) {
             let css = duration.into_css();
             let css = format!("h1 {{ animation-duration: {css}; }}");
+            assert_valid_css(&css);
+        }
+
+        #[test]
+        fn filter_into_css(filter: Filter) {
+            let css = filter.into_css();
+            let css = format!("h1 {{ backdrop-filter: {css}; }}");
             assert_valid_css(&css);
         }
     }

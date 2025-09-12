@@ -1,8 +1,8 @@
 //! Implement css keyframes
 
 use super::values::IntoCss;
-use crate::css::prelude::RuleBody;
-use crate::css::values::units::Percentage;
+use crate::css::property::RuleBody;
+use crate::css::values::{CssPropertyValue, Percentage};
 
 /// The name of a keyframe
 #[derive(Clone, Copy, Debug)]
@@ -12,6 +12,10 @@ impl IntoCss for KeyFrame {
     fn into_css(self) -> String {
         super::as_css_identifier(self.0)
     }
+}
+
+impl CssPropertyValue for KeyFrame {
+    type Kind = KeyFrame;
 }
 
 /// A keyframe definition

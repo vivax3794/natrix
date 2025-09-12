@@ -19,7 +19,7 @@ pub mod values;
 pub mod prelude {
     pub use super::property::RuleBody;
     pub use super::{IntoCss, property, selectors, values};
-    pub use crate::selector_list;
+    pub use crate::{const_unwrap, selector_list};
 }
 
 /// Convert a value to a css
@@ -273,7 +273,7 @@ mod tests {
     mod test_collection {
         use crate::prelude::*;
 
-        const BUTTON_CLASS: crate::prelude::Class = crate::prelude::Class("btn"); // Consistent
+        const BUTTON_CLASS: crate::prelude::Class = crate::class!();
 
         crate::register_rule!(
             BUTTON_CLASS,
@@ -292,8 +292,8 @@ mod tests {
         );
         crate::register_keyframe!(
             const SLIDE = KeyframeDefinition::new()
-            .frame(crate::unit!(0.0%), RuleBody::new().align_content(values::Normal))
-            .frame(crate::unit!(100.0%), RuleBody::new().align_content(values::Normal))
+            .frame(values::Percentage(0.0), RuleBody::new().align_content(values::Normal))
+            .frame(values::Percentage(100.0), RuleBody::new().align_content(values::Normal))
         );
 
         #[test]
