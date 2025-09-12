@@ -21,6 +21,9 @@ struct TestCommand {
     /// Output to a tui instead
     #[arg(short, long)]
     tui: bool,
+    /// Generate the allure report but just export it to the host.
+    #[arg(long)]
+    export: bool,
 }
 
 /// Run a dagger pipeline too generate test reports.
@@ -142,8 +145,19 @@ async fn main() -> Result<()> {
                         return Err(eyre!("Tests failed"));
                     }
                 } else {
-                    let report = report::generate_allure_report(&client, reports).await?;
-                    report::serve_dist(&client, report).await?;
+                    let report = report::generate_allure_report(&client, &reports).await?;
+
+                    if arguments.export {
+                        report.export("./allure_report/").await?;
+                        let tests_failed = reports
+                            .into_iter()
+                            .any(|report| matches!(report.status, TestStatus::Failed));
+                        if tests_failed {
+                            return Err(eyre!("Tests failed"));
+                        }
+                    } else {
+                        report::serve_dist(&client, report).await?;
+                    }
                 }
             }
             Cli::Fix => {
