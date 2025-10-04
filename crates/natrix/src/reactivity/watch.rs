@@ -1,32 +1,31 @@
-//! Implementation of `ctx.watch`
+//! Implementation of `ctx.watch` for fine-grained reactivity.
 
-use super::{HookKey, RenderCtx};
 use crate::error_handling::log_or_panic;
-use crate::reactivity::render_callbacks::{ReactiveHook, RenderingState, UpdateResult};
-use crate::reactivity::state::InnerCtx;
-use crate::reactivity::{KeepAlive, State, statics};
+use crate::reactivity::context::{InnerCtx, RenderCtx};
+use crate::reactivity::core::{HookKey, ReactiveHook, RenderingState, UpdateResult, statics};
+use crate::reactivity::{KeepAlive, State};
 
-/// The wather hook / signal
+/// The watcher hook / signal
 struct WatchState<F, T> {
     /// Function to calculate the state
     calc_value: F,
     /// The previous cached value
     last_value: T,
-    /// The dependency that owns us.
+    /// The dependency that owns us
     dep: HookKey,
-    /// Keepalive
+    /// Keep alive objects
     keep_alive: Vec<KeepAlive>,
     /// Child hooks
     hooks: Vec<HookKey>,
 }
 
-impl<C, F, T> ReactiveHook<C> for WatchState<F, T>
+impl<S, F, T> ReactiveHook<S> for WatchState<F, T>
 where
-    C: State,
+    S: State,
     T: PartialEq,
-    F: Fn(RenderCtx<C>) -> T,
+    F: Fn(RenderCtx<S>) -> T,
 {
-    fn update(&mut self, ctx: &mut InnerCtx<C>, you: HookKey) -> UpdateResult {
+    fn update(&mut self, ctx: &mut InnerCtx<S>, you: HookKey) -> UpdateResult {
         self.keep_alive.clear();
         let hooks = std::mem::take(&mut self.hooks);
 
@@ -53,9 +52,9 @@ where
     }
 }
 
-impl<C: State> RenderCtx<'_, '_, C> {
+impl<S: State> RenderCtx<'_, '_, S> {
     /// Calculate the value using the function and cache it using `clone`.
-    /// Then whenever any signals read in the function are modified re-run the function and check
+    /// Then whenever any signals read in the function are modified, re-run the function and check
     /// if the new result is different.
     /// Only reruns the caller when the item is different.
     ///
@@ -77,7 +76,7 @@ impl<C: State> RenderCtx<'_, '_, C> {
     #[inline]
     pub fn watch<T, F>(&mut self, func: F) -> T
     where
-        F: for<'c, 's> Fn(RenderCtx<'c, 's, C>) -> T + 'static,
+        F: for<'c, 's> Fn(RenderCtx<'c, 's, S>) -> T + 'static,
         T: PartialEq + Clone + 'static,
     {
         let me = self.ctx.hooks.reserve_key();

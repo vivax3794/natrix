@@ -6,8 +6,8 @@ use std::ops::{Deref, DerefMut};
 use crate::access::{Downgrade, Project, Ref, RefClosure};
 use crate::error_handling::log_or_panic;
 use crate::prelude::State;
-use crate::reactivity::state::SignalDepList;
-use crate::reactivity::statics;
+use crate::reactivity::core;
+use crate::reactivity::core::SignalDepList;
 
 /// A signal tracks reads and writes to a value, as well as dependencies.
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
@@ -53,7 +53,7 @@ impl<T> Deref for Signal<T> {
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        if let Some(hook) = statics::current_hook() {
+        if let Some(hook) = core::statics::current_hook() {
             if let Ok(mut deps) = self.deps.try_borrow_mut() {
                 deps.insert(hook);
             } else {
@@ -67,7 +67,7 @@ impl<T> Deref for Signal<T> {
 impl<T> DerefMut for Signal<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
-        statics::reg_dirty_list(|| self.deps.get_mut().create_iter_and_clear());
+        core::statics::reg_dirty_list(|| self.deps.get_mut().create_iter_and_clear());
 
         &mut self.data
     }
@@ -124,7 +124,7 @@ where
     #[inline]
     pub fn update(&mut self, new: T) {
         self.data = new;
-        statics::reg_dirty_list(|| self.deps.get_mut().create_iter_and_clear());
+        core::statics::reg_dirty_list(|| self.deps.get_mut().create_iter_and_clear());
     }
 
     /// Convert from a `&mut ProjectableSignal<Option<T>>` into a `Option<&mut T>`
@@ -150,7 +150,7 @@ where
     #[must_use]
     pub fn project_signal(self) -> T::Projected<'s> {
         if let Ref::Read(this) = &self
-            && let Some(hook) = statics::current_hook()
+            && let Some(hook) = core::statics::current_hook()
         {
             if let Ok(mut deps) = this.deps.try_borrow_mut() {
                 deps.insert(hook);
@@ -169,7 +169,7 @@ where
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        if let Some(hook) = statics::current_hook() {
+        if let Some(hook) = core::statics::current_hook() {
             if let Ok(mut deps) = self.deps.try_borrow_mut() {
                 deps.insert(hook);
             } else {
@@ -198,17 +198,14 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
-    use crate::reactivity::state::HookKey;
+    use crate::reactivity::core::{HookKey, statics};
 
     #[test]
     fn reading_signals_makes_them_appear_in_dirty() {
         let mut foo = Signal::new(0);
         let mut bar = Signal::new(0);
 
-        let hook = HookKey {
-            slot: 0,
-            version: 0,
-        };
+        let hook = HookKey::new(0, 0);
 
         statics::with_hook(hook, || {
             let _ = *foo;
@@ -235,14 +232,8 @@ mod tests {
     #[test]
     fn projectable_signal_modify_outer_alerts_both() {
         let mut signal = ProjectableSignal::new(Some(Signal::new(10)));
-        let hook_outer = HookKey {
-            slot: 0,
-            version: 0,
-        };
-        let hook_inner = HookKey {
-            slot: 1,
-            version: 0,
-        };
+        let hook_outer = HookKey::new(0, 0);
+        let hook_inner = HookKey::new(1, 0);
 
         statics::with_hook(hook_outer, || {
             let _ = *signal;
@@ -264,14 +255,8 @@ mod tests {
     #[test]
     fn projectable_signal_modify_inner_alerts_on() {
         let mut signal = ProjectableSignal::new(Some(Signal::new(10)));
-        let hook_outer = HookKey {
-            slot: 0,
-            version: 0,
-        };
-        let hook_inner = HookKey {
-            slot: 1,
-            version: 0,
-        };
+        let hook_outer = HookKey::new(0, 0);
+        let hook_inner = HookKey::new(1, 0);
 
         statics::with_hook(hook_outer, || {
             let _ = *signal;

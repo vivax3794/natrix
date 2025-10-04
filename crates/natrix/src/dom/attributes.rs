@@ -8,12 +8,8 @@ use super::html_elements::DeferredFunc;
 use crate::error_handling::log_or_panic;
 use crate::macro_ref::State;
 use crate::prelude::Id;
-use crate::reactivity::render_callbacks::{
-    ReactiveAttribute,
-    SimpleReactive,
-    SimpleReactiveResult,
-};
-use crate::reactivity::state::RenderCtx;
+use crate::reactivity::context::RenderCtx;
+use crate::reactivity::dom_hooks::{ReactiveAttribute, SimpleReactive, SimpleReactiveResult};
 use crate::type_macros;
 
 /// The result of apply attribute

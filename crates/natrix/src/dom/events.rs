@@ -2,7 +2,7 @@
 
 use wasm_bindgen::JsCast;
 
-use crate::reactivity::state::EventCtx;
+use crate::reactivity::context::EventCtx;
 
 /// Trait for converting a struct to needed event info.
 pub trait Event {

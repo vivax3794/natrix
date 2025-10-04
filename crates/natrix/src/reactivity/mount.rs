@@ -5,9 +5,9 @@ use std::rc::Rc;
 
 use crate::dom::element::Element;
 use crate::get_document;
-use crate::reactivity::KeepAlive;
-use crate::reactivity::render_callbacks::RenderingState;
-use crate::reactivity::state::{InnerCtx, State};
+use crate::reactivity::context::InnerCtx;
+use crate::reactivity::core::RenderingState;
+use crate::reactivity::{KeepAlive, State};
 
 /// The result of rendering a root element
 ///

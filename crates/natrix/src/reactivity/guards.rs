@@ -1,13 +1,14 @@
-//! Implementation of guards
+//! Implementation of guards for fine-grained reactivity with Option/Result.
 #![expect(
     clippy::unreachable,
     reason = "The whole point of guards is doing unwraps internally."
 )]
 
-use super::{RenderCtx, State};
 use crate::access::Ref;
+use crate::reactivity::State;
+use crate::reactivity::context::RenderCtx;
 
-impl<C: State> RenderCtx<'_, '_, C> {
+impl<S: State> RenderCtx<'_, '_, S> {
     /// Get a guard lens that can be used to retrieve the `Some` variant of a option without having to
     /// use `.unwrap`.
     /// Should be used to achieve find-grained reactivity (internally this uses `.watch` on `.is_some()`)
@@ -76,9 +77,9 @@ impl<C: State> RenderCtx<'_, '_, C> {
     pub fn guard_option<F, T>(
         &mut self,
         getter: F,
-    ) -> Option<impl Fn(Ref<C>) -> Ref<T> + Clone + use<F, T, C>>
+    ) -> Option<impl Fn(Ref<S>) -> Ref<T> + Clone + use<F, T, S>>
     where
-        F: Fn(Ref<C>) -> Option<Ref<T>> + Clone + 'static,
+        F: Fn(Ref<S>) -> Option<Ref<T>> + Clone + 'static,
     {
         let watch_getter = getter.clone();
         let check = self.watch(move |render| watch_getter(Ref::Read(&render.ctx.data)).is_some());
@@ -98,11 +99,11 @@ impl<C: State> RenderCtx<'_, '_, C> {
     ) -> Result<
         // Once rust gets better about `use` bounds we can get rid of `T`/`E` in the different
         // bounds.
-        impl Fn(Ref<C>) -> Ref<T> + Clone + use<F, T, E, C>,
-        impl Fn(Ref<C>) -> Ref<E> + Clone + use<F, T, E, C>,
+        impl Fn(Ref<S>) -> Ref<T> + Clone + use<F, T, E, S>,
+        impl Fn(Ref<S>) -> Ref<E> + Clone + use<F, T, E, S>,
     >
     where
-        F: Fn(Ref<C>) -> Result<Ref<T>, Ref<E>> + Clone + 'static,
+        F: Fn(Ref<S>) -> Result<Ref<T>, Ref<E>> + Clone + 'static,
         T: 'static,
         E: 'static,
     {
