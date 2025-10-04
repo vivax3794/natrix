@@ -69,15 +69,15 @@ pub mod prelude {
     };
     pub use super::dom::{Element, events, html_elements as e};
     pub use super::reactivity::State;
+    pub use super::reactivity::context::{EventCtx, RenderCtx};
     pub use super::reactivity::signal::Signal;
-    pub use super::reactivity::state::{EventCtx, RenderCtx};
     pub use super::{field, with};
 }
 
 pub use dom::Element;
 pub use natrix_macros::{State, asset, format_elements};
+pub use reactivity::context::{EventCtx, RenderCtx};
 pub use reactivity::mount::mount;
-pub use reactivity::state::{EventCtx, RenderCtx};
 
 /// Public exports of internal data structures for `natrix_macros` (and `macro_rules`) to use in generated code.
 #[doc(hidden)]
@@ -88,5 +88,5 @@ pub mod macro_ref {
 
     pub use super::css;
     pub use super::dom::element::Element;
-    pub use super::reactivity::state::State;
+    pub use super::reactivity::State;
 }

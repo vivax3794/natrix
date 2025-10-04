@@ -31,8 +31,8 @@ use crate::dom::{ToAttribute, ToClass, attributes};
 use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::prelude::Id;
 use crate::reactivity::State;
-use crate::reactivity::render_callbacks::RenderingState;
-use crate::reactivity::state::InnerCtx;
+use crate::reactivity::context::InnerCtx;
+use crate::reactivity::core::RenderingState;
 use crate::{EventCtx, get_document};
 
 /// A deferred function to do something once state is available

@@ -1,19 +1,19 @@
-//! Implementation of core async features
+//! Async context implementation for use with futures.
 
 use std::cell::RefCell;
+use std::future::Future;
 use std::ops::{Deref, DerefMut};
 use std::rc::Weak;
 
-use super::InnerCtx;
-use crate::EventCtx;
 use crate::error_handling::log_or_panic;
-use crate::reactivity::State;
+use crate::reactivity::context::InnerCtx;
+use crate::reactivity::{EventCtx, State};
 
-impl<T: State> EventCtx<'_, T> {
-    /// Spawn a async task in the local event loop, which will run on the next possible moment.
+impl<S: State> EventCtx<'_, S> {
+    /// Spawn an async task in the local event loop, which will run on the next possible moment.
     pub fn use_async<C, F>(&self, func: C)
     where
-        C: FnOnce(AsyncCtxHandle<T>) -> F,
+        C: FnOnce(AsyncCtxHandle<S>) -> F,
         F: Future<Output = Option<()>> + 'static,
     {
         let handle = AsyncCtxHandle {
@@ -55,29 +55,33 @@ impl<F: Future> Future for PanicCheckFuture<F> {
     }
 }
 
-/// A ctx for async context.
+/// Context for async operations, providing mutable access to state.
 pub struct AsyncCtx<'s, S: State>(pub(crate) &'s mut InnerCtx<S>);
+
 impl<S: State> Deref for AsyncCtx<'_, S> {
     type Target = S;
     fn deref(&self) -> &Self::Target {
         &self.0.data
     }
 }
+
 impl<S: State> DerefMut for AsyncCtx<'_, S> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0.data
     }
 }
 
-/// A combiend `Weak` and `RefCell` that facilities upgrading and borrowing as a shared
-/// operation and ensures you cant cause borrow errors.
+/// A handle to access state from async contexts.
+///
+/// Combines a `Weak<RefCell<InnerCtx<S>>>` with safe borrowing operations
+/// to prevent borrow errors in async code.
 #[must_use]
-pub struct AsyncCtxHandle<T: State> {
-    /// The `Weak<RefCell<T>>` in question
-    inner: Weak<RefCell<InnerCtx<T>>>,
+pub struct AsyncCtxHandle<S: State> {
+    /// The weak reference to the context
+    inner: Weak<RefCell<InnerCtx<S>>>,
 }
 
-impl<T: State> Clone for AsyncCtxHandle<T> {
+impl<S: State> Clone for AsyncCtxHandle<S> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -85,14 +89,13 @@ impl<T: State> Clone for AsyncCtxHandle<T> {
     }
 }
 
-impl<T: State> AsyncCtxHandle<T> {
+impl<S: State> AsyncCtxHandle<S> {
     /// Run a function on the state, returning `None` if the element was dropped.
     ///
     /// # Reactivity
-    /// Calling this function clears the internal reactive flags.
-    /// And causes a update to the UI when the closure exists.
+    /// Modifications to state are tracked and trigger UI updates when the closure exits.
     #[must_use]
-    pub fn update<R>(&self, func: impl FnOnce(AsyncCtx<T>) -> R) -> Option<R> {
+    pub fn update<R>(&self, func: impl FnOnce(AsyncCtx<S>) -> R) -> Option<R> {
         let rc = self.inner.upgrade()?;
         let Ok(mut borrow) = rc.try_borrow_mut() else {
             log_or_panic!("State borrowed while already borrowed.");

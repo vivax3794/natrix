@@ -5,8 +5,9 @@ use std::borrow::Cow;
 use super::HtmlElement;
 use crate::error_handling::log_or_panic;
 use crate::reactivity::State;
-use crate::reactivity::render_callbacks::{ReactiveNode, RenderingState};
-use crate::reactivity::state::{InnerCtx, RenderCtx};
+use crate::reactivity::context::{InnerCtx, RenderCtx};
+use crate::reactivity::core::RenderingState;
+use crate::reactivity::dom_hooks::ReactiveNode;
 use crate::type_macros;
 
 /// A result of the rendering process.

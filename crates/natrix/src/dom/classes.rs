@@ -4,8 +4,8 @@ use std::borrow::Cow;
 
 use super::html_elements::DeferredFunc;
 use crate::reactivity::State;
-use crate::reactivity::render_callbacks::{ReactiveClass, SimpleReactive, SimpleReactiveResult};
-use crate::reactivity::state::RenderCtx;
+use crate::reactivity::context::RenderCtx;
+use crate::reactivity::dom_hooks::{ReactiveClass, SimpleReactive, SimpleReactiveResult};
 
 /// The result of applying a class
 pub(crate) enum ClassResult<C: State> {

@@ -1,4 +1,9 @@
-//! Implements the reactive hooks for updating the dom in response to signal changessz.
+//! DOM-specific reactive hook implementations.
+//!
+//! This module contains concrete implementations of the `ReactiveHook` trait
+//! for updating DOM elements in response to signal changes:
+//! - `ReactiveNode`: Swaps out entire DOM nodes
+//! - `SimpleReactive`: Generic wrapper for simple reactive operations (attributes, classes, etc.)
 
 use std::borrow::Cow;
 
@@ -7,45 +12,14 @@ use wasm_bindgen::JsCast;
 use crate::dom::element::{ElementRenderResult, MaybeStaticElement, generate_fallback_node};
 use crate::error_handling::{log_or_panic, log_or_panic_result};
 use crate::get_document;
-use crate::reactivity::state::{HookKey, InnerCtx, RenderCtx};
+use crate::reactivity::context::{InnerCtx, RenderCtx};
+use crate::reactivity::core::{HookKey, ReactiveHook, RenderingState, UpdateResult};
 use crate::reactivity::{KeepAlive, State};
 
-/// State passed to rendering callbacks
-pub(crate) struct RenderingState<'s> {
-    /// Push objects to this array to keep them alive as long as the parent context is valid.
-    pub(crate) keep_alive: &'s mut Vec<KeepAlive>,
-    /// The hooks that are a child of this
-    pub(crate) hooks: &'s mut Vec<HookKey>,
-}
-
-/// All reactive hooks will implement this trait to allow them to be stored as `dyn` objects.
-pub(crate) trait ReactiveHook<C: State> {
-    /// Recalculate the hook and apply its update.
-    ///
-    /// Hooks should recall `ctx.reg_dep` with the you parameter to re-register any potential
-    /// dependencies as the update method uses `.drain(..)` on dependencies (this is also to ensure
-    /// reactive state that is only accessed in some conditions is recorded).
-    fn update(&mut self, _ctx: &mut InnerCtx<C>, _you: HookKey) -> UpdateResult;
-    /// Return the list of hooks that should be dropped
-    fn drop_us(self: Box<Self>) -> Vec<HookKey>;
-}
-
-/// The result of update
-pub(crate) enum UpdateResult {
-    /// Drop the given hooks
-    DropHooks(Vec<HookKey>),
-    /// Run this hook after this one
-    /// INVARIANT: This can only be returned if the only reason you are running is because said
-    /// hook could also be run (i.e you are acting as a pre-hook check, such as with `.watch`).
-    /// As this hook is ran instantly if this is used to run a hook before a parent may have
-    /// invalidated it, that might lead to panics if said hook uses features such as Guards.
-    RunHook(HookKey, Vec<HookKey>),
-}
-
-/// Reactive hook for swapping out a entire dom node.
-pub(crate) struct ReactiveNode<C: State> {
+/// Reactive hook for swapping out an entire DOM node.
+pub(crate) struct ReactiveNode<S: State> {
     /// The callback to produce nodes
-    callback: Box<dyn Fn(RenderCtx<C>) -> MaybeStaticElement<C>>,
+    callback: Box<dyn Fn(RenderCtx<S>) -> MaybeStaticElement<S>>,
     /// The current rendered node to replace
     target_node: web_sys::Node,
     /// Vector of various objects to be kept alive for the duration of the rendered content
@@ -54,12 +28,12 @@ pub(crate) struct ReactiveNode<C: State> {
     hooks: Vec<HookKey>,
 }
 
-impl<C: State> ReactiveNode<C> {
+impl<S: State> ReactiveNode<S> {
     /// Render this hook and simply return the node
     ///
     /// INVARIANT: This function works with the assumption what it returns will be put in its
     /// `target_node` field. This function is split out to facilitate `Self::create_initial`
-    fn render(&mut self, ctx: &mut InnerCtx<C>, you: HookKey) -> ElementRenderResult {
+    fn render(&mut self, ctx: &mut InnerCtx<S>, you: HookKey) -> ElementRenderResult {
         let element = ctx.track_reads(you, |ctx| {
             (self.callback)(RenderCtx {
                 ctx,
@@ -80,8 +54,8 @@ impl<C: State> ReactiveNode<C> {
     /// Create a new `ReactiveNode` registering the initial dependencies and returning both the
     /// `HookKey` for it and the initial node (Which should be inserted in the dom)
     pub(crate) fn create_initial(
-        callback: Box<dyn Fn(RenderCtx<C>) -> MaybeStaticElement<C>>,
-        ctx: &mut InnerCtx<C>,
+        callback: Box<dyn Fn(RenderCtx<S>) -> MaybeStaticElement<S>>,
+        ctx: &mut InnerCtx<S>,
     ) -> (HookKey, web_sys::Node) {
         let me = ctx.hooks.reserve_key();
 
@@ -105,8 +79,8 @@ impl<C: State> ReactiveNode<C> {
     }
 }
 
-impl<C: State> ReactiveHook<C> for ReactiveNode<C> {
-    fn update(&mut self, ctx: &mut InnerCtx<C>, you: HookKey) -> UpdateResult {
+impl<S: State> ReactiveHook<S> for ReactiveNode<S> {
+    fn update(&mut self, ctx: &mut InnerCtx<S>, you: HookKey) -> UpdateResult {
         let this = &mut *self;
         let hooks = std::mem::take(&mut this.hooks);
         let new_node = this.render(ctx, you);
@@ -153,18 +127,18 @@ pub(crate) trait ReactiveValue {
 }
 
 /// The result of a simple reactive call
-pub(crate) enum SimpleReactiveResult<C: State, K> {
+pub(crate) enum SimpleReactiveResult<S: State, K> {
     /// Apply the value
     Apply(K),
     /// Call the inner reactive function
-    Call(Box<dyn FnOnce(&mut InnerCtx<C>, &mut RenderingState)>),
+    Call(Box<dyn FnOnce(&mut InnerCtx<S>, &mut RenderingState)>),
 }
 
 /// A common wrapper for simple reactive operations to deduplicate dependency tracking code
-pub(crate) struct SimpleReactive<C: State, K: ReactiveValue> {
+pub(crate) struct SimpleReactive<S: State, K: ReactiveValue> {
     /// The callback to call, takes state and returns the needed data for the reactive
     /// transformation
-    callback: Box<dyn Fn(RenderCtx<C>, &web_sys::Element) -> SimpleReactiveResult<C, K>>,
+    callback: Box<dyn Fn(RenderCtx<S>, &web_sys::Element) -> SimpleReactiveResult<S, K>>,
     /// The node to apply transformations to
     node: web_sys::Element,
     /// Vector of various objects to be kept alive for the duration of the rendered content
@@ -175,12 +149,12 @@ pub(crate) struct SimpleReactive<C: State, K: ReactiveValue> {
     state: K::State,
 }
 
-impl<C: State, K: ReactiveValue> ReactiveHook<C> for SimpleReactive<C, K> {
+impl<S: State, K: ReactiveValue> ReactiveHook<S> for SimpleReactive<S, K> {
     fn drop_us(self: Box<Self>) -> Vec<HookKey> {
         self.hooks
     }
 
-    fn update(&mut self, ctx: &mut InnerCtx<C>, you: HookKey) -> UpdateResult {
+    fn update(&mut self, ctx: &mut InnerCtx<S>, you: HookKey) -> UpdateResult {
         let hooks = std::mem::take(&mut self.hooks);
 
         self.keep_alive.clear();
@@ -215,13 +189,13 @@ impl<C: State, K: ReactiveValue> ReactiveHook<C> for SimpleReactive<C, K> {
     }
 }
 
-impl<C: State, K: ReactiveValue + 'static> SimpleReactive<C, K> {
+impl<S: State, K: ReactiveValue + 'static> SimpleReactive<S, K> {
     /// Creates a new simple reactive hook, applying the initial transformation.
     /// Returns a hookkey of the hook
     pub(crate) fn init_new(
-        callback: Box<dyn Fn(RenderCtx<C>, &web_sys::Element) -> SimpleReactiveResult<C, K>>,
+        callback: Box<dyn Fn(RenderCtx<S>, &web_sys::Element) -> SimpleReactiveResult<S, K>>,
         node: web_sys::Element,
-        ctx: &mut InnerCtx<C>,
+        ctx: &mut InnerCtx<S>,
     ) -> HookKey {
         let me = ctx.hooks.reserve_key();
 
