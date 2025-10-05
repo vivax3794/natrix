@@ -361,11 +361,12 @@ macro_rules! can_have_children {
 
 /// A macro to define `attr` helpers for the the various elements
 macro_rules! attr_helpers {
-    ($tag:ident => $($attr:ident($kind:path, $attr_name:literal)),+) => {
+    ($tag:ident => $($attr:ident($kind:path, $attr_name:literal $(, $alias:literal)?)),+) => {
         pastey::paste! {
             impl<C: State> HtmlElement<C, [< Tag $tag:camel >]> {
                 $(
                     #[doc = "<https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/" $tag "##" $attr_name ">"]
+                    $(#[doc(alias = $alias)])?
                     #[inline]
                     pub fn $attr(self, value: impl ToAttribute<C, AttributeKind = $kind>) -> Self {
                         self.attr($attr_name, value)
@@ -537,7 +538,7 @@ attr_helpers!(embed =>
 attr_helpers!(fieldset => disabled(bool, "disabled"), form(Id, "form"), name(String, "name"));
 attr_helpers!(form =>
     auto_complete(attributes::OnOff, "autocomplete"), name(String, "name"), rel(attributes::Rel, "rel"),
-    action(String, "action"), encoding_type(attributes::EncodingType, "enctype"), method(attributes::FormMethod, "method"),
+    action(String, "action"), encoding_type(attributes::EncodingType, "enctype", "enctype"), method(attributes::FormMethod, "method"),
     no_validate(bool, "novalidate"), target(attributes::Target, "target")
 );
 
