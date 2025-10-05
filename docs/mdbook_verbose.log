@@ -1,0 +1,367 @@
+2025-10-05 22:14:24 [DEBUG] (mdbook::book): Loading config from /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book.toml
+2025-10-05 22:14:24 [DEBUG] (mdbook::config): Updating the config from environment variables
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::summary): Found a h1 in the SUMMARY
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::summary): Parsing prefix items
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::summary): Found a h1 in the SUMMARY
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::summary): Parsing numbered chapters at level 0
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::summary): Parsing numbered chapters at level 14.
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::summary): Parsing suffix items
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading the book from disk
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Introduction (README.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Getting Started (getting-started.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading FAQ (faq.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Features (features.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Panic Policy (panics.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Render Functions (render-functions.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Getters (ref.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading State (state.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Reactivity (reactivity.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Html (html.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Async (async-components.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Css (css.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Assets (assets.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Debugging (debugging.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Testing (testing.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading CLI and Configuration (cli-and-config.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Deployment (deployment.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Library (deployment-library.md)
+2025-10-05 22:14:24 [DEBUG] (mdbook::book::book): Loading Usage in other frameworks (deployment-other.md)
+2025-10-05 22:14:24 [INFO] (mdbook::book): Book building has started
+2025-10-05 22:14:24 [DEBUG] (mdbook::preprocess::cmd): Checking if the "callouts" preprocessor supports "html"
+2025-10-05 22:14:24 [DEBUG] (mdbook::book): Running the callouts preprocessor.
+2025-10-05 22:14:24 [DEBUG] (mdbook::book): Running the index preprocessor.
+2025-10-05 22:14:24 [DEBUG] (mdbook::book): Running the links preprocessor.
+2025-10-05 22:14:24 [DEBUG] (mdbook::preprocess::cmd): Checking if the "rustdoc-link" preprocessor supports "html"
+2025-10-05 22:14:24 [WARN] (mdbook::preprocess::cmd): The command wasn't found, is the "rustdoc-link" preprocessor installed?
+2025-10-05 22:14:24 [WARN] (mdbook::preprocess::cmd): 	Command: mdbook-rustdoc-link
+2025-10-05 22:14:24 [INFO] (mdbook::book): Running the html backend
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Register the index handlebars template
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Register the head handlebars template
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Register the redirect handlebars template
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Register the header handlebars template
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Register the toc handlebars template
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Register handlebars helpers
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): [*]: JSON constructed
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::search): Writing search index ✓
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::search): Copying search files ✓
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render toc js
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating toc.js ✓
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Copy static files
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> book.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/book.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> css/general.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/css/general.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> css/chrome.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/css/chrome.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> css/print.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/css/print.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> css/variables.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/css/variables.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> favicon.png
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/favicon.png
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> favicon.svg
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/favicon.svg
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> highlight.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/highlight.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> tomorrow-night.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/tomorrow-night.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> ayu-highlight.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/ayu-highlight.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> highlight.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/highlight.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> clipboard.min.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/clipboard.min.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> FontAwesome/css/font-awesome.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/FontAwesome/css/font-awesome.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> FontAwesome/fonts/fontawesome-webfont.eot
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/FontAwesome/fonts/fontawesome-webfont.eot
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> FontAwesome/fonts/fontawesome-webfont.svg
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/FontAwesome/fonts/fontawesome-webfont.svg
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> FontAwesome/fonts/fontawesome-webfont.ttf
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/FontAwesome/fonts/fontawesome-webfont.ttf
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> FontAwesome/fonts/fontawesome-webfont.woff
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/FontAwesome/fonts/fontawesome-webfont.woff
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> FontAwesome/fonts/fontawesome-webfont.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/FontAwesome/fonts/fontawesome-webfont.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> FontAwesome/fonts/FontAwesome.ttf
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/FontAwesome/fonts/FontAwesome.ttf
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/fonts.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/fonts.css
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/OPEN-SANS-LICENSE.txt
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/OPEN-SANS-LICENSE.txt
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/SOURCE-CODE-PRO-LICENSE.txt
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/SOURCE-CODE-PRO-LICENSE.txt
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/open-sans-v17-all-charsets-300.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/open-sans-v17-all-charsets-300.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/open-sans-v17-all-charsets-300italic.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/open-sans-v17-all-charsets-300italic.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/open-sans-v17-all-charsets-regular.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/open-sans-v17-all-charsets-regular.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/open-sans-v17-all-charsets-italic.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/open-sans-v17-all-charsets-italic.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/open-sans-v17-all-charsets-600.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/open-sans-v17-all-charsets-600.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/open-sans-v17-all-charsets-600italic.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/open-sans-v17-all-charsets-600italic.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/open-sans-v17-all-charsets-700.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/open-sans-v17-all-charsets-700.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/open-sans-v17-all-charsets-700italic.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/open-sans-v17-all-charsets-700italic.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/open-sans-v17-all-charsets-800.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/open-sans-v17-all-charsets-800.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/open-sans-v17-all-charsets-800italic.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/open-sans-v17-all-charsets-800italic.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> fonts/source-code-pro-v11-all-charsets-500.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/fonts/source-code-pro-v11-all-charsets-500.woff2
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> searchindex.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/searchindex.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> searcher.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/searcher.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> mark.min.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/mark.min.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> elasticlunr.min.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/elasticlunr.min.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::static_files): Writing builtin -> toc.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/toc.js
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render toc html
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/toc.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating toc.html ✓
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/.nojekyll
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating index.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/index.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating index.html from index.md
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/index.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating getting-started.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/getting-started.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating faq.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/faq.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating features.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/features.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating panics.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/panics.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating render-functions.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/render-functions.html
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:24 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating ref.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/ref.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating state.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/state.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating reactivity.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/reactivity.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating html.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/html.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating async-components.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/async-components.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating css.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/css.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating assets.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/assets.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating debugging.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/debugging.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating testing.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/testing.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating cli-and-config.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/cli-and-config.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating deployment.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/deployment.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating deployment-library.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/deployment-library.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating deployment-other.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/deployment-other.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): HTML 'site-url' parameter not set, defaulting to '/'. Please configure this to ensure the 404 page work correctly, especially if your site is hosted in a subdirectory on the HTTP server.
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/404.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating 404.html ✓
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Render template
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Get data from context
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::helpers::navigation): Search for chapter
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Creating /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book/print.html
+2025-10-05 22:14:25 [DEBUG] (mdbook::renderer::html_handlebars::hbs_renderer): Creating print.html ✓
+2025-10-05 22:14:25 [DEBUG] (mdbook::utils::fs): Copying all files from /home/gyanedra-thakur/Desktop/open_source/natrix/docs/src to /home/gyanedra-thakur/Desktop/open_source/natrix/docs/book (blacklist: ["md"]), avoiding Some("/home/gyanedra-thakur/Desktop/open_source/natrix/docs/book")
