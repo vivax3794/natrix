@@ -5,7 +5,40 @@ use clap::Parser;
 /// Reusable imports
 mod prelude {
     pub use anyhow::{Context, Result, anyhow};
-    pub use owo_colors::OwoColorize;
+    pub use owo_colors::{OwoColorize, Stream::Stdout};
+}
+
+/// Helper macro to chain multiple styles and colors from ``owo_colors`` (and println! it), checks if colors are supported.
+macro_rules! uwu {
+    ($text:expr, $($style:ident).+) => {
+        print!("{}", $text.if_supports_color(Stdout, |s| s$(.$style())+.to_string()));
+    };
+    ($text:expr) => {
+        print!("{}", $text);
+    };
+}
+
+/// Helper macro to chain multiple styles and colors from ``owo_colors`` (and print! it), checks if colors are supported.
+macro_rules! uwuln {
+    ($text:expr, $($style:ident).+) => {
+        println!(
+            "{}",
+            ($text).if_supports_color(Stdout, |s| s$(.$style())+.to_string())
+        );
+    };
+    ($text:expr) => {
+        println!("{}", $text);
+    };
+}
+
+/// Helper macro to chain multiple styles and colors from ``owo_colors`` (but not print it), checks if colors are supported.
+macro_rules! uwu_style {
+    ($text:expr, $($style:ident).+) => {
+        ($text).if_supports_color(Stdout, |s| s$(.$style())+.to_string())
+    };
+    ($text:expr) => {
+        ($text).to_string()
+    };
 }
 
 use prelude::*;

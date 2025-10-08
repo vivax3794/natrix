@@ -149,12 +149,7 @@ impl DevArguments {
         } else if let Ok(port) = get_free_port(9000) {
             Some(port)
         } else {
-            println!(
-                "{}",
-                "No free port found for live reload, disabling it"
-                    .red()
-                    .bold()
-            );
+            uwuln!("No free port found for live reload, disabling it", red.bold);
             None
         };
 

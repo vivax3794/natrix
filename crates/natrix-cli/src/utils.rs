@@ -15,7 +15,7 @@ use crate::prelude::*;
 /// Create a spinner with the given msg
 pub(crate) fn create_spinner(msg: &str) -> Result<ProgressBar> {
     let spinner = ProgressBar::new_spinner().with_style(
-        ProgressStyle::with_template(&format!("{{spinner:.red}} {} {{msg}}", msg.bright_blue()))?
+        ProgressStyle::with_template(&format!("{{spinner:.red}} {} {{msg}}", uwu_style!(msg, bright_blue)))?
             .tick_chars("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏-"),
     );
     spinner.enable_steady_tick(Duration::from_millis(100));
@@ -61,7 +61,7 @@ pub(crate) fn run_with_spinner(
 
         Ok(result)
     } else {
-        spinner.finish_with_message("ERROR".red().to_string());
+        spinner.finish_with_message(uwu_style!("ERROR", red).to_string());
         println!("{full_output}");
         Err(anyhow!("Command exited with non zero status"))
     }
@@ -85,7 +85,7 @@ pub(crate) fn is_feature_enabled(feature: &str, is_default: bool) -> Result<bool
             is_default && natrix.uses_default_features
         }
     } else {
-        println!("{}", "⚠️ Natrix not found in dependencies".yellow().bold());
+        uwuln!("⚠️ Natrix not found in dependencies", yellow.bold);
         is_default
     })
 }

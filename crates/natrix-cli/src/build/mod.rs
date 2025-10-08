@@ -23,13 +23,13 @@ const CSS_OUTPUT_NAME: &str = "styles.css";
 /// Build a project
 pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManifest> {
     if !utils::is_natrix_version_matching()? {
-        println!(
-            "{}",
-            "Cli version does not match natrix version.".red().bold()
+        uwuln!(
+            "Cli version does not match natrix version.", red.bold
         );
     }
 
-    println!("🧹 {}", "Cleaning dist".bright_black(),);
+    print!("🧹 ");
+    uwuln!("Cleaning dist",bright_black);
     let _ = fs::remove_dir_all(&config.dist);
 
     if config.invalidate_cache {
@@ -37,11 +37,12 @@ pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManife
     }
     let _ = fs::create_dir_all(config.temp_dir.join(MACRO_OUTPUT_DIR));
 
-    println!(
-        "🚧 {} (using profile {})",
-        "Starting Build".bright_blue(),
-        config.profile.readable().cyan()
-    );
+    print!("🚧 ");
+    uwu!("Starting Build ", bright_blue);
+    print!("(using profile ");
+    uwu!(config.profile.readable(), cyan);
+    println!();
+
     std::fs::create_dir_all(&config.dist).context("Creating dist")?;
 
     let source_wasm_file = wasm_js::build_wasm(config).context("Building wasm")?;
@@ -62,7 +63,7 @@ pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManife
     };
 
     if config.profile == options::BuildProfile::Dev {
-        println!("{}", "🗺️ Generating source map".bright_blue());
+        uwuln!("🗺️ Generating source map", bright_blue);
         let parse_result = wasm_parse_result
             .as_ref()
             .ok_or_else(|| anyhow!("Wasm parse result missing for sourcemap generation"))?;
@@ -84,11 +85,9 @@ pub(crate) fn build(config: &options::BuildConfig) -> Result<assets::AssetManife
 
     generate_html(config, &wasm_file, &js_file, css_file)?;
 
-    println!(
-        "📦 {} {}",
-        "Result in".bright_blue(),
-        config.dist.display().cyan()
-    );
+    print!("📦 ");
+    uwu!("Result in", bright_blue);
+    uwuln!(config.dist.display(), cyan);
 
     Ok(asset_manifest)
 }

@@ -37,18 +37,16 @@ dist
         .current_dir(&root)
         .status();
     if let Err(err) = result {
-        println!("{}", "Failed to init git repo".red().bold());
-        println!("{}", err.red().bold());
+        uwuln!("Failed to init git repo", red.bold);
+        uwuln!(err, red.bold);
     }
 
-    println!(
-        "✨ {} {}",
-        "Project created".bright_green(),
-        root.display().cyan()
-    );
-    println!(
-        "{}",
-        "Run `natrix dev` to start the dev server".bright_blue()
+    print!("✨ ");
+    uwu!("Project created ", bright_green);
+    uwu!(root.display(), cyan);
+    println!();
+    uwuln!(
+        "Run `natrix dev` to start the dev server", bright_blue
     );
 
     Ok(())

@@ -55,7 +55,7 @@ pub(crate) fn do_dev(args: &options::DevArguments) -> Result<()> {
 
     match build(&config) {
         Err(err) => {
-            println!("{}", err.red());
+            uwuln!(err, red);
         }
         Ok(manifest) => {
             let mut lock = asset_manifest_mutex
@@ -87,7 +87,7 @@ pub(crate) fn do_dev(args: &options::DevArguments) -> Result<()> {
 
         match build(&config) {
             Err(err) => {
-                println!("{}", err.red());
+                uwuln!(err, red);
             }
             Ok(manifest) => {
                 let mut lock = asset_manifest_mutex
@@ -171,19 +171,18 @@ pub(crate) fn spawn_server(
         .to_ip()
         .expect("Failed to get ip")
         .port();
-    println!(
-        "{}{}{}{}{}",
-        "🚀 Dev server running at http://".green(),
-        ip.bright_red(),
-        ":".bright_red(),
-        port.to_string().bright_red(),
-        if let Some(live_reload) = live_reload {
-            format!(" (with live-reload via {live_reload})")
-        } else {
-            String::new()
-        }
-        .bright_black()
-    );
+    uwu!("🚀 Dev server running at http://", green);
+    uwu!(ip, bright_red);
+    uwu!(":", bright_red);
+    uwu!(&port.to_string(), bright_red);
+    
+    let live_reload_text = if let Some(live_reload_url) = live_reload {
+        format!(" (with live-reload via {live_reload_url})")
+    } else {
+        String::new()
+    };
+    uwu!(&live_reload_text, bright_black);
+    println!();
 
     for request in server.incoming_requests() {
         let asset_manifest = asset_manifest.lock().expect("Failed to lock mutex");
@@ -200,12 +199,9 @@ pub(crate) fn spawn_server(
                 let response =
                     Response::from_string("PATH TRAVERSAL DETECTED").with_status_code(404);
                 let _ = request.respond(response);
-                println!(
-                    "{}",
-                    "Path traversal detected in URL, terminating server for security."
-                        .bold()
-                        .red()
-                        .on_black()
+                uwuln!(
+                    "Path traversal detected in URL, terminating server for security.",
+                    bold.red.on_black
                 );
                 return;
             }
