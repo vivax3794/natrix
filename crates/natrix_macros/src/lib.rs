@@ -1,4 +1,4 @@
-//! Derive macros for [Natrix](https://github.com/vivax3794/natrix)
+//! Derive macros for [Natrix](https://github.com/Serpent-Tools/natrix)
 
 extern crate proc_macro;
 

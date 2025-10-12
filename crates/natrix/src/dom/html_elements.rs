@@ -122,7 +122,7 @@ impl<C: State, T> HtmlElement<C, T> {
     /// })
     /// # }
     /// ```
-    /// For more information see [Reactivity](https://vivax3794.github.io/natrix/reactivity.html) in the book.
+    /// For more information see [Reactivity](https://serpent-tools.github.io/natrix/reactivity.html) in the book.
     #[inline]
     pub fn on<E: Event>(mut self, function: impl EventHandler<C, E>) -> Self {
         let function = function.func();
