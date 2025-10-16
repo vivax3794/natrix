@@ -1,6 +1,5 @@
 #![doc = include_str!(concat!("../", std::env!("CARGO_PKG_README")))]
 #![cfg_attr(not(feature = "_internal_no_ssg"), forbid(unsafe_code))]
-
 pub mod access;
 
 pub mod async_utils;
@@ -71,6 +70,7 @@ pub mod prelude {
     pub use super::reactivity::State;
     pub use super::reactivity::context::{EventCtx, RenderCtx};
     pub use super::reactivity::signal::Signal;
+    pub use super::reactivity::signal_list::SignalList; 
     pub use super::{field, with};
 }
 

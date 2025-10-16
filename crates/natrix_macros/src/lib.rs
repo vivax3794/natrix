@@ -89,16 +89,18 @@ fn emit_file(
     let output_directory = settings.output_dir.join(caller_name);
 
     #[expect(
-        clippy::expect_used,
-        reason = "We should have write permission to target/"
-    )]
-    {
-        if first_use && let Err(err) = std::fs::remove_dir_all(&output_directory) {
+    clippy::expect_used,
+    reason = "We should have write permission to target/"
+)]
+{
+    if first_use {
+        if let Err(err) = std::fs::remove_dir_all(&output_directory) {
             assert!(
                 err.kind() == io::ErrorKind::NotFound,
                 "Deleting folder failed {err}"
             );
         }
+    }
         std::fs::create_dir_all(&output_directory)
             .expect("Could not create target output directory for crate");
     }

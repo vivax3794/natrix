@@ -147,21 +147,19 @@ where
     /// Convert a `Ref<ProjectableSignal<Option<T>>>` into a `Option<Ref<T>>`,
     /// (Or similarly for any other projectable value)
     /// In the mut path this does *not* mark the `ProjectableSignal` as dirty.
-    #[must_use]
     pub fn project_signal(self) -> T::Projected<'s> {
-        if let Ref::Read(this) = &self
-            && let Some(hook) = core::statics::current_hook()
-        {
-            if let Ok(mut deps) = this.deps.try_borrow_mut() {
-                deps.insert(hook);
-            } else {
-                log_or_panic!("Deps list overlapping borrow");
+        if let Ref::Read(this) = &self {
+            if let Some(hook) = core::statics::current_hook() {
+                if let Ok(mut deps) = this.deps.try_borrow_mut() {
+                    deps.insert(hook);
+                } else {
+                    log_or_panic!("Deps list overlapping borrow");
+                }
             }
         }
         crate::field!((self).data).project()
     }
 }
-
 impl<T> Deref for ProjectableSignal<T>
 where
     T: ProjectIntoState,
