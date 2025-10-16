@@ -22,6 +22,7 @@ pub mod dom_hooks;
 pub mod guards;
 pub mod mount;
 pub mod signal;
+pub mod signal_list;
 pub mod watch;
 
 #[cfg(feature = "async")]
@@ -30,7 +31,7 @@ pub mod async_state;
 #[cfg(feature = "async")]
 pub use self::async_state::{AsyncCtx, AsyncCtxHandle};
 pub use self::context::{EventCtx, RenderCtx};
-
+pub use self::signal_list::SignalList;
 /// Trait automatically implemented on reactive structs by the `#[derive(State)]` macro.
 pub trait State: Sized + 'static {
     /// Overwrite the value of this state while preserving reactive tracking.
