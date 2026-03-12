@@ -35,3 +35,19 @@ fn render_counter() -> impl Element<Counter> {
 * **Developer experience first** – Natrix is designed to feel natural for Rust developers.
 * **Idiomatic Rust** – We use Rust-native features & patterns, not what worked for js.
 * **Stop porting JS to Rust** – Rust is an amazing language, let’s build a frontend framework that actually feels like Rust.
+
+# Getting Started
+> [!WARNING]
+> Natrix is still in flux and these instructions are for people who want to play with it before a proper release.
+
+Install the natrix cli from github:
+```bash
+cargo install --git https://github.com/Serpent-Tools/natrix natrix-cli
+```
+
+Then use `natrix new my-app` to create a simple hello world app, then edit its resulting `Cargo.toml` to point to github:
+```toml
+natrix = { git = "https://github.com/Serpent-Tools/natrix", package = "natrix" }
+```
+
+Now you can run the project with `natrix dev`, for learning the framework you can use `cargo doc` and read the [Book](https://github.com/Serpent-Tools/natrix/tree/main/docs/src)
